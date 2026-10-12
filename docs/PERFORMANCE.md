@@ -1,47 +1,52 @@
 # Performance
 
 How OnPurpose keeps the grid, History and notes responsive, how to measure it,
-and the dated record of device investigations. The founder's test device is an
-iPhone 16 Pro. Never infer iPhone frame rates from Node benchmarks, React
-Profiler totals or JavaScript timer lateness; only phone runs, and ultimately
-release-build profiling, establish device performance.
+and the dated record of device investigations. The founder's test devices are an
+iPhone 16 Pro and, since 8 October 2026, a Samsung Galaxy S21 over USB. Never
+infer phone frame rates from Node benchmarks, React Profiler totals or
+JavaScript timer lateness; only phone runs, and ultimately release-build
+profiling, establish device performance.
 
 ## Current design and open problems
 
 ### What keeps the grid responsive
 
-- **Per-cell selectors.** Entry edits and save acknowledgements do not rerender
-  the app root's grid or its columns. Each mounted cell subscribes to its own
-  value through `storage/selection.ts`, and a date heading reads only whether its
-  date has a recorded entry. See [Entry updates](#entry-updates).
-- **UI-thread scroll synchronization.** Reanimated scroll handlers move the
-  follower list (header or body) on the UI thread. Only discrete settled dates
-  reach React. Never put per-frame list synchronization back on JavaScript.
-- **FlashList on native.** FlashList 2.3.3 recycles date columns and headings on
-  iOS and Android, drawing one date-viewport width beyond the visible area. Web
-  keeps an RN Web FlatList (fixed item layout, `windowSize` 5), because inverted
-  FlashList DOM offsets failed the layout review.
-- **Bounded date windows.** Dates load in 90-day chunks; jumps build 120 dates
-  around the target; windows over 360 dates compact to 270 after native settling.
-  Date objects and labels are cached and reused.
-- **Row windowing.** `gridRowWindow.ts` renders real cells only for the measured
-  vertical viewport plus two rows of overscan, updating on two-row buckets. Names
-  still measure every habit, and all rows render during menus, drags and for
-  300 ms after an identity change.
-- **One Pressable per date column.** `useGridColumnPress.ts` and
-  `gridColumnHit.ts` map a touch to the measured row; each cell keeps its own
-  accessible view and actions.
-- **Batched checkbox drawing.** `GridCheckboxLayer.tsx` draws idle checkboxes in
-  one SVG per column; only a locally accepted tap adds a short overlay.
-- **Shared row motion.** `RowPositions` gives each displayed habit one animated
-  style that names, cells and loading strips share; idle date rows use static
-  transforms.
-- **Cached derived values.** Per-habit grid colours (`gridAppearance.ts`), date
-  labels, and a goal-policy cache bounded to 256 dates per definition. The
-  completion mask is selected only while Hide completed today is on.
-- **Fallback backdrop.** `GridLoadingBackdrop.tsx` paints read-only dates and
-  dashes on the UI-thread offset, so a fast fling shows structure rather than
-  black gaps.
+Since 12 October 2026 the date area is a Skia canvas on both phones (see
+[the canvas grid entry](#12-october-2026-android-frame-rate-and-the-canvas-grid)
+and [ARCHITECTURE.md](ARCHITECTURE.md#grid)).
+
+- **UI-thread drawing from one offset.** Horizontal scrolling is a
+  gesture-handler pan with momentum and column snapping, entirely on the UI
+  thread. The heading and cell canvases are recorded from the same shared offset
+  in Reanimated derived values, so they cannot drift and no list synchronization
+  exists. Only discrete events reach React: a settled day, a future reveal, an
+  arrival and a cell tap. Never put per-frame scrolling or drawing on JavaScript.
+- **No per-cell React components or subscriptions.** There are no date lists,
+  columns, cell components, Pressables or per-cell store selectors. Each frame
+  loops over the visible days and every row, drawing from prepared records.
+- **JS-prepared, chunked cell records.** `useGridModel.ts` prepares cell records
+  on the JavaScript thread in 30-day chunks (two either side of the visible
+  position, keeping up to eight chunks away) into one shared map keyed by day.
+  A chunk change crossing a boundary is the only scrolling signal it receives.
+  Store notifications re-check only prepared days whose saved values changed;
+  save acknowledgements keep the same values object and do nothing. A day not
+  yet prepared draws dashes rather than blank space.
+- **Paragraphs prepared once.** Text, category and numeric cells are Skia
+  paragraphs laid out when their record is prepared, not per frame. Weekday
+  labels, day numbers and the Today label are built once per font scale, column
+  width and theme.
+- **Dates generated on the fly.** Integer worklet date maths (`gridDates.ts`)
+  derives date keys, weekdays and week shading from the offset, so there are no
+  date windows, caches, remounts or anchoring, and about a century of past days
+  is reachable. Rotation and size changes keep the logical rightmost day and
+  redraw at the new column width; no list resets.
+- **Shared row motion.** `RowPositions` keeps row tops in shared values; names
+  attach their animated styles and the canvas reads the same values while
+  drawing, so reorder, hide, archive and restore motion needs no per-cell
+  controllers.
+- **Cached derived values.** Per-habit grid colours (`gridAppearance.ts`) and a
+  goal-policy cache bounded to 256 dates per definition. The completion mask is
+  selected only while Hide completed today is on.
 - **Deferred presentation.** Grid size, style and theme choices wait until the
   Settings sheet closes, so the hidden grid is not rebuilt on every choice.
 - **History and notes.** History groups only the whole days it shows; notes use
@@ -51,22 +56,25 @@ release-build profiling, establish device performance.
 
 - `EXPO_PUBLIC_DEV_PERFORMANCE` console aggregates
   ([Development timing](#development-timing)).
-- Settings → Development → Grid diagnostics: Normal / No goal tint / Simple
-  cells comparisons with anonymous reports to the paired receiver
-  ([Grid diagnostics](#grid-diagnostics)).
+- Settings → Development → Grid diagnostics: timed Normal runs with anonymous
+  reports to the paired receiver ([Grid diagnostics](#grid-diagnostics)). They
+  measure JavaScript, React and storage work, not canvas frame rates.
 - `npm run benchmark:grid` and `npm run benchmark:bottlenecks`: synthetic Node
   benchmarks ([Synthetic benchmarks](#synthetic-benchmarks)).
 - `npm run start:compare-dev` and `npm run start:production-js`: paired Expo Go
   sessions comparing development and production JavaScript on the same saved
   data (see [DEVELOPMENT.md](DEVELOPMENT.md)).
+- Frame rate: observed on the phone itself; no in-app tool measures native or
+  GPU frames.
 
 ### Known costs and open problems
 
-- **Width changes remount both date lists.** The recycler has measured widths
-  for old items that cannot safely be mixed with a new fixed width, so rotation
-  and size changes reset both native lists. Development-build reports averaged
-  0.5–0.85 seconds to grid readiness; half-second readiness is still
-  unsatisfactory, and rendering remains the target.
+- **Date-scrolling feel is still being tuned.** The founder confirmed the canvas
+  grid feels right on the phones; momentum, snapping and pull feel remain open
+  polish.
+- **Accessibility overlay unverified.** The invisible native layer that gives
+  screen readers the visible cells has not been checked with VoiceOver or
+  TalkBack, nor has its cost while a screen reader scrolls.
 - **Each edit rewrites the whole projection.** The SQLite adapter parses,
   reapplies, validates and rewrites the full JSON projection per edit, and live
   reducers copy value containers. A synthetic five-year store took about 17 ms
@@ -74,33 +82,36 @@ release-build profiling, establish device performance.
   tests are a candidate, not an approved change.
 - **Startup replays the full log.** Native launch time with long histories is
   unmeasured.
-- **Development overhead is unquantified.** The production-JavaScript comparison
-  showed no visible loading, but on a shorter saved list. There is no
-  matched-data comparison or compiled Release profiling yet; the EAS internal
-  preview profile still needs account, signing and device setup.
-- **Phone checks outstanding.** A fresh identical Normal-mode report after column
-  batching, physical-phone accessibility of column press handling, and the
-  Notes/Statistics tab layout with the editor's resume/keyboard matrix.
+- **No release-build profiling.** Evidence so far comes from development and
+  production JavaScript in Expo Go; the EAS internal preview profile still needs
+  account, signing and device setup.
+- **Phone checks outstanding.** The Notes/Statistics tab layout with the
+  editor's resume/keyboard matrix.
 
 ## Entry updates
 
-The root still subscribes to the store for dialogs, errors and save status.
-Its active habit list and grid callbacks retain their identities between
-entry edits and save acknowledgements. HabitGrid receives the store, not the
-entire values object, so its memo boundary can skip those root updates.
+The root still subscribes to the store for dialogs, errors and save status. Its
+active habit list and grid callbacks retain their identities between entry edits
+and save acknowledgements. HabitGrid receives the store, not the entire values
+object, so its memo boundary can skip those root updates.
 
-GridCells owns memoized date columns, cells and headings. Each mounted cell
-subscribes to its own entry value through `storage/selection.ts`. A date heading
-reads only the active habits for that date, including numeric zero. Unrelated
-entries, preferences and successful save acknowledgements do not notify these
-selected subscribers. Notifications still derive from the authoritative store
-snapshot; no second mutable values cache exists. Undo/Redo, restore, pending
-edits and re-subscription read current values directly. Disabled state and error
-retry continue through root props, so save failures still block further editing.
+`useGridModel` subscribes to the store once. A notification compares each
+prepared day's saved values for the displayed habits with what it prepared and
+rebuilds only the changed day records, which the canvas then draws. Successful
+save acknowledgements keep the same values object, so nothing is rebuilt.
+Undo/Redo, restore and pending edits read current values from the store
+snapshot; no second mutable values cache exists. Disabled state and error retry
+continue through root props, so save failures still block further editing.
 
 A mounted grid behind statistics updates the affected cell without rebuilding
-all columns. Statistics is memoized against unchanged props for save-status
+other days. Statistics is memoized against unchanged props for save-status
 updates. Statistics calculations themselves still run when their data changes.
+
+Superseded (12 October 2026) by the canvas grid: GridCells owned memoized date
+columns, cells and headings. Each mounted cell subscribed to its own entry value
+through `storage/selection.ts`, and a date heading read only the active habits
+for that date, including numeric zero. Unrelated entries, preferences and
+successful save acknowledgements did not notify these selected subscribers.
 
 ## Horizontal scrolling preparation
 
@@ -108,32 +119,37 @@ updates. Statistics calculations themselves still run when their data changes.
   rendering reads them instead of repeating OKLCH conversions/gamut searches per
   cell. (It held five fade levels until date fading was removed on 12 October
   2026.)
-- Each grid owns a local-date cache. Range expansion keeps existing date objects
-  and formats only newly added days with reused Intl formatters. The cache is
-  discarded on grid unmount or local-day rollover and is bounded to the loaded
-  window or 512 dates, whichever is larger.
-- Header and body requests at the same rendered history boundary share one
-  extension, so they do not add two 90-day batches. Existing column geometry is
-  reused; date columns and headings can skip unchanged React props when the month
-  label changes.
+
+Superseded (12 October 2026) by the canvas grid, which generates dates per frame:
+
+- Each grid owned a local-date cache. Range expansion kept existing date objects
+  and formatted only newly added days with reused Intl formatters. The cache was
+  discarded on grid unmount or local-day rollover and was bounded to the loaded
+  window or 512 dates, whichever was larger.
+- Header and body requests at the same rendered history boundary shared one
+  extension, so they did not add two 90-day batches. Existing column geometry
+  was reused; date columns and headings could skip unchanged React props when
+  the month label changed.
 - Native UI-thread header/body synchronization, Today animation, future reveal,
-  reorder transforms, cancellation and completed-drop persistence are preserved.
-  No per-frame synchronization runs on JavaScript.
+  reorder transforms, cancellation and completed-drop persistence were preserved.
 
 ## Loading fallback
 
-`GridLoadingBackdrop` paints muted dashes per row beneath the body list, using a
-viewport-width-plus-two-columns SVG pattern. It has no entry subscriptions or
-press handlers. Its translation follows the native offset modulo column width on
-the UI thread; reorder geometry remains shared. Two transform-only masks hide
+Superseded (12 October 2026) by the canvas grid, which draws dashes for a day
+whose records are not prepared yet and has no separate backdrop.
+
+`GridLoadingBackdrop` painted muted dashes per row beneath the body list, using a
+viewport-width-plus-two-columns SVG pattern. It had no entry subscriptions or
+press handlers. Its translation followed the native offset modulo column width
+on the UI thread; reorder geometry remained shared. Two transform-only masks hid
 dashes beyond the real content on edge pulls.
 
-A separate read-only date strip pre-renders labels for the loaded date window. It
-translates with the same native offset and preserves date-key identity while
-extending history. This costs lightweight text for the loaded window, not
-habit/day controls. Fallback content is hidden from VoiceOver, and real
-columns/headings paint opaque backgrounds over it. A missing control is never
-tappable or presented as an unchecked saved value. Fallback movement needs no
+A separate read-only date strip pre-rendered labels for the loaded date window.
+It translated with the same native offset and preserved date-key identity while
+extending history. This cost lightweight text for the loaded window, not
+habit/day controls. Fallback content was hidden from VoiceOver, and real
+columns/headings painted opaque backgrounds over it. A missing control was never
+tappable or presented as an unchecked saved value. Fallback movement needed no
 JavaScript scroll synchronization.
 
 Superseded (7 October 2026): the first version of this work tuned
@@ -141,7 +157,7 @@ Superseded (7 October 2026): the first version of this work tuned
 delay, an 11-viewport header window and a 5-viewport body window; see React
 Native's
 [batch-size/frequency tradeoff](https://reactnative.dev/docs/optimizing-flatlist-configuration)).
-Native date lists now use FlashList instead, and the web FlatList keeps only
+Native date lists then used FlashList instead, and the web FlatList kept only
 `windowSize` 5.
 
 ## Development timing
@@ -159,12 +175,10 @@ runs can send anonymous timing reports to the paired preview receiver (see
 [Grid diagnostics](#grid-diagnostics)). Turn the flag off and reload for an
 uninstrumented comparison.
 
-- `grid.container.render`, `grid.cell.render`, `grid.heading.render`: render
-  attempt counts, including initial mounting and newly virtualized columns.
-  Duration zero for these counters is intentional; use Profiler records for
-  actual render cost.
+- `grid.container.render`: HabitGrid render attempts. Duration zero for this
+  counter is intentional; use Profiler records for actual render cost.
 - `grid.render`, `statistics.render`: React Profiler commit actualDuration. These
-  measure React work, not native display latency or full frame time.
+  measure React work, not canvas drawing, native display latency or frame time.
 - `store.apply`: synchronous event validation/reduction.
 - `store.metadata`: change ID, edit timestamp and local-zone metadata creation.
 - `store.publish`: event-array publication and subscriber callbacks.
@@ -172,52 +186,50 @@ uninstrumented comparison.
   including time waiting for native storage (or the sample memory adapter).
 
 To isolate a checkbox edit, let initial mounting settle and wait for the initial
-aggregate, tap one cell without scrolling, then inspect the next report. Expect
-one changed cell; its heading changes only when that day's recorded/empty state
-changes. The grid container should not rerender just for that entry or its
-successful save. Strict Mode and concurrent render attempts can increase
-counters. Use the DevTools performance trace to inspect JS stalls, and compare a
-release build for final performance acceptance; Expo Go timing is not release
-evidence.
+aggregate, tap one cell without scrolling, then inspect the next report. The grid
+container should not rerender just for that entry or its successful save. Strict
+Mode and concurrent render attempts can increase counters. Use the DevTools
+performance trace to inspect JS stalls, and compare a release build for final
+performance acceptance; Expo Go timing is not release evidence.
+
+Superseded (12 October 2026) by the canvas grid: `grid.cell.render` and
+`grid.heading.render` counted cell and heading render attempts, including newly
+virtualized columns; a checkbox edit was expected to change one cell, and its
+heading only when that day's recorded/empty state changed. The metric names stay
+accepted in reports for compatibility but are no longer recorded.
 
 ## Grid diagnostics
 
 Settings → Development → Grid diagnostics is gated by `__DEV__` and
 `EXPO_PUBLIC_DEV_PERFORMANCE`. Start a run, close Settings, wait two seconds for
-mode-switch/dismissal warmup, then perform the same date flings and three
-portrait/landscape/portrait rotations. Return, Stop and send timings. Repeat each
-mode with the same list and date range, and avoid editing during this
-scroll/rotation comparison. A separate Normal run with ten check/uncheck actions
+dismissal warmup, then perform the same date flings and three
+portrait/landscape/portrait rotations. Return, Stop and send timings. Repeat runs
+with the same list and date range, and avoid editing during this
+scroll/rotation comparison. A separate run with ten check/uncheck actions
 measures the edit/write path. Sample uses an in-memory repository; Saved uses the
 native SQLite adapter on phones. Do not mix sources within a run. Changing or
-resetting sample data stops the current test.
+resetting sample data stops the current test. Runs are temporary, never
+preferences or events.
 
-Modes are temporary, never preferences or events:
+Only Normal remains. Superseded (12 October 2026) by the canvas grid, which has
+no reduced renderer modes (the `GridExperiment` type keeps the old values only
+for report compatibility):
 
-- Normal: current controls and goal evaluation.
-- No goal tint: skips goal evaluation for cells, preserving values, dated
+- No goal tint skipped goal evaluation for cells, preserving values, dated
   checkbox defaults and native controls. Success colours and accessibility goal
-  summaries are deliberately absent during this experiment; rules themselves are
-  not edited.
-- Simple cells: preserves values, checkbox defaults and goal evaluation, using
+  summaries were deliberately absent during this experiment.
+- Simple cells preserved values, checkbox defaults and goal evaluation, using
   static row views and native text marks instead of the batched checkbox shapes
-  and animated row views. Name reordering is disabled. This is a diagnostic
+  and animated row views, with name reordering disabled. It was a diagnostic
   rendering comparison, not an accepted product appearance.
 
 Runs stop automatically after 60 seconds of measurement or when the app becomes
-inactive, and Normal is restored. The last numeric report stays in memory for
-Retry. Only discrete start/stop changes notify React; the 100 ms event-loop
-monitor does not update React. Its lateness measures JS scheduling, not UI/GPU
-frame rate.
+inactive. The last numeric report stays in memory for Retry. Only discrete
+start/stop changes notify React; the 100 ms event-loop monitor does not update
+React. Its lateness measures JS scheduling, not UI/GPU frame rate, and the canvas
+draws on the UI thread, so JS timings say nothing about scrolling smoothness.
 
-Metrics: `grid.ready` measures from the observed width-change layout event (or
-the new-frame layout effect for other resets) until both current viewport/onLoad
-signals are accepted. It is not proof of GPU presentation. `grid.header.load` and
-`grid.body.load` use FlashList's `elapsedTimeInMs`; `grid.render` is React
-Profiler's actualDuration. `grid.cell.mount`/`unmount`/`render` and
-`grid.column.render` count work. `grid.goal` and `grid.checkbox.policy` isolate
-synchronous policy/evaluation costs; they include both accessible cells and
-drawing subscribers, so duplicated drawing work is not hidden.
+Metrics: `grid.render` is React Profiler's actualDuration.
 `store.load`/`apply`/`publish`/`ack`/`append` keep their separate meanings. SQL
 reads, writes and exclusive transactions are timed through their awaited
 completion; these include bridge/wait/JS-resumption latency, not just SQLite
@@ -226,13 +238,20 @@ engine time. `repository.read.parse`/`replay` and
 existing production operations. Nested durations overlap; never add transaction,
 SQL and validation totals as independent costs.
 
-Instrumentation itself adds work, especially per-cell clocks and aggregates.
-Treat No goal tint as an upper bound on the removed evaluation/reporting cost,
-then confirm a proposed optimization with diagnostics disabled on the phone.
-These development comparisons do not replace release-build profiling. Compare
-work counts as well as elapsed totals, because manual flings cover different
-ranges. A report collected entirely inside Settings can contain only JS timer
-samples: absent render/ready metrics mean unmeasured, not zero-duration work.
+Superseded (12 October 2026) by the canvas grid: `grid.ready` measured from the
+width-change layout event until both current viewport/onLoad signals were
+accepted; `grid.header.load` and `grid.body.load` used FlashList's
+`elapsedTimeInMs`; `grid.cell.mount`/`unmount`/`render` and
+`grid.column.render` counted work; and `grid.goal` and `grid.checkbox.policy`
+isolated per-cell policy/evaluation costs. These names remain valid in the
+report format but are no longer recorded, so older reports cannot be compared
+with new ones on them.
+
+Instrumentation itself adds work. These development comparisons do not replace
+release-build profiling. Compare work counts as well as elapsed totals, because
+manual flings cover different ranges. A report collected entirely inside
+Settings can contain only JS timer samples: absent render metrics mean
+unmeasured, not zero-duration work.
 
 Explicit reports POST to `/performance` on the existing paired receiver, keeping
 its authentication/no-browser-origin policy. Both development env flags must be
@@ -312,16 +331,15 @@ primitive mask through `completedHabitsSelection`, computed from each habit's
 effective-dated goal at Today (all four habit types; see [GOALS.md](GOALS.md)).
 Only edits that change whether a habit meets its goal at Today change the mask;
 other edits, other dates, preferences and save acknowledgements leave it
-unchanged. When the option is off, entry edits keep the per-cell update path
-without notifying the container.
+unchanged. When the option is off, entry edits update only the grid model's
+changed days without notifying the container.
 
 Filtering changes displayed row geometry, so a qualifying edit does rebuild the
 visible rows. This is the cost of the explicitly requested optional behaviour,
 not a replacement for stable rows by default. `useDelayedCompletionMask.ts` keeps
 tap-burst targets in place for 700 ms of quiet; Undo and unchecking reveal rows
-immediately. Names, cells and fallback geometry use the same displayed IDs;
-date-heading recorded state reads the full active list. Native scrolling stays on
-the UI thread. Hidden and archived order slots stay fixed when the displayed
+immediately. Names and canvas rows use the same displayed IDs. Scrolling and
+drawing stay on the UI thread. Hidden and archived order slots stay fixed when the displayed
 subset is reordered.
 
 ## Large descriptions
@@ -357,20 +375,22 @@ is gone.
 
 ## Categorical and free-text cells
 
-Daily values include primitives and stable arrays of category IDs. Per-cell
-subscriptions keep unchanged references through save acknowledgements; category
-corrections compare array contents across SQLite serialization. Native
-horizontal scroll synchronization and the loading backdrop are unchanged.
+Daily values include primitives and stable arrays of category IDs. Save
+acknowledgements keep unchanged references, so the grid model rebuilds nothing;
+category corrections compare array contents across SQLite serialization.
 
 Grid previews collapse whitespace and cap measurement at 32 Unicode characters,
-with a consistent 12-point font before app/OS scaling and native tail ellipsis.
-`gridEntryText.ts` derives 1–3 lines from measured row height and combined scale.
-Column width controls native wrapping, not font compression. Native fitting is
-disabled for text/categories because our iOS renderer ignores
+with a consistent 12-point font before app/OS scaling. Since the canvas grid (12
+October 2026) they are Skia paragraphs laid out once when a day is prepared,
+with tail ellipsis and system font fallback for emoji; `gridEntryText.ts`
+derives 1–3 lines from measured row height and combined scale. Column width
+controls wrapping, not font compression, for text and categories; numbers shrink
+to fit, down to 65%. Superseded (12 October 2026): native Text fitting was
+disabled for text/categories because our iOS renderer ignored
 `minimumFontScale`. Full values remain in storage and the editor. Recording
 statistics virtualize their dated entry list rather than mounting every full
-text value. Browser checks cover layout, not native font fitting or iPhone frame
-rates.
+text value. The web preview has no grid, so text fitting is checked on the
+phones only.
 
 ## Appearance changes behind Settings
 
@@ -404,7 +424,11 @@ and the calendar on the iPhone.
 ## Investigation log
 
 Dated device reports and the work that followed, oldest first. Statements marked
-“Superseded” describe an earlier state. iPhone figures come from the iPhone 16
+“Superseded” describe an earlier state. Entries before 12 October 2026 describe
+the FlashList/native-view grid, which was superseded (12 October 2026) by the
+canvas grid; their measurements remain as recorded, and the modules they name
+(GridCells, DateColumns, useGridScroll, the row window, column Pressables, the
+batched checkbox SVG and the loading backdrop) no longer exist. iPhone figures come from the iPhone 16
 Pro running development JavaScript in Expo Go with in-memory Sample data, Normal
 diagnostic mode and manual date flings plus rotations. Run lengths and work
 differed, so they are indicative, not controlled benchmarks.
@@ -715,3 +739,30 @@ state; a test confirms it causes no additional parent commits. Storage
 validation was extracted with identical function bodies, not weakened or
 optimized. This refactor makes future performance work easier to isolate; no phone
 speedup is claimed.
+
+### 12 October 2026: Android frame rate and the canvas grid
+
+On the Galaxy S21, in production JavaScript, Android scrolling peaked around
+45 fps in fast flings: each day column scrolling in was built from many native
+views. The FlashList workarounds of the preceding days (Android anchoring off,
+no `contentOffset`, a future-date preload, remounts on reveal and whole-pixel
+columns for FlashList's estimates) fixed jumps and loops but not this cost.
+
+A throwaway Skia test screen drawing the same grid then held a steady 120 fps on
+the S21. The founder decided to build the canvas grid for real, replacing the
+FlashList grid directly with no parallel renderer, with the iOS-style future
+pull on both phones and no grid on web. With the real canvas grid in place, the
+founder confirmed on the phones that it feels right, apart from date-scrolling
+polish still to tune. These are on-phone observations, not release-build
+profiling; the iPhone has not had an equivalent
+frame-rate measurement.
+
+The canvas design is summarized in
+[What keeps the grid responsive](#what-keeps-the-grid-responsive). It removed
+FlashList, the per-cell React grid, the row window, column Pressables, the
+batched checkbox SVG, the loading backdrop, the Android pull zone and the No goal
+tint/Simple cells diagnostic modes. Taps, the pressed highlight, the checkbox
+pulse, haptics, dialogs, Quick Undo and row motion kept their behaviour.
+Day columns are now whole physical pixels on every platform for crisp canvas
+edges. Accessibility moved to an invisible native layer that is not yet checked
+with VoiceOver or TalkBack.

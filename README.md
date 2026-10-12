@@ -55,7 +55,7 @@ Android over USB and troubleshooting, see the
 [development guide](docs/DEVELOPMENT.md).
 
 ```sh
-npm run web             # browser preview, useful for layout only
+npm run web             # browser preview of other screens; the grid is phones only
 npm run check           # TypeScript, lint and formatting
 npm test                # storage, replay, date, layout and other test suites
 npm run export:ios      # verify the iOS JavaScript bundle (not a signed build)

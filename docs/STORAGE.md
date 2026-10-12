@@ -175,9 +175,11 @@ event; live UI updates remain immutable. On 7 October 2026 `types.ts`,
 responsibility refactor: function bodies, error messages, version gates and the
 public exports stayed the same, with no schema, event or write-queue change.
 
-Grid cells use `selection.ts` to subscribe to their own primitive or stable array
-value; date headings select whether their date has any active-habit entry.
-Unchanged selections ignore save acknowledgements and unrelated edits. This is
+The canvas grid (`canvasGrid/useGridModel.ts`) subscribes once to the store and
+re-checks only its prepared days whose saved values changed; save
+acknowledgements keep the same values object and do nothing. `selection.ts`
+supplies the primitive Today completion mask used by Hide completed, so
+unchanged selections ignore acknowledgements and unrelated edits. This is
 notification filtering derived from the store snapshot, not another persisted
 cache. Store timing can be enabled in development without changing events,
 replay, serialized writes or the schema.

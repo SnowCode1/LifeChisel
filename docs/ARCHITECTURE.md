@@ -13,18 +13,20 @@ The home view is the habit-by-day grid. History, Settings, Notes/Statistics and
 the editors open as native sheets or dialogs above it, so the grid stays mounted
 underneath. There is no navigation library, backend, account flow or
 scheduler, and no analytics SDK yet (crash reporting and analytics are planned). It runs on iOS and Android devices (which launches first is
-undecided); web is a layout preview.
+undecided). Web is a layout preview for the rest of the screen; it shows a short
+notice in place of the habit grid.
 
 ```text
 UI       App.tsx: screen state, dialogs and nested native sheets
-           HabitGrid (grid) · AppPanel (History, Settings)
+           HabitGrid (names, Skia canvas grid) · AppPanel (History, Settings)
            HabitDetailsScreen (Notes/Statistics) · editors and entry dialogs
              │
-Hooks    useDailyEntryActions · usePersistentStore · useGridDates · useGridScroll
+Hooks    useDailyEntryActions · usePersistentStore · useGridDates
+         useCanvasGridScroll · useGridModel · useCanvasGrid
          useBackupActions · useQuickUndo · useGridDisplayPreferences
              │
 Store    ChangeStore (storage/store.ts): immediate state, serialized write queue,
-         Undo/Redo, backups · per-cell selectors (storage/selection.ts)
+         Undo/Redo, backups · selectors (storage/selection.ts)
              │
 Storage  repository.ts → native.ts → Expo SQLite        (iOS, Android)
          browserRepository.ts → native.web.ts → localStorage   (web)
@@ -33,13 +35,14 @@ Storage  repository.ts → native.ts → Expo SQLite        (iOS, Android)
 **Startup.** `useStoreOpening` opens the store. The repository loads the whole
 change log, and replay validates it and rebuilds the current state plus the
 Undo/Redo stacks, repairing a stale projection from the log. `ChangeStore`
-publishes a snapshot; `usePersistentStore` subscribes the app, and each grid cell
-subscribes only to its own value through `storage/selection.ts`.
+publishes a snapshot; `usePersistentStore` subscribes the app, and the grid's
+`useGridModel` subscribes once and prepares drawing records for the days near the
+visible dates.
 
-**An edit.** A tap goes through `useDailyEntryActions`, which reads the
-before-value from the store's current state. `ChangeStore.change` builds the
-event, applies it in memory and notifies only the affected selectors, so the cell
-updates at once. The queue then appends the event and the new projection in one
+**An edit.** A tap on the canvas goes through `useDailyEntryActions`, which reads
+the before-value from the store's current state. `ChangeStore.change` builds the
+event, applies it in memory and notifies subscribers; the grid model re-prepares
+only the days whose saved values changed, so the cell redraws at once. The queue then appends the event and the new projection in one
 SQLite transaction; a failure stays visible with Retry.
 
 Theme and text scale wrap the tree: `ThemeContext.tsx` provides colours derived
@@ -56,21 +59,21 @@ index.ts, App.tsx      app registration; screen state, dialogs and nested sheets
 app.json               Expo configuration (generated native folders stay ignored)
 
 Grid
-  src/HabitGrid.tsx            toolbar, fixed names/date headers, measured width, rows
-  src/GridCells.tsx            memoized date columns, cells and headings
-  src/DateColumns.tsx          native FlashList / web FlatList adapter
-  src/useGridDates.ts          date windows, Today/date/future navigation, readiness
-  src/useGridScroll.ts         UI-thread list synchronization and pull handling
-  src/gridNavigation.ts        future-pull threshold and date offsets
-  src/FuturePullZone.tsx       Android future-pull gesture
+  src/HabitGrid.tsx            toolbar, names, measured width, rows, vertical scrolling
+  src/useGridDates.ts          settled date, Today/date/future navigation, resize anchoring
+  src/canvasGrid/
+    useCanvasGrid.tsx          heading and cell canvases, taps, pressed highlight, pulse
+    useCanvasGrid.web.tsx      web notice in place of the grid
+    useCanvasGridScroll.ts     UI-thread pan, momentum, snapping and future pull
+    useGridModel.ts            JS-thread cell records in 30-day chunks, Skia paragraphs
+    GridAccessibilityLayer.tsx invisible native views for screen readers
+    cellAccessibility.ts       cell state, roles and labels
+    gridGeometry.ts            offset ↔ day maths, snapping, rubber band, checkbox geometry
+    gridDates.ts               worklet date keys, weekdays and week shading
+  src/gridNavigation.ts        future-pull threshold, batch size and reveal target
   src/gridSizing.ts            stored grid sizes, legacy mapping, automatic rules
   src/gridLayout.ts            adaptive name/day geometry with text scaling
   src/useMeasuredRowHeights.ts batched native row measurement
-  src/gridRowWindow.ts         vertical row windowing (with useGridRowWindow.ts)
-  src/gridColumnHit.ts         one press handler per date column (with useGridColumnPress.ts)
-  src/GridCheckboxLayer.tsx    batched idle checkbox SVG per column
-  src/GridCheckboxMark.tsx     checkbox drawing and tap feedback
-  src/GridLoadingBackdrop.tsx  read-only fallback dates and dashes
   src/gridAppearance.ts        cached per-habit grid colours
   src/gridEntryText.ts         text/category cell previews
   src/ReorderRow.tsx           RowPositions: shared row movement
@@ -164,95 +167,93 @@ target.
 
 ## Grid
 
-Two Reanimated horizontal FlashLists recycle native date headings and columns;
-web keeps a FlatList path. Both keep date headings and cells aligned. Their
-scroll handlers run on the UI thread and synchronously move the follower list;
-only the end-of-drag/momentum date is sent back to React. Never move per-frame
-list synchronization back to JavaScript. Smoothness must be judged on the phone;
+The date area is drawn with Skia (`@shopify/react-native-skia` 2.6.2, bundled
+in Expo Go SDK 57) on iOS and Android; it replaced the FlashList date lists on
+12 October 2026 (founder decision, see [DECISIONS.md](DECISIONS.md)). Two
+canvases share one horizontal offset: fixed date headings, and the cells inside
+the vertical ScrollView at the grid's full height, beside the native habit
+names. Both pictures are recorded in a Reanimated derived value from that
+offset on the UI thread, so headings and cells cannot drift apart, and no React
+component exists per cell or column. React hears only discrete events: a
+settled day, a future reveal, an arrival and a cell tap. Never move per-frame
+scrolling or drawing back to JavaScript. Smoothness must be judged on the phone;
 see [PERFORMANCE.md](PERFORMANCE.md).
 
-| Module           | Responsibility                                                                                                  |
-| ---------------- | --------------------------------------------------------------------------------------------------------------- |
-| HabitGrid        | Measured outer width, habit rows, reorder controls, toolbar and cell render callbacks                           |
-| useGridDates     | Cached/bounded dates, Today/date/future navigation, paired native generation readiness and resize anchoring     |
-| useGridScroll    | UI-thread list synchronization, actual offsets, pull thresholds and reduced-motion-aware arrival                |
-| DateColumns      | Native recycler/web FlatList adapter, retaining native initial index until the existing generation key remounts |
-| HabitContextMenu | Menu appearance, local height measurement and placement; held names remain reachable                            |
+| Module                  | Responsibility                                                                                                  |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------- |
+| HabitGrid               | Measured outer width, names, rows, vertical scrolling, reorder controls, toolbar and the date picker            |
+| useGridDates            | Settled rightmost day, unlocked future, month/year label, Today/date/future navigation and resize anchoring     |
+| useCanvasGridScroll     | Gesture-handler pan on the UI thread: drag, momentum, column snapping, rubber band, pull threshold and arrivals |
+| useGridModel            | JS-thread cell records in 30-day chunks around the visible dates, Skia paragraphs, updates on changed days      |
+| useCanvasGrid           | Heading and cell canvases, Today pill, week shading, streak, tap hit testing, pressed highlight, checkbox pulse |
+| GridAccessibilityLayer  | Invisible native views giving visible cells and headings their roles, states, labels and actions                |
+| gridGeometry, gridDates | Worklet maths: offset ↔ day, visible range, snapping, rubber band, checkbox geometry, date keys and weekdays    |
+| HabitContextMenu        | Menu appearance, local height measurement and placement; held names remain reachable                            |
+
+**Cells.** `useGridModel` prepares one record per habit and day on the JavaScript
+thread, in 30-day chunks (two chunks either side of the visible position, keeping
+up to eight chunks away), into a shared map keyed by day. Text and category
+previews are Skia paragraphs with the line count from `gridEntryText.ts`, an
+ellipsis and system font fallback for emoji; numbers use a paragraph shrunk to
+fit, down to 65%. Store notifications re-check only the prepared days whose
+saved values changed; save acknowledgements keep the same values and do nothing.
+A change of font scale, column width, theme, row height or habits rebuilds the
+prepared days. A day not prepared yet draws dashes for a moment. Cell
+backgrounds follow pressed, then goal met, then Today, then plain; both checkbox
+styles (boxes and marks) draw as paths.
+
+**Taps.** A gesture-handler Tap races the horizontal Pan. Press-in hit tests the
+row (reading live row positions) and shows the pressed highlight; release on the
+same cell calls `useDailyEntryActions.pressCell`, so haptics, dialogs and Quick
+Undo are unchanged. The checkbox pulse (scale 1 → 0.94 → 1 over 45 + 135 ms)
+runs only when the checked state actually flipped, gated by Tap animations and
+Reduce Motion. Taps are disabled while editing is blocked, during a drag and in
+reorder mode; scrolling is locked while the menu is open or a drag is active.
+
+**Accessibility.** The canvas itself is invisible to screen readers.
+`GridAccessibilityLayer.tsx` keeps native views for every visible cell, with the
+previous `cell-<habit>-<date>` test IDs, role, checked/disabled state, label,
+hint, `activate` action and `onAccessibilityTap` (wording from
+`cellAccessibility.ts`), plus header-role date headings and an adjustable
+"Dates" strip that pages by the visible day count. It follows the shared offset
+and takes touches only while a screen reader is on; otherwise it passes touches
+to the canvas gestures. It has not yet been checked with VoiceOver or TalkBack.
 
 The grid is one mounted state owner: `useGridDates` runs inside it rather than
-adding another store, per-frame callback or remounted screen. Date objects keep
-their cache identities. The outer layout handler cancels reordering, prepares the
-current native date anchor, then changes width. Header and body keep their
-width/range keys and shared starting offset. Current viewport plus native drawing
-readiness releases columns; web still uses fixed content sizes. Context-menu
-height is local to the always-mounted menu, so menu measurement never updates the
-grid parent.
+adding another store, per-frame callback or remounted screen. Context-menu
+height is local to the always-mounted menu, so menu measurement never updates
+the grid parent.
 
 ### Dates and future pull
 
-Lists are inverted with the newest available date at the right edge, initially
-today. Releasing a direct pull at least 64 points beyond the native scroll
-boundary unlocks 30 future dates. The release distance determines how far to
-continue (normally tomorrow beside today), independently of the viewport width.
-A fling reaching the boundary does not unlock dates. The iOS rubber-band supplies
-resistance; a UI-thread border streak follows the pull and the threshold haptic
-marks readiness.
-Android lists stop at the edge instead of overscrolling, so `FuturePullZone.tsx`
-adds a gesture-handler pan over both date areas that starts only at the newest
-date. It decides within 6 points (before the list's own touch slop), fails for
-past-ward or vertical movement, and feeds `useGridScroll`'s `edgePull` at
-two-thirds finger speed. The columns do not move; the streak and tick match iOS,
-and release always continues by one column (tomorrow beside the old edge)
-because there is no moved distance to continue. A drag that scrolls to the edge must lift and pull again.
-Android turns native anchoring off and omits the lists' `contentOffset` prop:
-the anchoring followed recycled column views and jumped by FlashList's render
-window, and Android kept re-applying `contentOffset`, snapping lists back to
-their mount position in a self-sustaining loop. Without anchoring, Android cannot
-insert columns before the visible ones in place, so it preloads as many future
-days as could fit across the screen's long side at the narrowest column (about
-23 on the test phone) beyond the unlocked boundary. `useGridScroll` holds
-ordinary scrolling at that boundary on the UI thread, as a list's own edge
-would, and pulls start there. A reveal unlocks the preload and animates to
-tomorrow with no data change or remount; arriving at Today folds the boundary
-back. A further pull at the unlocked edge remounts both lists with the next
-batch and a fresh preload. Newer history after a far jump still remounts on
-Android, once a gesture settles near the newest loaded date.
+Every date is generated on the fly from the offset, so there are no date lists,
+windows, remounts or anchoring. Offset 0 places Today in the rightmost column;
+positive offsets show older days and negative offsets show unlocked future days
+(day _d_ sits at x = width − (_d_ + 1) × column + offset). About a century of
+past days is reachable. Dragging moves the offset directly; release continues
+with momentum (`withDecay`, deceleration 0.99, as iOS's fast rate) and then snaps
+to a column, after which the settled day is sent to React for the month/year
+label and the Today action.
 
-FlashList positions columns it has not drawn by the average of recently
-measured widths, while scrolling assumes index × column width. Android therefore
-rounds day columns to whole physical pixels (the name column takes the
-remainder), so every column measures the same and the two agree.
-The Android app root has a `GestureHandlerRootView`; iOS keeps its tree.
-At the new future edge, another pull reveals the next batch. The month menu also
-offers future access without a gesture, including for accessibility and web.
-Future entries use the same habit ID/local-date keys as past entries.
+The Today/future boundary sits at −unlocked future × column, and ordinary flings
+stop there. Both platforms use the same iOS-style pull: dragging past the
+boundary moves the columns with rubber-band resistance, the heading streak grows
+with the pull, and the threshold haptic fires once at 64 points. Releasing past
+64 points unlocks 30 more future days (`FUTURE_BATCH`) and animates by the
+release distance, normally to tomorrow beside today (`futureRevealDay`); a
+shorter release settles back at the boundary. At the new edge another pull reveals the next
+batch. Future entries use the same habit ID/local-date keys as past entries.
 
-Older dates append in batches of 90. Date-picker jumps replace the window with
-dates around the target rather than mounting intervening years, and large windows
-compact after native settling. A vertical ScrollView moves names and cells
-together while date headings remain visible.
-
-Dates snap to column boundaries. A Today action appears only while browsing the
-past or future; its reserved space prevents layout shifts. Width changes remount
-both date lists with a frozen initial index anchored to the previously rightmost
-day. Outside Android, adding future dates keeps both lists mounted, preserving
-visible date positions with `maintainVisibleContentPosition` and stable date
-keys. Once both content-size callbacks confirm the new range is laid out, the
-body animates to the nearest column corresponding to the released pull; its
-UI-thread handler drives the header. A new drag takes priority over that
-animation. No frame loop or timer is added on the JavaScript thread. The explicit
-future menu action reveals one day beyond the old edge with the same transition.
-See [React Native's content-position preservation](https://reactnative.dev/docs/scrollview#maintainvisiblecontentposition).
-Dates are only prepended or appended during range expansion, never reordered.
-Because inverted lists use transforms, validate native anchoring on the phone,
-particularly while expanding a second future batch.
-
-Changing width or the future range resets scroll ownership. Returning to Today
-animates to its column, then collapses future columns and restores the pull
-boundary without deleting entries; it cancels any pending reveal. Rotation also
-cancels a pending transition and anchors to its logical date. Current-day
-changes remount the grid at today while values keep their habit ID/local-date
-keys.
+Navigation animates the offset on the UI thread for 280 ms (ease-out cubic,
+following the system Reduce Motion setting); a new finger stops it. The Today
+action appears only while browsing the past or future, in reserved space so
+nothing shifts; returning to Today animates to it, then collapses the unlocked
+future without deleting entries. The month/year button opens the date picker
+(`DateNavigationSheet.tsx`), which jumps straight to any date, unlocking future
+days as needed; this is also the gesture-free route to future dates. Rotation and
+column-size or text-size changes keep the logical rightmost day
+(`prepareResize`) and place it immediately at the new column width. A vertical
+ScrollView moves names and cells together while date headings stay visible.
 
 ### Geometry and rows
 
@@ -261,23 +262,21 @@ stay aligned. Users can choose fixed name-column, day-column and row sizes or
 Auto in Settings ([SETTINGS.md](SETTINGS.md)); `gridSizing.ts` stores those
 choices and the automatic rules, and `gridLayout.ts` turns them into geometry.
 Automatic day columns are at least 48 points (scaled for larger text), and the
-automatic name width is bounded so landscape gives its extra space to dates. The
-screen uses both orientations and safe areas, including dialogs. The month/year
-beside the day headings describes the visible period, including month/year
-boundaries.
+automatic name width is bounded so landscape gives its extra space to dates. Day
+columns are whole physical pixels on every platform (`gridLayout` receives
+`PixelRatio.get()` in HabitGrid and the size-settings preview), with the name
+column taking the remainder, so canvas edges stay crisp. The screen uses both
+orientations and safe areas, including dialogs. The month/year beside the day
+headings describes the visible period, including month/year boundaries.
 
-Real cells render only near the vertical viewport (`gridRowWindow.ts`), while
-names measure every habit and content height stays complete. Each native date
-column has one Pressable that maps touches to rows (`gridColumnHit.ts`), while
-every cell keeps its own accessible view, role, state and actions. Idle checkbox
-shapes draw in one SVG per column (`GridCheckboxLayer.tsx`). `RowPositions` in
-`ReorderRow.tsx` gives each displayed habit one shared animated position that
-names, cells and loading strips attach to. [PERFORMANCE.md](PERFORMANCE.md)
-explains these choices and their measured effects.
-
-`GridLoadingBackdrop.tsx` paints non-interactive fallback dates and dashes
-beneath the virtualized columns on the UI-thread offset. It is hidden from
-accessibility, and real columns cover it fully.
+The cell picture draws every row for the visible days only, so there
+is no vertical row window. `RowPositions` in `ReorderRow.tsx` keeps each
+displayed habit's position in shared values (row tops, the dragged row's Y, the
+body top and the scroll offset). Names attach to them as before, and the canvas
+reads the same values while drawing, with the dragged row drawn last, so
+reorder, hide, archive and restore motion moves names and cells together.
+[PERFORMANCE.md](PERFORMANCE.md) explains these choices and their measured
+effects.
 
 ### Top bar and future-pull streak
 
@@ -288,16 +287,16 @@ regions keep Today at the geometric centre. Month/year sits in the name-column
 corner beside the day headings and opens the date menu. Month and year are
 separate Text elements with a four-point gap inside one Pressable date button.
 
-Future-pull feedback is text-free: a gradient streak overlays the existing
-divider beneath the date headings, where habit rows start. No new top border is
-added. Its right endpoint stays fixed while its width grows leftwards with the
-pull, up to the date-column viewport width at readiness. It keeps the last width
-during a 180 ms release fade. A single theme grey (`ink(0x8A)`) with alpha
-ramping from zero at left to full at right gives monotonic brightness, without a
-white hotspot or a dimmer right cap. There is no translation or repeating
-shimmer. All updates run on the UI thread; the system Reduce Motion policy
-applies to the fade. The single threshold haptic remains and no overlay covers
-controls.
+Future-pull feedback is text-free: a gradient streak, drawn in the heading
+canvas, lies along the bottom edge of the headings, where habit rows start. No
+new top border is added. Its right endpoint stays fixed while its width grows
+leftwards with the pull, up to the date-area width at the threshold. It keeps
+the last width during a 180 ms release fade. A single theme grey (`ink(0x8A)`)
+with alpha ramping from zero at left to full at right gives monotonic
+brightness, without a white hotspot or a dimmer right cap. There is no
+translation or repeating shimmer. All updates run on the UI thread; the system
+Reduce Motion policy applies to the fade. The single threshold haptic remains
+and no overlay covers controls.
 
 ## Storage
 
@@ -378,8 +377,9 @@ combines Pressable taps/holds with native PanResponder drag recognition. The men
 overlay stays in the grid tree, so opening it does not transfer a held touch to
 another native modal. `useHabitReorder` owns measured row/viewport geometry, an
 unsaved order preview, edge scrolling and interruption cancellation. The real
-rows move: `RowPositions` drives each row's shared `translateY` from a fixed
-top-zero anchor, with swap targets in shared values rather than React state.
+rows move: `RowPositions` drives each name's shared `translateY` from a fixed
+top-zero anchor, and the cell canvas draws each row at the same shared top, with
+swap targets in shared values rather than React state.
 Horizontal scrolling stays on its UI-thread path. One accepted drop persists one
 complete order event. `displayedHabitOrder` keeps hidden and archived slots fixed
 when a filtered subset is reordered.
@@ -510,7 +510,7 @@ display colours are derived.
 Every date uses the same tone: empty cells show their habit colour blended
 against the background, and recorded values keep full colour, including explicit
 numeric zero. The earlier fade for older and future dates was removed (12 October
-2026); date headings therefore no longer subscribe to recorded values.
+2026).
 
 `ColourPicker.tsx` shows Presets and Custom tabs one at a time to avoid a tall
 dialog; the 24 presets occupy four rows at the usual phone width. Native sliders
@@ -550,14 +550,13 @@ Checkbox feedback follows completion/undo. Opening numeric entry gets a selectio
 tick; changed numeric saves and clears use confirmation/undo. A changed colour's
 Done confirms, while preset/tab changes get selection ticks. Unchanged saves,
 unchanged selections, Close/Cancel, typing and continuous sliders are quiet. A
-deliberate Today jump or future menu action gets a selection tick.
+deliberate Today jump or date-picker choice gets a selection tick.
 
 Future pulls track dragging and whether the threshold has ticked on the UI
-thread. Only the active list can request it, once per drag. A fling, follower
-list event or recrossing the same threshold cannot generate repeated ticks.
-Release after that tick reveals dates without an extra pulse. Haptics use the JS
-bridge only for this discrete threshold event; scroll synchronization stays on
-the UI thread.
+thread, inside the canvas pan gesture, so the tick fires once per drag. A fling
+or recrossing the same threshold cannot generate repeated ticks. Release after
+that tick reveals dates without an extra pulse. Haptics use the JS bridge only
+for this discrete threshold event; scrolling and drawing stay on the UI thread.
 
 Settings exposes a saved haptic toggle, enabled by default; the module reads it at
 each feedback event, including threshold events bridged from the UI thread.
@@ -570,23 +569,25 @@ output.
 
 Android testing started on 8 October 2026. Which platform launches first is
 undecided (see [DECISIONS.md](DECISIONS.md)). Keep iOS behaviour unchanged when
-adapting a screen for Android.
+adapting a screen for Android. Since 12 October 2026 the habit grid is the same
+Skia canvas on both phones, including scrolling, the iOS-style future pull and
+far navigation; web is not developed as a product and shows a notice instead of
+the grid.
 
-| Area               | iOS                                 | Android                                                         | Web (layout preview)  |
-| ------------------ | ----------------------------------- | --------------------------------------------------------------- | --------------------- |
-| Date lists         | FlashList recycling                 | FlashList recycling                                             | FlatList              |
-| Future pull        | Native overscroll                   | `FuturePullZone.tsx` pan; reveal remounts lists at the new date | Month menu only       |
-| Far navigation     | Animates to the target              | Lands directly (FlashList re-applies its initial index)         | Animates              |
-| Sheets             | UIKit pageSheet and swipe dismissal | Gesture-handler sheet in `SheetModal.tsx`                       | Same sheet as Android |
-| Date pickers       | Native inline/compact pickers       | Dark `DateCalendar.tsx`                                         | Text field            |
-| Dialog keyboard    | `autoFocus`                         | `useKeyboardFocus.ts`                                           | `autoFocus`           |
-| Haptics            | Expo Haptics                        | Short `Vibration` pulses                                        | Silent                |
-| Storage            | Expo SQLite                         | Expo SQLite                                                     | `localStorage`        |
-| Description editor | `@expo/dom-webview`                 | Falls back to `react-native-webview` where needed (Expo Go)     | DOM                   |
-| App root           | Unchanged tree                      | `GestureHandlerRootView`                                        | Unchanged tree        |
+| Area               | iOS                                 | Android                                                     | Web (layout preview)      |
+| ------------------ | ----------------------------------- | ----------------------------------------------------------- | ------------------------- |
+| Habit grid         | Skia canvas                         | Skia canvas                                                 | Notice ("runs on phones") |
+| Sheets             | UIKit pageSheet and swipe dismissal | Gesture-handler sheet in `SheetModal.tsx`                   | Same sheet as Android     |
+| Date pickers       | Native inline/compact pickers       | Dark `DateCalendar.tsx`                                     | Text field                |
+| Dialog keyboard    | `autoFocus`                         | `useKeyboardFocus.ts`                                       | `autoFocus`               |
+| Haptics            | Expo Haptics                        | Short `Vibration` pulses                                    | Silent                    |
+| Storage            | Expo SQLite                         | Expo SQLite                                                 | `localStorage`            |
+| Description editor | `@expo/dom-webview`                 | Falls back to `react-native-webview` where needed (Expo Go) | DOM                       |
+| App root           | `GestureHandlerRootView`            | `GestureHandlerRootView`                                    | `GestureHandlerRootView`  |
 
-Web is a development convenience: it checks layout and controls, not native
-recycling, text fitting, persistence or frame rates.
+Web is a development convenience: it checks the layout and controls around the
+grid, not the grid itself, text fitting, persistence or frame rates. Skia on the
+web would need CanvasKit and bundled fonts, which the project does not ship.
 
 ## Development tooling
 
@@ -606,9 +607,11 @@ checks.
 - **Sample data.** `src/dev/sampleData.ts` and its companions build an isolated
   in-memory store of fictional history, notes, goals and records for statistics
   review. It never touches real data or backups.
-- **Grid diagnostics.** With the performance flag on, Settings → Development runs
-  Normal / No goal tint / Simple cells comparisons and can send anonymous timing
-  reports to the paired receiver. See [PERFORMANCE.md](PERFORMANCE.md).
+- **Grid diagnostics.** With the performance flag on, Settings → Development
+  runs timed Normal sessions (the earlier No goal tint and Simple cells
+  experiments were removed with the canvas grid) and can send anonymous timing
+  reports to the paired receiver. These are JavaScript and storage timings, not
+  canvas frame rates. See [PERFORMANCE.md](PERFORMANCE.md).
 - **Comparison launchers.** `npm run start:compare-dev` and
   `npm run start:production-js` start paired Expo Go sessions on the same saved
   data with development or production JavaScript.
@@ -624,8 +627,11 @@ checks.
 - **Storage cost per edit.** Each edit revalidates and rewrites the whole
   projection JSON, and startup replays the full log. Native timing with long
   histories is unmeasured; see [PERFORMANCE.md](PERFORMANCE.md).
-- **Width changes remount date lists.** Rotation resets both native lists for
-  correctness; loading fallbacks cover the gap.
+- **Grid accessibility unverified on phones.** The invisible accessibility layer
+  over the canvas has not yet been checked with VoiceOver or TalkBack.
+- **Date-scrolling feel still being tuned.** The founder confirmed the canvas
+  grid feels right; momentum, snapping and pull tuning remain open polish.
+- **No grid on web.** The web preview shows a notice instead of the habit grid.
 - **No release-build profiling yet.** Measurements so far come from development
   JavaScript and production JavaScript in Expo Go; the EAS internal build still
   needs account, signing and device setup ([RELEASING.md](RELEASING.md)).

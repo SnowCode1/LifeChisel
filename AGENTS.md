@@ -71,13 +71,33 @@ preserve earlier icon choices/removals and raw history.
   shared goal cache), bins, observations, the centred smoothed trend and streak runs;
   `categoryColours.ts` derives OKLCH category hues; `outcomeColours.ts` is the
   one colour language. `statisticsFormatting.ts` owns shared display helpers.
-- `src/GridCells.tsx` selects individual entries from the store.
+- `src/canvasGrid/` draws the date area with Skia (founder decision, 12 October
+  2026); there is no second renderer. `useCanvasGrid.tsx` returns two canvases
+  (fixed headings; body inside the vertical ScrollView at full grid height),
+  both drawn with `createPicture` from one shared offset so they cannot drift.
+  `useCanvasGridScroll.ts` owns drag, decay, column snapping, the Today/future
+  boundary, the iOS-style rubber-band future pull (both phones) and `scrollToDay`.
+  `gridGeometry.ts`/`gridDates.ts` hold worklet geometry and integer date maths.
+  Keep all per-frame work on the UI thread; React receives only settles, reveals
+  and arrivals. `useGridModel.ts` prepares cell records on JS in 30-day chunks
+  and re-checks only prepared days whose saved values changed (acknowledgements
+  do nothing); unprepared days draw dashes. Keep the drawing rules ported from
+  the old renderer: background precedence pressed > goal met > Today > plain,
+  rule hairline, both checkbox styles and fitted paragraphs. Day columns are
+  whole physical pixels (`PixelRatio.get()` into `gridLayout`).
   Keep grid callbacks/definitions stable across save acknowledgements. Cache colour
-  levels in `gridAppearance.ts` and retain date identities when extending history.
+  levels in `gridAppearance.ts`.
   See `docs/PERFORMANCE.md`; never infer iPhone frame rates from Node benchmarks.
-- `GridLoadingBackdrop.tsx` paints non-interactive fallback dates/dashes beneath
-  virtualized columns. Keep it on the UI-thread offset, outside the virtualized
-  render window, and hidden from accessibility. Real columns must cover it fully.
+- Cell taps race a gesture-handler Tap with the Pan: press-in hit-tests live
+  `rowTops`, and release on the same cell calls `onCellPress`. Disable taps when
+  not editable, during a drag or in reorder mode; lock scrolling while the menu
+  is open or a drag is active.
+- `GridAccessibilityLayer.tsx` stays mounted: invisible native views follow the
+  shared offset with per-cell `cell-<habit>-<date>` testIDs, roles, checked/
+  disabled states, labels, hints and activation (wording in pure
+  `cellAccessibility.ts`), header dates and an adjustable Dates strip. Never
+  collapse it into one element. It takes touches only while a screen reader is
+  on. Web is not developed: `useCanvasGrid.web.tsx` shows a notice instead.
 - Keep the compact top bar visible, with Today centred and History/Settings at right.
   Month/year stays beside the day headings; future pull streak grows left from the
   fixed right edge of the existing divider beneath the headings. Do not add a border.
@@ -119,8 +139,10 @@ preserve earlier icon choices/removals and raw history.
   it in memory, excluded via `__DEV__` from release, and separate from real data.
   `src/HabitSymbol.tsx` renders optional emoji/Phosphor/Tabler icons; the editor owns
   selection drafts through `src/HabitIconPicker.tsx`. Read HABIT_ICONS.md.
-  `src/ReorderRow.tsx` moves the actual name/cell views together during drag/drop;
-  do not introduce a visually different floating placeholder. Keep native sibling
+  `src/ReorderRow.tsx` moves the actual name views during drag/drop and the canvas
+  draws cells from the same `RowPositions` shared values (`rowTops`, `dragY`,
+  `bodyTop`, `scrollOffset`; dragged row last); do not introduce a visually
+  different floating placeholder. Keep native sibling
   order stable during preview swaps. Send swap targets through shared values, not
   React state that rerenders the grid during touch input. Use one absolute animated Y coordinate
   via translateY from a fixed top: 0 anchor. Do not animate layout top each frame
@@ -134,7 +156,7 @@ preserve earlier icon choices/removals and raw history.
   History/Settings/archive sheet is presented or dismissing. Settings and storage
   use current values immediately; native `AppPanel.onDismiss` releases the latest
   values together. Keep the mounted grid and its inner TypographyProvider stable.
-  Do not defer durable writes, unmount the grid, or rebuild hidden day lists on
+  Do not defer durable writes, unmount the grid, or rebuild prepared days on
   every spacing/text-size choice.
 - `src/gridSizing.ts` owns v18 grid sizes (points or `auto`), legacy mapping and
   automatic rules; `gridLayout.ts`/`rowSpacing.ts` turn them into geometry with font
@@ -157,12 +179,8 @@ preserve earlier icon choices/removals and raw history.
   save failure/retry. Keep an accessible Close button and the underlying grid.
   Do not reintroduce sideways entry or a separate JS overscroll threshold.
 - `src/gridLayout.ts` calculates adaptive column geometry for both orientations.
-- `src/useGridScroll.ts` synchronizes native scrolling on the UI thread; never
-  put per-frame list synchronization back on the JavaScript thread.
-- `src/gridNavigation.ts` owns the future-pull threshold and signed date offsets.
-  Android cannot overscroll, so `src/FuturePullZone.tsx` (Android-only pan, app
-  root `GestureHandlerRootView` on Android only) feeds `useGridScroll`'s
-  `edgePull`; keep the iOS native pull and tree unchanged.
+- `src/gridNavigation.ts` owns `FUTURE_PULL_DISTANCE`, `FUTURE_BATCH` and
+  `futureRevealDay`. The app root uses `GestureHandlerRootView` on all platforms.
 - `src/ColourPicker.tsx` and `src/colors.ts` own preset/custom colours and OKLCH.
 - `src/haptics.ts` owns action feedback; never trigger it from state updaters
   or await it before updating UI. Keep routine scrolling quiet.
@@ -223,8 +241,8 @@ Do not trade reliability or readable controls for the three-second aspiration.
 ## Verification
 
 Run `npm run check` and relevant `npm test` suites after code changes, and `npm run export:ios` when changing
-native-facing imports or Expo config. Web preview helps layout checks but is not
-evidence that iOS runs correctly. Report actual checks and any unverified device
+native-facing imports or Expo config. Web preview shows a notice instead of the
+grid and is not evidence that iOS runs correctly. Report actual checks and any unverified device
 behaviour. Follow `docs/TESTING.md` for phone and release testing.
 Run `npm run export:android` as well when changing platform-specific code. With an
 Android phone on adb, take your own screenshots with `npm run android:screenshot`
@@ -377,11 +395,12 @@ section choices open directly; do not nest a duplicate selected-value dropdown.
 
 v15 added `checkboxStyle`, a strict boxes/marks preference
 (default boxes), outside History/Undo, retaining v1–v14 prefixes and SQL schema 1.
-`GridCheckboxMark.tsx` scales both styles and owns tap-only UI-thread feedback.
-Never animate on cell mount, store acknowledgements, Undo or scroll. Respect
-ReduceMotion.System; rapid taps cancel/restart the short non-bouncy sequence.
-`GridCells.tsx` shades alternating calendar weeks only in live/fallback date
-headings using fixed-date `isShadedWeek` from displayPreferences. Keep the original
+`useCanvasGrid.tsx` scales both styles and owns the tap-only UI-thread pulse
+(1 → 0.94 → 1), run only when an accepted tap flipped the checked state.
+Never animate on mount, store acknowledgements, Undo or scroll. Respect
+ReduceMotion.System; rapid taps restart the short non-bouncy sequence.
+Headings shade alternating calendar weeks only in the date headings using
+`shadedWeekOf` (the fixed-date `isShadedWeek` rule). Keep the original
 quiet header border and future-pull streak unchanged; never shade habit cells.
 Defer checkboxStyle and weekStart with other grid presentation preferences until
 Settings dismisses. A separate rest-day feature was declined; keep scheduling in
@@ -403,38 +422,17 @@ Absent v18 fields still honour v5–v17 `rowSpacing`, `columnSpacing`/`columnDen
 (via `effectiveColumnSpacing`) and `nameColumnWidth`, whose Standard means
 automatic. Read docs/SETTINGS.md and STORAGE.md before changing sizing.
 
-`DateNavigationSheet.tsx` owns the native date-picker draft. `useGridDates.ts`
-owns signed-origin date windows, Today/future navigation, native generation frames,
-readiness and resize anchoring. `HabitGrid.tsx` owns measured outer width, rows and
+`DateNavigationSheet.tsx` owns the native date-picker draft. `useGridDates.ts` is
+a small controller holding `rightmostDay`, `unlockedFuture` and the month/year
+label: `revealFuture` unlocks `FUTURE_BATCH` and animates to tomorrow,
+`returnToToday` animates to 0 then collapses the future, `navigateToDate` unlocks
+the future as needed, and `prepareResize` keeps the rightmost day across width,
+column and font changes. `HabitGrid.tsx` owns measured outer width, rows and
 reorder cancellation; call prepareResize before changing that width. Keep the
-controller in the same mounted grid, not a conditional component. Preserve the
-existing discrete callbacks into useGridScroll; keep old/future entry keys
-exact, date identities shared and windows compact only at final native settling.
-Android FlashList re-applies its initial index after first layout, so far
-navigation on Android lands directly instead of animating its final columns.
-Android disables native anchoring (it follows recycled column views and jumps by
-the render window) and never passes the lists a `contentOffset` (Android keeps
-re-applying it, snapping lists back in a loop). So Android never inserts columns
-before the visible ones in place: it preloads one long-side screenful of future
-days at the narrowest column (`futurePreload`/`futurePad`) beyond the unlocked
-boundary, and `useGridScroll` holds ordinary scrolling there (`lockedDays`). A
-reveal unlocks the preload and animates there with no data change; Today folds
-it back. A pull at the unlocked edge, newer history after a far jump (once a
-gesture settles near its edge) and existing remounts rebuild the lists. Keep
-index/day conversions on the loaded count, boundary rules on the unlocked
-`futureCount`. Android day columns are whole physical pixels (`gridLayout`'s
-pixel ratio): FlashList places undrawn columns by the average measured width,
-so identical widths keep its positions equal to the scroll arithmetic.
-`DateColumns.tsx` owns native FlashList 2.3.3/web FlatList adaptation and the
-frozen native initial index; list keys still reset width/range generations.
+controller in the same mounted grid, not a conditional component.
 `HabitContextMenu.tsx` owns menu measurement/placement, staying mounted when closed
 to retain its measured height. Keep the held name uncovered and close before
 dispatching actions; measurement must not update the grid parent.
-Width changes reset measured lists, using the same stable frame/contentOffset; hold old mount
-events until both current viewports and native onLoad signals are ready, rejecting stale frames.
-Never require an exact total recycler content width to reveal cells; that width is estimated.
-Web FlatList retains its fixed content-size check.
-The fallback offset and native synchronization stay on the UI thread.
 `habitGoals.ts` caches only bounded date/immutable-definition policies (256),
 never entry values/results. Date cache bounds retain the loaded window and
 limited overlap. Do not claim phone frame rates from mock worklets or Node.
@@ -448,15 +446,13 @@ and active habit. Append ordinary compensating edits; never rewind unrelated
 actions or erase raw History. Keep receipts/timers out of persistence/exports.
 
 `useMeasuredRowHeights.ts` batches native wraps, rejects stale geometry and cancels
-on unmount. Geometry readiness shows existing fallback dates/dashes until both
-lists report current viewports and visible items drawn; do not expose mixed layouts or accept old offsets.
-`useHabitReorder` animates the shared row-top record on swaps; ReorderRow consumes
-it directly, without one spring/reaction per cell. Hide/archive/restore transitions
+on unmount.
+`useHabitReorder` animates the shared row-top record on swaps; ReorderRow and the
+canvas consume it directly, without one spring/reaction per cell. Hide/archive/restore transitions
 use one 220 ms shared record animation; geometry changes remain immediate. Idle
 identity changes must not cancel/reset that animation. Quick Undo fades out for
 180 ms after its four-second lifetime. Both respect system Reduce Motion.
-Checkbox marks use native non-interaction tap animations; recycled identities reset
-an earlier pulse. Completion filtering applies behind Settings immediately, unlike
+Completion filtering applies behind Settings immediately, unlike
 presentation size/style deferral. Quick Undo supports all entry dates independent
 of filtering/goals, and archival reverses only the archived field on the current
 habit. Preserve unrelated entries, definition edits and current order. Keep timers
@@ -465,50 +461,26 @@ and receipts outside persistence/export and keep their subscription off the grid
 ## Grid bottleneck diagnostics
 
 performanceModel.ts owns bounded anonymous metric/report validation; performance.ts
-owns warmup-limited temporary Normal/No goal tint/Simple cells runs and aggregate
-counts. Native DevPerformanceControls/transport/lifecycle require `__DEV__` and the
+owns warmup-limited temporary runs and aggregate counts; the canvas grid has no
+reduced renderer modes (`GridExperiment` stays only for report compatibility). Native DevPerformanceControls/transport/lifecycle require `__DEV__` and the
 performance env flag and are excluded from release. Explicit uploads require the
 preview flag too and use paired /performance; receiver rejects extra fields/data
-and stores ignored .dev/performance/ reports separately from PNGs. Preserve
-normal appearance on stop, timeout, inactivity and sample source/reset changes.
+and stores ignored .dev/performance/ reports separately from PNGs. Runs end on
+stop, timeout, inactivity and sample source/reset changes.
 profileSql.ts wraps existing SQL calls only when profiling is enabled, preserving
 transaction, atomic log/projection and error/retry semantics. Time JSON validation
-separately from awaited SQL, but do not add nested durations. Grid ready/onLoad
-signals are not GPU frame measurements; JS timer lateness is not native FPS.
-Keep experiment state outside preferences/history and preserve native default
-checkbox policies in both comparisons. Simple cells are an experiment, not a
-product replacement. benchmark:bottlenecks uses fictional temporary Node SQLite
+separately from awaited SQL, but do not add nested durations. JS timer lateness
+is not native FPS. Keep run state outside preferences/history. benchmark:bottlenecks uses fictional temporary Node SQLite
 files under 256 MiB; never infer iPhone performance from it. Read PERFORMANCE.md.
 
 RowPositions (in ReorderRow.tsx) owns one keyed shared animated-style controller
-per displayed habit at the grid root, outside resetting date lists. Names/cells/
-loading strips attach to that handle; ReorderRow must not recreate a mapper per
-cell. Register before paint and detach only the removed owner's ID; preserve the
-top-zero translateY anchor, stable native sibling order and the real row views.
-GridCheckboxMark allocates tap animation state lazily, starts its first pulse after
-commit and cancels pending/active feedback when the exact cell identity changes.
-useGridRowWindow/gridRowWindow render real cells near the vertical viewport using
-wrapped heights, two-row buckets and overscan. Keep all names measuring and full
-content height. Menus/reordering and the 300 ms identity-change window retain all
-rows through removal/restoration motion. Keep the UI-thread read-only fallback
-independent of this window and preserve dated subscriptions when rows remount.
-
-Native GridDateColumn uses one ordinary Pressable and useGridColumnPress per date;
-gridColumnHit maps full-content Y through measured/omitted rows. Capture the habit
-and date at press-in, retain them through press-out-before-press, and reject a
-changed row/date or disabled edit. During row motion only, hit testing reads
-current shared tops at touch boundaries so an animating row cannot edit its
-neighbour; never read UI positions per frame. Individual accessible row views retain
-roles, checked/disabled states, labels and explicit native activation handlers.
-Do not collapse accessibility into one column. Native text stays native and keeps
-its existing fitting/truncation rules; web keeps per-cell Pressables.
-GridCheckboxLayer batches idle checkbox shapes in one SVG per column. Its
-entry-selected graphics retain current dated defaults/goals and instrument their
-policy work. Pause batching throughout menu/drag/removal/restoration movement;
-the same row views then attach shared animation handles and native marks. Idle
-date rows pass animatedPosition=false, retaining top-zero static transforms
-without animated descriptors. One temporary feedback overlay per tapped column
-hides its corresponding idle shape; external edits/Undo/recycling never pulse.
+per displayed habit at the grid root. Names attach to that handle and the canvas
+reads the same shared values; ReorderRow must not recreate a mapper per row.
+Register before paint and detach only the removed owner's ID; preserve the
+top-zero translateY anchor, stable native sibling order and the real name views.
+Keep all names measuring and full content height. Capture the habit and date at
+press-in and reject a changed cell or disabled edit at release. External
+edits/Undo never pulse.
 
 developmentFeatures.ts supplies the temporary EXPO_PUBLIC_DEV_COMPARISON override
 for paired Saved-data Expo Go sessions. Keep literal `__DEV__` guards on native dev

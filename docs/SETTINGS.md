@@ -114,11 +114,13 @@ four days and 48-point rows instead of three days and 52-point rows. The
 physical screen, not the app window, sets row height, because Android windows
 exclude system bars.
 
-`gridLayout.ts` and `rowSpacing.ts` turn these into geometry. Sizes are shared by
-date headings, cells, loading placeholders and reordering. Measured names stay
+`gridLayout.ts` and `rowSpacing.ts` turn these into geometry. Day columns are
+rounded to whole physical pixels on all platforms, with the name column taking
+the remainder, so the canvas grid draws crisp edges. Sizes are shared by date
+headings, cells, not-yet-prepared dashes and reordering. Measured names stay
 authoritative: wrapped names and numeric units can make a row taller than its
-setting. Changing day columns preserves the name-column width and uses the
-existing rotation/remount path to keep the viewed dates. Text scaling takes
+setting. Changing day columns preserves the name-column width and keeps the
+rightmost viewed date, as rotation does. Text scaling takes
 precedence over fitting many days, so when only one readable column fits,
 different sizes can converge. Changing sizes keeps habit order, entries and the
 horizontal position.

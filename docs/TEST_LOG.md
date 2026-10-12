@@ -1650,7 +1650,7 @@ report and reorder/animation acceptance remain pending.
 
 ### Native column input and batched checkbox shapes
 
-`grid-column-rendering.test.mjs` runs the actual native GridDateColumn branch,
+The grid-column-rendering test (since removed) runs the actual native GridDateColumn branch,
 GridCheckboxLayer and press hook with bounded native-control/SVG mocks. It checks
 one ordinary control and drawing root, per-cell accessibility roles/states,
 native text-fitting props, current dated defaults, explicit Off, press-out-before-
@@ -1721,7 +1721,7 @@ These mocks and the bundle export do not establish physical-iPhone behaviour.
 
 ### Grid/controller and model organization
 
-`grid-coordination.test.mjs` mounts the actual useGridDates hook with bounded
+The grid-coordination test (since removed) mounts the actual useGridDates hook with bounded
 native-scroll mocks. It covers native-position rotation anchoring, rejection of
 old-generation callbacks, ordered layout/draw readiness, shared date identities,
 both-list future reveal, animated Today arrival before future collapse,
@@ -1729,7 +1729,7 @@ single-boundary history expansion, final-settle compaction and distant bounded
 navigation. The actual DateColumns adapter retains its native initial index until
 its generation key changes. The menu test covers uncovered held-name hit regions,
 local measurement with no parent commits and close-before-action ordering.
-`grid-readiness.test.mjs` now extracts the unchanged handlers from useGridDates;
+The grid-readiness test (since removed) now extracts the unchanged handlers from useGridDates;
 existing native/web readiness and useGridScroll tests still apply.
 
 All 331 tests and the single-worker iOS export passed under memory limits.

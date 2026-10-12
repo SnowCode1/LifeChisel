@@ -21,8 +21,13 @@ there and keep this file current.
 
 `npm test` covers dates, goals, statistics, event replay and backups, real
 SQLite storage in Node, the preview receiver, and bounded React/jsdom tests of
-actual hooks and components. Run `npm run check` and the relevant suites after
-every code change; run one suite with the same limits as, for example,
+actual hooks and components. For the canvas grid, `canvas-grid.test.mjs` checks
+its worklet date maths against the Date helpers, column geometry, the rubber
+band, checkbox geometry and cell accessibility state and labels;
+`grid-context-menu.test.mjs` covers the habit menu. Drawing, gestures and frame
+rate are not covered: check those on the phones. Run `npm run check` and the
+relevant suites after every code change; run one suite with the same limits as,
+for example,
 `node --max-old-space-size=256 --test --test-timeout=15000 scripts/storage.test.mjs`.
 On a memory-constrained host, exports can use one bundler worker
 (`npm run export:ios -- --max-workers 1`). Add focused tests when persistence,
@@ -36,8 +41,9 @@ What these checks do not prove:
 - An exported bundle does not validate native compilation, signing,
   installation, phone performance or App Store readiness.
 - Mocked worklets, ready callbacks and JS timer lateness check alignment and work
-  counts, not frame rates. Web previews (React Native Web with FlatList) help with
-  layout but not native text fitting, keyboards, gestures, VoiceOver or speed.
+  counts, not frame rates. The web preview shows a notice instead of the grid
+  (phones only); it helps with other screens' layout but not native text
+  fitting, keyboards, gestures, VoiceOver or speed.
 
 ### Memory and time limits
 
@@ -139,9 +145,11 @@ docs hold the design behind each check.
 ### Grid and entries
 
 - Check/uncheck five habits rapidly: immediate feedback and one short haptic per
-  accepted tap, nothing queued. A swipe starting on a cell must not toggle it.
-  Only tapped marks pulse; cells appearing through scrolling, reload or Undo do
-  not. Tap animations off or Reduce Motion removes the pulse, not the change.
+  accepted tap, nothing queued. A pressed cell highlights; a swipe starting on
+  a cell, or releasing on a different cell, must not toggle it. Only a tapped
+  mark whose state changed pulses; cells appearing through scrolling, reload or
+  Undo do not. Tap animations off or Reduce Motion removes the pulse, not the
+  change.
 - Numbers: recent-total suggestions fill the draft only; Close cancels, Done
   saves. Try a decimal, an explicit zero (recorded) and a clear. Unchanged saves
   and Close give no haptic.
@@ -151,7 +159,8 @@ docs hold the design behind each check.
   every option is prevented.
 - Free text: a multiline paragraph survives reload in full even when the cell
   preview is truncated; blank clears. Text and category cells keep readable
-  12-point text with tail truncation over one to three lines, never shrinking.
+  12-point text with tail truncation over one to three lines, never shrinking;
+  emoji draw. Long numbers shrink to fit, down to 65%.
 - Hide completed today (Daily tracking, off by default): rows meeting their goal
   at Today hide after a 700 ms pause; Track only habits stay; Show completed
   reveals them; other dates show the full list; the next day uses its own results.
@@ -165,19 +174,24 @@ docs hold the design behind each check.
 
 ### Date navigation
 
-- Fling across months on the body and the headings, and reverse: headings, cells
-  and names stay aligned. Loading gaps show correct dates and muted dashes, never
-  over a loaded cell; dashes cannot be tapped and are hidden from screen readers.
+- Fling across months on the body and the headings, and reverse: the grid
+  decelerates and settles on whole columns; headings, cells and names stay
+  aligned. Days not prepared yet show muted dashes briefly, then fill in with
+  their values.
+- Flings toward Today stop there until a deliberate pull.
 - Today from history or future dates returns quickly and continuously; a drag
   interrupts it.
-- Future pull: a short pull bounces back. A farther pull gives one readiness
-  haptic as the streak grows left from the right end of the divider below the
-  dates (no extra tick when crossing back and forth). Release reveals tomorrow
-  beside today with no blank frame; a fling alone unlocks nothing. Pull again at
-  the new edge. Future values stay on their dates and outside statistics.
+- Future pull (the same rubber band on iPhone and Android): a short pull bounces
+  back. A farther pull gives one readiness haptic as the streak grows left from
+  the right end of the divider below the dates (no extra tick when crossing back
+  and forth). Release slides to tomorrow beside today without the grid redrawing;
+  a fling alone unlocks nothing. Pull again at the new edge. Future values stay
+  on their dates and outside statistics.
 - The month/year button jumps to near and distant dates accurately.
-- Rotate deep in history and in future dates: the rightmost date is kept, values
-  stay on their dates, and no mixed layout appears (a brief fallback is fine).
+- Rotate deep in history and in future dates: the rightmost date is kept and
+  values stay on their dates.
+- Date-scrolling feel (deceleration, snapping, rubber band) is still being
+  tuned; note anything that feels off.
 - Closing History, Settings or Statistics (button or swipe) keeps the grid's
   dates and vertical position.
 
@@ -342,30 +356,27 @@ See [GOALS.md](GOALS.md).
   drag only when content is at its top; Back closes sheets.
 - Number, text and new-habit dialogs open the keyboard; its Done key saves.
 - Jump to date and start dates use the dark calendar with a month/year chooser.
-- Far jumps and Today from far away land directly; near ones animate.
-- Future pull: release past the tick slides to tomorrow without the grid
-  blanking and redrawing; scroll both ways, Today, and pull again at the new
-  edge (that second pull may redraw once). Flings toward Today stop there
-  until a deliberate pull. The grid opens on Today, and Today realigns columns
-  exactly with their headings.
-- In the future region, and after a far jump into the past, fling both ways:
-  no jumps, and nothing moves on its own after the finger lifts.
+- Date navigation and the future pull behave as on iPhone (see Date
+  navigation); the grid opens on Today with columns aligned to their headings.
 - Auto sizes on the S21: four days, 130-point names, 48-point rows. Landscape
   clears the camera cutout and navigation bar.
 - Still unchecked: the description editor and toolbar above the keyboard; other
   `Platform.OS === 'ios'` branches (CategoryEditor, GoalVersionForm,
-  DevPreviewCapture); number fitting (`minimumFontScale` is iOS-only); reorder;
-  rapid taps; saved-data reload; backup via share sheet and file picker;
-  TalkBack; haptics.
+  DevPreviewCapture); reorder; rapid taps; saved-data reload; backup via share
+  sheet and file picker; TalkBack; haptics.
 - Expo Go's floating developer button covers part of the grid; real builds lack it.
 
 ### Accessibility
 
-- **Screen readers:** every grid cell is its own element with habit, date, role,
-  state and value (never one combined column). Names offer Edit habit, Reorder
-  habits, Move up, Move down and Archive habit; the background is hidden while
-  the menu is open. Charts adjust item by item; History rows read once; bursts
-  and day headings announce expansion; inactive panels are hidden.
+- **Screen readers:** the canvas grid has an invisible overlay with one element
+  per visible cell (habit, date, role, state and value; never one combined
+  column) and an activate action that edits it like a tap. Date headings read as
+  headers with the full date, and an adjustable Dates strip pages by the visible
+  days on swipe up/down. Not yet checked with VoiceOver or TalkBack on a phone;
+  with neither on, the overlay must not block grid touches. Names offer Edit
+  habit, Reorder habits, Move up, Move down and Archive habit; the background is
+  hidden while the menu is open. Charts adjust item by item; History rows read
+  once; bursts and day headings announce expansion; inactive panels are hidden.
 - **Text size:** 85–150% app text with the phone's larger text, both
   orientations, every screen: content scrolls rather than clipping.
 - **Reduce Motion:** Today return, future reveal, row movement, tap pulses,
@@ -431,11 +442,12 @@ measure, not an achieved claim; acceptance thresholds are still to be agreed.
   predating persistent History. Unresolved; see "Incremental persistence and
   backup" in TEST_LOG.md.
 - **Grid rendering speed:** entry rendering felt noticeably slow on the iPhone in
-  Expo Go development mode (7 October 2026). No Release build has been measured;
-  see [PERFORMANCE.md](PERFORMANCE.md).
-- **Android launch position:** a production-JavaScript launch on the S21 opened
-  three days back with headings about a third of a column off the cells
-  (12 October 2026). See DECISIONS.md.
+  Expo Go development mode (7 October 2026), before the Skia canvas grid
+  replaced that renderer on 12 October. No Release build has been measured; see
+  [PERFORMANCE.md](PERFORMANCE.md).
+- **Date-scrolling feel still being tuned:** the founder confirmed the canvas
+  grid feels right on both phones apart from date-scrolling polish
+  (12 October 2026).
 - **Android number dialog:** with the keyboard open, Close/Done need scrolling.
   Decide whether that is acceptable or the dialog should be more compact.
 - **Android over Wi-Fi:** Expo Go could not reach Metro over Wi-Fi (cause

@@ -85,15 +85,16 @@ draft until Done. These sheets also work from the statistics calendar and entry
 list and nest above habit details. Comments remain deferred.
 
 Grid category/text cells use a 12-point font before app/system scaling, with
-native wrapping and tail ellipsis. Line capacity follows the measured row height
+wrapping and tail ellipsis (Skia paragraphs on the canvas grid, with the system
+font fallback for emoji). Line capacity follows the measured row height
 and combined text scale: shorter rows show two lines; taller rows up to three.
 Wider day columns reveal more text without making letters smaller. Full values
 stay available in editors and to accessibility. The preview is bounded to 32
 Unicode characters for cheap measurement. Unrecorded cells show a dash and
 recorded cells use the habit colour; recording is not completion. Only numeric
-cells use native autosizing: a fitting trial for text was rejected on the iPhone
-because the iOS renderer ignores the proposed `minimumFontScale` limit. Revised
-readability still needs device acceptance.
+cells shrink to fit, down to 65%. An earlier fitting trial for text was rejected
+on the iPhone because the native text renderer ignored the proposed
+`minimumFontScale` limit. Revised readability still needs device acceptance.
 
 ## Success goals
 
@@ -150,10 +151,10 @@ padding. Changing sizes keeps habit order, entries and horizontal position.
 
 `HabitName` registers native responder callbacks; `useHabitReorder` owns the
 temporary order, cancellation, shared geometry, and edge scrolling. `ReorderRow`
-applies the same absolute animated Y position to the actual name and every date
-cell. Only a completed drop reaches the store. The UI-thread horizontal scroll
-synchronization is unchanged. See the React Native
-[Pressable](https://reactnative.dev/docs/0.86/pressable) and
+applies the same absolute animated Y position to the actual name, and the canvas
+grid draws that row's cells at the same shared Y (the dragged row last). Only a
+completed drop reaches the store. Date scrolling is locked during a drag. See
+the React Native [Pressable](https://reactnative.dev/docs/0.86/pressable) and
 [PanResponder](https://reactnative.dev/docs/0.86/panresponder) references.
 
 ### Reorder animation invariants
@@ -163,10 +164,10 @@ floating card, swap flicker, low frame rate, then stutter on fast crossings).
 The founder confirmed the real-row appearance, flicker fix and fast swaps on the
 iPhone on 4 October 2026.
 
-- **Real rows move.** The actual name and date-cell views move with their
-  existing fonts, icons, units, checkboxes, backgrounds and dividers. Only the
-  dragged row's stacking order rises; no separately styled card, shadow, handle
-  or faded copy replaces it.
+- **Real rows move.** The actual name view and the row's canvas-drawn cells move
+  with their existing fonts, icons, units, checkboxes, backgrounds and dividers.
+  Only the dragged row's stacking order rises; no separately styled card,
+  shadow, handle or faded copy replaces it.
 - **Fixed native sibling order.** Preview swaps never reorder native siblings.
   At commit, keyed views may change order, but their absolute positions stay the
   same.
@@ -184,8 +185,9 @@ iPhone on 4 October 2026.
 - **Measure the inner name control,** not the moving wrapper, so movement does
   not report layout to JavaScript every frame.
 - **Shared `RowPositions` handles.** One keyed animated-style controller per
-  displayed habit lives at the grid root; names, cells and loading strips attach
-  to it rather than creating a mapper per cell.
+  displayed habit lives at the grid root; names attach to it rather than
+  creating a mapper per row, and the canvas grid reads the same `rowTops` and
+  drag shared values when drawing cells.
 - **Settling.** Neighbours and the dropped row share an overdamped spring
   (stiffness 650, damping 54, mass 1, energy threshold 0.0001). The held row
   follows the finger without spring delay and, on release, settles to the same

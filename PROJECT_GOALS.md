@@ -234,7 +234,7 @@ The three-second target is an aspiration to measure, not an achieved claim.
 - Repeat with 10, 15, and 20 habits; do not hide scrolling cost from the results.
 - Evaluate numeric entry separately: entering a total is a different task from
   checking a box, and is not automatically subject to the five-in-three target.
-- Use a preview/release build for final timing. Expo Go and web previews help
+- Use a preview/release build for final timing. Expo Go previews help
   layout iteration but do not establish release iOS performance.
 - Check reliability: saved values survive reopening, offline use works, and
   completion never unexpectedly changes other rows' positions.

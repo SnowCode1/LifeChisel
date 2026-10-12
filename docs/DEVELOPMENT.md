@@ -73,10 +73,11 @@ No env file is needed to run the app. `.env.local` only holds the
 - **Android emulator:** with an emulator running, press `a` after `npm start`.
 - **Linux and Windows** cannot run the iOS Simulator, Xcode or `expo run:ios`.
   Use a physical iPhone, and EAS for iOS builds (see [RELEASING.md](RELEASING.md)).
-- **Browser:** `npm run web` is convenient for layout work. It stores data in
-  browser `localStorage` (`src/storage/browserRepository.ts`), not SQLite, and
-  uses FlatList instead of the native FlashList grid. It is not evidence that the
-  app behaves correctly on a phone.
+- **Browser:** `npm run web` is a limited preview. It stores data in browser
+  `localStorage` (`src/storage/browserRepository.ts`), not SQLite, and shows a
+  notice instead of the habit grid, because the Skia canvas grid is built for
+  phones only and web is not developed. It is not evidence that the app behaves
+  correctly on a phone.
 
 ### Portrait and landscape
 
@@ -114,7 +115,7 @@ Expo troubleshooting pages, some of which describe an earlier freeze at SDK 54.
 | `npm run start:clear`           | Start with a cleared Metro cache                                            |
 | `npm run start:tunnel`          | Try a tunnel if Wi-Fi isolation blocks local access                         |
 | `npm run android`               | Forward port 8081 over USB with `adb reverse` and open Expo Go on the phone |
-| `npm run web`                   | Browser preview for layout work (browser storage, not SQLite)               |
+| `npm run web`                   | Limited browser preview; the grid shows a notice (browser storage)          |
 | `npm run typecheck`             | TypeScript checks                                                           |
 | `npm run lint`                  | ESLint checks                                                               |
 | `npm run format`                | Format the repository with Prettier                                         |
@@ -266,14 +267,12 @@ the store. The web preview keeps separate data in browser `localStorage`.
   match SDK 57. After adding a native or Babel-affecting library, restart Metro
   with `npm run start:clear` and fully reload Expo Go so cached transforms do not
   keep the previous configuration.
-- **FlashList.** The native date lists use `@shopify/flash-list` 2.3.3, installed
-  with `npx expo install @shopify/flash-list@2.3.3`. Expo's recommended 2.0.2
-  lacks the inverted layout used here; this newer JavaScript-only version uses
-  the existing new architecture and needs no custom native module. Keep the
-  lockfile pin and test in Expo Go after upgrades. The web build keeps FlatList,
-  so a web check is not native list evidence. See
-  [FlashList usage](https://shopify.github.io/flash-list/docs/usage/) and
-  [v2 architecture requirements](https://shopify.github.io/flash-list/docs/v2-migration/).
+- **Skia.** The habit grid's date area is drawn with
+  `@shopify/react-native-skia` 2.6.2, which Expo Go for SDK 57 bundles. npm
+  blocks the package's install script. Expo Go and EAS builds do not need it
+  approved, but a local native build does: approve the script or run
+  `npx install-skia`. The web build shows a notice instead of the grid, so a web
+  check is not grid evidence.
 - **Date picker.** `@react-native-community/datetimepicker` 9.1.0 has its config
   plugin in `app.json` and is
   [included in Expo Go](https://docs.expo.dev/versions/v57.0.0/sdk/date-time-picker/).
@@ -282,9 +281,10 @@ the store. The web preview keeps separate data in browser `localStorage`.
 - **Animation and controls.** Reanimated, Worklets, the community Slider and
   Expo LinearGradient use SDK-compatible versions available in Expo Go.
   Reanimated's Babel plugin comes from `babel-preset-expo`, so the project has
-  no custom Babel configuration. See
-  [Expo Reanimated setup](https://docs.expo.dev/versions/v57.0.0/sdk/reanimated/)
-  and [UI-thread scroll synchronisation](https://docs.swmansion.com/react-native-reanimated/docs/scroll/scrollTo/).
+  no custom Babel configuration. The grid's scrolling and taps use
+  react-native-gesture-handler with `GestureHandlerRootView` at the app root on
+  all platforms. See
+  [Expo Reanimated setup](https://docs.expo.dev/versions/v57.0.0/sdk/reanimated/).
 - **SVG.** Icons use `react-native-svg` 15.15.4, which Expo Go includes. See the
   [Expo SVG reference](https://docs.expo.dev/versions/v57.0.0/sdk/svg/).
 - **Notes editor.** The full-screen description editor is a bundled Expo
@@ -464,8 +464,8 @@ exercises.
 
 With `EXPO_PUBLIC_DEV_PERFORMANCE=true`, the app records aggregate grid and store
 timings that can be inspected in React Native DevTools, and Settings →
-Development → Grid diagnostics compares the Normal renderer with two temporary
-reductions (No goal tint and Simple cells). Start a run, return to the grid,
+Development → Grid diagnostics records a run of the canvas grid (it has no
+reduced renderer modes to compare). Start a run, return to the grid,
 wait two seconds, then repeat the same scroll and rotation actions. **Stop and
 send** uploads the report through the paired preview receiver, so it also needs
 `EXPO_PUBLIC_DEV_PREVIEW=true`. Reports contain fixed numeric metrics only and
@@ -511,10 +511,9 @@ existing records for scroll tests. Preview capture and Save timings are
 unavailable; use observations or an iPhone screen recording.
 
 Production JavaScript in Expo Go is a useful partial test, not a compiled iOS
-release build: Expo Go remains the native host. FlashList recommends
-release-mode profiling, and React Native warns about development overhead; see
-[FlashList performance](https://shopify.github.io/flash-list/docs/fundamentals/performance/)
-and [React Native performance](https://reactnative.dev/docs/performance). For a
+release build: Expo Go remains the native host. React Native warns about
+development overhead; see
+[React Native performance](https://reactnative.dev/docs/performance). For a
 compiled Release comparison, use the internal preview profile in
 [RELEASING.md](RELEASING.md). Close both terminals to stop them, then scan the
 ordinary port-8081 QR code to return to sample data and development tools.

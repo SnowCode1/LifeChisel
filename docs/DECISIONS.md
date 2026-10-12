@@ -1353,6 +1353,10 @@ when stopped. Desktop tests use fictional temporary databases only; they confirm
 SQL-free entry reads and expose full-projection write costs, without establishing
 native latency. No Skia or storage migration is approved or introduced by this work.
 
+Superseded 12 October 2026 by the
+[Skia canvas grid](#12-october-2026--skia-canvas-grid); the No goal tint
+and Simple cells experiments are removed.
+
 ## 7 October 2026 — Reduce repeated renderer setup and off-screen cell work
 
 Founder authorized renderer improvements without Skia after the first Normal
@@ -1364,6 +1368,9 @@ complete rows during reordering and removal/restoration transitions. Names,
 measured heights and content geometry stay complete. Existing loading fallbacks,
 native horizontal sync, date identity and storage invariants remain. The width
 reset is retained for correctness; device timing improvement remains unverified.
+
+Superseded 12 October 2026 by the
+[Skia canvas grid](#12-october-2026--skia-canvas-grid).
 
 ## 7 October 2026 — Batch stationary native checkbox rendering and input
 
@@ -1378,6 +1385,9 @@ the same row views. Local tap feedback uses one temporary overlay per column.
 Date recycling/cross-row releases/disabled errors reject edits. Web retains the
 per-cell controls. No Skia, storage migration or dependency was added. Fresh phone
 timing and native touch/accessibility checks remain required.
+
+Superseded 12 October 2026 by the
+[Skia canvas grid](#12-october-2026--skia-canvas-grid).
 
 ## 7 October 2026 — Compare development overhead before more rendering work
 
@@ -1664,14 +1674,14 @@ signing and device enrolment are still prerequisites, not completed deployment.
 
 ## 10 October 2026 — Android future pull
 
-- Founder report: pulling past Today for future dates did nothing on Android.
-  It never worked there: the pull relies on iOS rubber-banding to a negative
-  scroll offset, and Android lists stop at the edge. Assistant change: an
-  Android-only pan (`FuturePullZone.tsx`) recognises a leftward pull that
-  starts at the newest date and drives the same streak, threshold haptic and
-  release reveal. Assistant choices to check on the phone: two-thirds finger
-  speed (about 96 points to the threshold), no column movement during the pull,
-  and a scroll that reaches the edge must lift and pull again. iOS is unchanged.
+- Founder report: pulling past Today for future dates did nothing on Android. It
+  never worked there: the pull relies on iOS rubber-banding to a negative scroll
+  offset, and Android lists stop at the edge. Assistant change: an Android-only
+  pan (`FuturePullZone`, since removed) recognises a leftward pull that starts
+  at the newest date and drives the same streak, threshold haptic and release
+  reveal. Assistant choices to check on the phone: two-thirds finger speed
+  (about 96 points to the threshold), no column movement during the pull, and a
+  scroll that reaches the edge must lift and pull again. iOS is unchanged.
 - Founder report: the pull and its haptic worked, but date navigation then
   drifted by weeks on its own. The reveal inserts 30 columns and relies on
   FlashList to keep the visible dates in place, then animates to the revealed
@@ -1686,6 +1696,9 @@ signing and device enrolment are still prerequisites, not completed deployment.
   rubber band keeps that near one column), and the Android pull had no such
   limit, so long pulls landed several days ahead. Assistant change: Android
   always continues by one column, so tomorrow lands beside the old edge.
+- Superseded 12 October 2026 by the
+  [Skia canvas grid](#12-october-2026--skia-canvas-grid): both phones now
+  use the same iOS-style rubber-band pull and the Android pull zone is removed.
 
 ## 10 October 2026 — Calmer History with bursts, filters and a floating Undo bar
 
@@ -1802,6 +1815,9 @@ signing and device enrolment are still prerequisites, not completed deployment.
 - Founder confirmed on the phone the same day: the loop and teleports are gone.
   The blank-and-redraw at a future reveal remains (it is that remount); the
   founder asked to remove it by loading future dates up front.
+- Superseded 12 October 2026 by the
+  [Skia canvas grid](#12-october-2026--skia-canvas-grid), which removes
+  FlashList.
 
 ## 12 October 2026 — Android future dates load up front
 
@@ -1828,8 +1844,12 @@ signing and device enrolment are still prerequisites, not completed deployment.
 - Founder confirmed on the Galaxy S21 the same day: the future pull is stable.
   Open: a production-JavaScript launch opened three days back, with the date
   headings about a third of a column off the cells. Suspected cause: FlashList
-  re-applying its initial index after launch. Superseded if the Skia grid test
-  replaces FlashList.
+  re-applying its initial index after launch.
+- Superseded 12 October 2026 by the
+  [Skia canvas grid](#12-october-2026--skia-canvas-grid). Removing
+  FlashList resolves the launch-position issue; the preload, Android remounts
+  and Android-only pixel snapping are gone (columns are now whole pixels on all
+  platforms).
 
 ## 12 October 2026 — Date fading removed
 
@@ -1841,3 +1861,36 @@ signing and device enrolment are still prerequisites, not completed deployment.
   drove the fade), removing one live store subscription per visible heading. The
   saved `dateFading` preference still validates and replays from older logs and
   backups but has no effect; no storage version change.
+
+## 12 October 2026 — Skia canvas grid
+
+- Evidence: in production JavaScript, Android scrolling peaked around 45 fps in
+  fast flings. A throwaway Skia test screen held a steady 120 fps on the Galaxy
+  S21.
+- Founder decisions: build the Skia canvas grid for real, replacing the
+  FlashList grid directly with no parallel renderer. Make the future pull
+  iOS-style on both phones. Phones only: web is not developed, so the web
+  preview shows a notice instead of the grid.
+- Assistant implementation (`src/canvasGrid/`, `@shopify/react-native-skia`
+  2.6.2, bundled in Expo Go 57): the date headings and cells are drawn on two
+  canvases from one UI-thread scroll offset, so they cannot drift. A
+  gesture-handler pan scrolls with deceleration and snaps to whole columns;
+  ordinary flings stop at Today, and dragging past it rubber-bands, drives the
+  streak and reveals 30 future days without redrawing the list. Cell content is
+  prepared on the JavaScript thread in 30-day chunks. Taps keep the same entry
+  actions, haptics, dialogs and quick Undo. Invisible native views mirror every
+  visible cell for screen readers, with an adjustable date strip. Day columns
+  are whole physical pixels on all platforms for crisp edges. The app root uses
+  `GestureHandlerRootView` on iOS too.
+- Removed: FlashList, the native/web date-column renderer, the Android future
+  pull zone, the Skia test screen and the No goal tint and Simple cells
+  diagnostics experiments.
+- Founder confirmed on the phones the same day that the canvas grid "feels
+  right", apart from date-scrolling polish still to tune. VoiceOver and
+  TalkBack checks of the accessibility overlay are still pending.
+- Supersedes the earlier "no Skia" renderer decisions of 7 October 2026, the
+  FlashList move and its workarounds (Android far jumps landing without a slide,
+  [Android future pull](#10-october-2026--android-future-pull) remounts,
+  [Android date-list jumps](#12-october-2026--android-date-list-jumps) and
+  [Android future dates load up front](#12-october-2026--android-future-dates-load-up-front)).
+  The open Android launch-position issue is resolved by removing FlashList.
