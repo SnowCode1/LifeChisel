@@ -11,8 +11,8 @@ rules and formats.
 OnPurpose is one React Native screen written in strict TypeScript on Expo SDK 57.
 The home view is the habit-by-day grid. History, Settings, Notes/Statistics and
 the editors open as native sheets or dialogs above it, so the grid stays mounted
-underneath. There is no navigation library, backend, account flow, scheduler or
-analytics SDK. It runs on iOS and Android devices (which launches first is
+underneath. There is no navigation library, backend, account flow or
+scheduler, and no analytics SDK yet (crash reporting and analytics are planned). It runs on iOS and Android devices (which launches first is
 undecided); web is a layout preview.
 
 ```text

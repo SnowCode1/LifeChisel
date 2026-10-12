@@ -31,8 +31,10 @@ being decided. Data stays on the device: there is no account, server or sync.
   System, dark and light themes with custom backgrounds. Adjustable grid sizes,
   text size and checkbox style. An option to hide habits completed today.
 
-Not yet built: comments, skipped or excused days, and sync. The plan is a free
-tier plus a one-time unlock; see [project goals](PROJECT_GOALS.md).
+Not yet built: importing from Loop Habit Tracker, comments, skipped or excused
+days, and sync. Crash reporting and usage analytics are planned. Pricing will be
+five habits free and a one-time US$9.99 unlock for more; see
+[project goals](PROJECT_GOALS.md).
 
 ## Getting started
 

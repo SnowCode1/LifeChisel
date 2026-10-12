@@ -1512,6 +1512,7 @@ signing and device enrolment are still prerequisites, not completed deployment.
 - Open: the free-tier limit. The founder first proposed five active habits and
   is weighing a seven-day free trial instead. Assistant recommendation: an
   active-habit cap without a time limit; archived habits do not count.
+  Decided 12 October 2026: five habits and a US$9.99 price (see that entry).
 - In-app purchase needs a development build; Expo Go cannot test it. Choose the
   purchase library (for example `expo-iap` or RevenueCat) when implementing.
 
@@ -1753,3 +1754,28 @@ signing and device enrolment are still prerequisites, not completed deployment.
   name or app icon, so forks must use their own.
 - Status: drafted by the assistant and not yet reviewed by a lawyer. Connect
   cla-assistant.io before merging the first outside pull request.
+
+## 12 October 2026 — Price, free tier, analytics, Loop import and F-Droid
+
+- Founder decisions:
+  - The one-time unlock costs US$9.99, replacing the round US$10 of 10 October.
+  - The free tier allows five habits. The paywall appears when creating a sixth
+    habit, never during onboarding; reaching the limit still only prevents
+    adding more.
+  - Crash reporting and product analytics are supported (planned, not built),
+    for example to measure retention and paywall views against purchases.
+  - The app will import history from Loop Habit Tracker's CSV and SQLite
+    exports. Export and the Loop import are never paywalled.
+  - An F-Droid build without proprietary libraries is wanted, at the lowest
+    priority.
+- Founder answers (same day): archived habits do not count toward the five.
+  The 12 preset habits are for development only. Release builds will start
+  with no habits and a short first-run walkthrough showing how to create the
+  first ones (not built yet).
+- Assistant proposals, awaiting founder review: keep habit names, notes and
+  entry values out of analytics and crash reports; disclose both in the privacy
+  policy and store forms; consider an opt-out in Settings. F-Droid flags
+  tracking, so analytics may need to be left out of that build.
+- Assistant guardrail: write the Loop importer against the export formats and
+  never copy or port Loop's GPL code. The founder can only publish code on the
+  App Store under non-GPL terms if the founder holds its copyright.

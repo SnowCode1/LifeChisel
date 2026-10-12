@@ -10,7 +10,8 @@ Which platform launches first is undecided (see the 12 October 2026 entry in
 [DECISIONS.md](DECISIONS.md)). The iPhone release matters more; launching on
 Android first is cheaper, since Google Play registration is a one-time US$25
 against US$99 a year for Apple. This guide covers the App Store path; the Google
-Play path is not yet documented here.
+Play path is not yet documented here. An F-Droid build without proprietary
+libraries is also wanted, at the lowest priority.
 
 ## 1. Validate on the phone
 
@@ -88,15 +89,20 @@ the iOS Simulator still require macOS.
 
 ## 3. Add the in-app unlock
 
-The founder decided on a free tier plus a one-time US$10 unlock for unlimited
-use (10 October 2026; see [DECISIONS.md](DECISIONS.md)). The free-tier limit is
-still open. None of this is implemented yet. The plan:
+The founder decided on a free tier of five habits plus a one-time US$9.99
+unlock for unlimited habits (10 and 12 October 2026; see
+[DECISIONS.md](DECISIONS.md)). None of this is implemented yet. The plan:
 
-- Decide the free-tier limit. Payment must never lock existing records, export,
-  backups or History; reaching the limit only prevents adding more.
-- Add a StoreKit in-app purchase library, such as `expo-iap` or RevenueCat's
-  `react-native-purchases`. It is native code, so it needs the development build
-  from step 2; Expo Go cannot test purchases. See Expo's
+- Enforce the limit: the paywall appears when creating a sixth habit, never
+  during onboarding. Payment must never lock existing records, export, backups,
+  History or the Loop import; reaching the limit only prevents adding more.
+  Archived habits do not count. Release builds start without the development
+  preset habits; a short first-run walkthrough shows how to create the first
+  ones.
+- Add an in-app purchase library that covers StoreKit and Google Play Billing,
+  such as `expo-iap` or RevenueCat's `react-native-purchases`. It is native
+  code, so it needs the development build from step 2; Expo Go cannot test
+  purchases. See Expo's
   [in-app purchases guide](https://docs.expo.dev/guides/in-app-purchases/).
 - In App Store Connect, the Account Holder signs the Paid Apps Agreement and
   completes the tax and banking details it requires. Then create the unlock as a
@@ -140,9 +146,10 @@ Remaining items:
   [CONTRIBUTING.md](../CONTRIBUTING.md)).
 - Implement the unlock and free-tier limit (step 3).
 - Decide the support contact/URL and data recovery expectations.
-- Provide a privacy policy and accurate App Store privacy disclosures based on
-  the app's actual code and dependencies. Re-evaluate if analytics or sync is
-  added.
+- Provide a privacy policy and accurate store disclosures (Apple's privacy
+  labels, Google's Data safety form) based on the app's actual code and
+  dependencies, including the planned crash reporting and analytics. Update them
+  if sync is added.
 - Complete App Store metadata, age rating, export compliance, review information
   and any applicable accessibility declarations using the current submission
   flow.

@@ -30,11 +30,20 @@ and uncertainty about whether something was saved.
   and the physical iPhone (an iPhone 16 Pro) is the primary test device.
 - Release the source under GPLv3 or later, with the founder as sole copyright
   holder. The repository is public at https://github.com/SnowCode1/OnPurpose.
-- Earn income through a free tier plus a one-time US$10 unlock, with no
-  subscription. Payment never locks existing records, export, backups or History.
+- Earn income through a free tier of five active habits (archived habits do
+  not count) plus a one-time US$9.99
+  unlock, with no subscription. The paywall appears when creating a sixth habit,
+  never during onboarding. Payment never locks existing records, export,
+  backups, History or the Loop import; reaching the limit only prevents adding
+  more.
 - Use [Loop Habit Tracker for Android](https://github.com/iSoron/uhabits) as a
   product reference. This is inspiration for behaviour, not a decision to copy
   its code, assets, scoring formula, or every feature.
+- Import history from Loop Habit Tracker's CSV and SQLite exports, with a parser
+  written against the export formats rather than adapted from Loop's code.
+- Support crash reporting and product analytics, disclosed in the privacy policy
+  and store forms.
+- Offer an F-Droid build without proprietary libraries, at the lowest priority.
 - Plan for approximately 10–20 habits.
 - Maintain project goals, agent guidance including CLAUDE.md, and a docs folder.
 
@@ -237,7 +246,7 @@ Final acceptance thresholds are still to be agreed. See [TESTING.md](docs/TESTIN
 ## Current state
 
 The app runs on the founder's iPhone and an Android test phone through Expo Go.
-It starts with 12 sample habits, seeded once, which can be edited and archived;
+Development builds start with 12 preset habits, seeded once, which can be edited and archived;
 archived habits can be deleted, with Undo available. The grid shows as many day columns as fit (typically
 four on the test iPhone in portrait, more in landscape, fewer with larger text).
 It scrolls into the past, returns to Today, reveals future dates with a
@@ -298,7 +307,7 @@ Permanent erasure of deleted data is also deferred.
 | Which app changes enter the history; how do deletion and undo work?    | Active habit actions; preferences excluded; archived Delete undoable; erasure open |
 | Export/import format, backup location, and cross-device sync?          | Versioned JSON change-log backup; all older versions import; sync deferred         |
 | Any reminders or widgets required for version one?                     | Open                                                                               |
-| Free, paid, donations, or another model?                               | Free tier plus one-time US$10 unlock; free-tier limit (habit cap or trial) open    |
+| Free, paid, donations, or another model?                               | Five free habits plus a one-time US$9.99 unlock                                    |
 | Licence and copyright holder?                                          | GPLv3 or later; LICENSE added, copyright Daniel Adams                              |
 | Final name and visual personality?                                     | Name open; System/Dark/Light themes (Dark default) and habit colours confirmed     |
 | iOS version, Expo account, Apple Developer membership?                 | iPhone 16 Pro confirmed; EAS preview profile prepared; account/OS status open      |
@@ -326,12 +335,16 @@ Permanent erasure of deleted data is also deferred.
    starting with backup restore and older Undo, before relying on the app daily.
 3. Set up internal builds and store testing: the Expo project, a provisional
    bundle identifier, the developer accounts and signing.
-4. Decide the free-tier limit (an active-habit cap or a free trial) and build the
-   in-app unlock, which needs a development build rather than Expo Go.
-5. Discuss an explicit “skipped/not applicable” value before relying on streaks,
+4. Build the in-app unlock and five-habit limit, which need a development build
+   rather than Expo Go, and the first-run walkthrough that replaces the
+   development preset habits in release builds.
+5. Build the Loop import, tested on real Loop backups.
+6. Add crash reporting and analytics, with matching privacy disclosures.
+7. Discuss an explicit “skipped/not applicable” value before relying on streaks,
    so intentionally skipping a habit need not look like a missed day.
-6. Design comments, including whether they attach to a habit, a day or an entry.
-7. Choose the final name and bundle identifier before store submission.
+8. Design comments, including whether they attach to a habit, a day or an entry.
+9. Choose the final name and bundle identifier before store submission.
+10. Last: an F-Droid build without proprietary libraries.
 
 This ordering is an assistant proposal, not an approved requirement. Keep further
 ideas connected to reducing cognitive friction rather than adding screen clutter.

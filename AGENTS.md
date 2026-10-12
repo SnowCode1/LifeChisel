@@ -35,10 +35,17 @@ sheet, and user-chosen stable row order.
 Protect stable row positions, direct access to the list, and immediate feedback.
 Do not add navigation, dashboards, celebrations, login, or a backend without a
 requirement. Distinguish founder decisions from assistant proposals in the docs.
+Crash reporting and product analytics are planned; keep habit names, notes and
+entry values out of them unless the founder decides otherwise. A Loop Habit
+Tracker import is planned: write it against Loop's export formats and never copy
+or port Loop's GPL code, because App Store publication depends on the founder
+holding the copyright.
 Incremental change storage and export are confirmed requirements; read
 `docs/STORAGE.md` before implementing persistence. Entries, habit definitions and
 preferences persist locally. Sample habits are initialized
 once; never reset or reseed an existing store during loading or an error.
+The 12 presets are for development only: release builds will start empty with
+a short first-run walkthrough (not built yet).
 `src/storage/presetIcons.ts` applies preset icons as normal undoable edits;
 preserve earlier icon choices/removals and raw history.
 
@@ -258,7 +265,9 @@ Keep deployment and signing manual until release automation is deliberately set
 up. Do not claim App Store readiness from a successful JavaScript bundle export.
 Preserve the Expo template notice in `docs/licenses/EXPO_TEMPLATE_LICENSE.txt`.
 The project is GPLv3-or-later (LICENSE; copyright notice in README). Pricing is a
-free tier plus a one-time US$10 unlock; its free limit, the final bundle
+free tier of five active habits (archived habits do not count) plus a one-time
+US$9.99 unlock. Never paywall existing
+records, export, backups, History or the Loop import. The final bundle
 identifier and the final brand remain open.
 
 `src/habitCompletion.ts` centralizes completion rules; do not infer completion
