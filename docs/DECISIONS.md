@@ -1942,6 +1942,17 @@ signing and device enrolment are still prerequisites, not completed deployment.
   Settings → Appearance → Cells as saved preferences (storage v20, `before:
 null` until chosen). Defaults are still to be chosen; all start Off with a
   55% connector.
+- Founder revision (same day): remove Outlines only on Today (it looked odd;
+  its v20 kind still replays), rename Missed days to Missed day crosses and
+  default it On, and offer Round checkboxes as a Circles checkbox style. Make
+  Appearance read as one grid page: the controls are grouped as Theme, Size,
+  Checkboxes and Days under a live preview, pinned on portrait phones, that
+  draws with the grid's own painter and shows every cell setting, with a
+  Preview bar to collapse it.
+- Founder decision (same day): default to Circles, Streak numbers and Joined
+  checkboxes, with Missed day crosses on and a 55% connector. Because
+  `before` stays null until chosen, these defaults apply to everyone who has
+  not chosen otherwise, without rewriting saved data.
 - Assistant implementation: `CellState.schedule` (due, off or none; period
   quotas and tracking-only habits are never missed per day) feeds the canvas;
   `checkedStreak` counts streaks from saved values.

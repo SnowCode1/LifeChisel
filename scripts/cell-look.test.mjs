@@ -87,10 +87,13 @@ test('v20 cell look preferences persist in SQLite/backup outside History and Red
       () =>
         applyChange(store.getSnapshot().replay.state, {
           ...change,
-          before: cellLookDefaults[change.kind],
+          // A non-null before: the default is not a stored value.
+          before:
+            typeof change.after === 'boolean'
+              ? !change.after
+              : cellLookDefaults.connectorThickness,
         }),
       /precondition/,
-      'the default is not a stored value',
     );
     assert.equal(store.change(change), true);
     assert.throws(
@@ -119,8 +122,9 @@ test('v20 cell look preferences persist in SQLite/backup outside History and Red
   store = new ChangeStore(repo, meta);
   await store.load();
   const state = store.getSnapshot().replay.state;
+  // Outlines only on Today was retired: still replayed, no longer drawn.
+  assert.equal(state.todayOutlines, true);
   assert.deepEqual(cellLookOf(state), {
-    todayOutlines: true,
     missedDays: true,
     joinedCheckboxes: true,
     streakNumbers: true,

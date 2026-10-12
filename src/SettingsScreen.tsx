@@ -7,7 +7,6 @@ import { InfoNote } from './InfoNote';
 import Slider from '@react-native-community/slider';
 import { useState } from 'react';
 import {
-  checkboxStyleOptions,
   type CellLook,
   type CellLookKind,
   type CheckboxStyle,
@@ -15,7 +14,11 @@ import {
   type WeekStart,
 } from './displayPreferences';
 import type { GridSize, GridSizeKind, GridSizing } from './gridSizing';
-import { GridLivePreview, GridSizeSettings } from './GridSizeSettings';
+import {
+  GridLivePreview,
+  GridSizeSettings,
+  type PreviewAppearance,
+} from './GridSizeSettings';
 import type { StoreSnapshot } from './storage/store';
 import { useSheetScroll } from './SheetModal';
 import { BackgroundSettings, type ThemePreference } from './BackgroundSettings';
@@ -26,6 +29,18 @@ import {
   type ThemeMode,
 } from './theme';
 import { themedStyles, useTheme } from './ThemeContext';
+
+// Checkbox style and round checkboxes, chosen together as one shape.
+const checkboxShapeOptions = [
+  { value: 'squares', label: 'Squares' },
+  { value: 'circles', label: 'Circles' },
+  { value: 'marks', label: 'Ticks & crosses' },
+] as const;
+type CheckboxShape = (typeof checkboxShapeOptions)[number]['value'];
+
+// Whether the pinned Appearance preview is collapsed, remembered for this app
+// session (it starts open).
+let previewCollapsed = false;
 
 export const settingsTitles = {
   index: 'Settings',
@@ -165,10 +180,12 @@ function Toggle({
 // Saved on release, like the grid size sliders.
 function ConnectorThickness({
   value,
+  onDraft,
   onChange,
   disabled,
 }: {
   value: number;
+  onDraft: (value: number | null) => void;
   onChange: (value: number) => void;
   disabled: boolean;
 }) {
@@ -193,8 +210,14 @@ function ConnectorThickness({
         thumbTintColor={theme.ink(0xee)}
         accessibilityLabel="Connector thickness"
         accessibilityValue={{ text: `${draft} percent of the checkbox` }}
-        onValueChange={(next) => setDraft(Math.round(next / 5) * 5)}
-        onSlidingComplete={(next) => onChange(Math.round(next / 5) * 5)}
+        onValueChange={(next) => {
+          setDraft(Math.round(next / 5) * 5);
+          onDraft(Math.round(next / 5) * 5);
+        }}
+        onSlidingComplete={(next) => {
+          onDraft(null);
+          onChange(Math.round(next / 5) * 5);
+        }}
       />
     </View>
   );
@@ -261,13 +284,68 @@ export function SettingsScreen(p: Props) {
   const count = p.snapshot.replay.state.habits.filter((h) => h.archived).length;
   const sheetScroll = useSheetScroll();
   const styles = useStyles();
+  const window = useAppWindowDimensions();
   const backgroundScheme =
     p.page === 'darkBackground'
       ? 'dark'
       : p.page === 'lightBackground'
         ? 'light'
         : null;
-  return (
+  // Slider drafts show in the preview while dragging; each saves on release.
+  const [sizeDrafts, setSizeDrafts] = useState<
+    Partial<Record<GridSizeKind, number>>
+  >({});
+  const [connectorDraft, setConnectorDraft] = useState<number | null>(null);
+  const activeHabits = p.snapshot.replay.state.habits.filter(
+    (habit) => !habit.archived,
+  );
+  const appearance: PreviewAppearance = {
+    checkboxStyle: p.checkboxStyle,
+    cellLook:
+      connectorDraft === null
+        ? p.cellLook
+        : { ...p.cellLook, connectorThickness: connectorDraft },
+    weekDividers: p.weekDividers,
+    weekStart: p.weekStart,
+  };
+  const preview = (
+    <GridLivePreview
+      sizing={p.sizing}
+      drafts={sizeDrafts}
+      gridWidth={p.gridWidth}
+      habits={activeHabits}
+      appearance={appearance}
+      caption
+    />
+  );
+  // On portrait phones the preview stays pinned above the Appearance controls,
+  // so every grid setting below it changes something visible.
+  const [collapsed, setCollapsed] = useState(previewCollapsed);
+  const toggleCollapsed = () => {
+    previewCollapsed = !collapsed;
+    setCollapsed(!collapsed);
+  };
+  const pinPreview =
+    p.page === 'appearance' &&
+    window.height >= 640 &&
+    window.height > window.width;
+  const shape: CheckboxShape =
+    p.checkboxStyle === 'marks'
+      ? 'marks'
+      : p.cellLook.roundCheckboxes
+        ? 'circles'
+        : 'squares';
+  const changeShape = (next: CheckboxShape) => {
+    if (next === 'marks') {
+      p.onCheckboxStyleChange('marks');
+      return;
+    }
+    if (p.checkboxStyle !== 'boxes') p.onCheckboxStyleChange('boxes');
+    const round = next === 'circles';
+    if (round !== p.cellLook.roundCheckboxes)
+      p.onCellLookChange('roundCheckboxes', round);
+  };
+  const scroll = (
     <ScrollView
       {...sheetScroll}
       key={p.page}
@@ -331,7 +409,8 @@ export function SettingsScreen(p: Props) {
       )}
       {p.page === 'appearance' && (
         <>
-          <Group>
+          {!pinPreview && <Group>{preview}</Group>}
+          <Group title="Theme">
             <Choice
               label="Theme"
               value={p.themeMode}
@@ -354,13 +433,12 @@ export function SettingsScreen(p: Props) {
               onPress={() => p.onPage('lightBackground')}
             />
           </Group>
-          <Group>
+          <Group title="Size">
             <GridSizeSettings
               sizing={p.sizing}
               gridWidth={p.gridWidth}
-              habits={p.snapshot.replay.state.habits.filter(
-                (habit) => !habit.archived,
-              )}
+              drafts={sizeDrafts}
+              onDrafts={setSizeDrafts}
               editable={!disabled}
               onChange={p.onGridSizeChange}
             />
@@ -374,50 +452,16 @@ export function SettingsScreen(p: Props) {
               />
             </View>
           </Group>
-          <Group>
+          <Group title="Checkboxes">
             <Choice
-              label="Checkbox style"
-              value={p.checkboxStyle}
-              options={checkboxStyleOptions}
-              onChange={p.onCheckboxStyleChange}
-              disabled={disabled}
-            />
-            <Toggle
-              label="Week dividers"
-              value={p.weekDividers}
-              onChange={p.onWeekDividersChange}
-              disabled={disabled}
-            />
-            <Toggle
-              label="Tap animations"
-              value={p.tapAnimations}
-              onChange={p.onTapAnimationsChange}
-              disabled={disabled}
-            />
-          </Group>
-          <Group title="Cells">
-            <Toggle
-              label="Outlines only on Today"
-              value={p.cellLook.todayOutlines}
-              onChange={(value) => p.onCellLookChange('todayOutlines', value)}
-              disabled={disabled}
-            />
-            <Toggle
-              label="Missed days"
-              value={p.cellLook.missedDays}
-              onChange={(value) => p.onCellLookChange('missedDays', value)}
+              label="Style"
+              value={shape}
+              options={checkboxShapeOptions}
+              onChange={changeShape}
               disabled={disabled}
             />
             {p.checkboxStyle === 'boxes' && (
               <>
-                <Toggle
-                  label="Round checkboxes"
-                  value={p.cellLook.roundCheckboxes}
-                  onChange={(value) =>
-                    p.onCellLookChange('roundCheckboxes', value)
-                  }
-                  disabled={disabled}
-                />
                 <Toggle
                   label="Streak numbers"
                   value={p.cellLook.streakNumbers}
@@ -438,6 +482,7 @@ export function SettingsScreen(p: Props) {
                   <ConnectorThickness
                     key={p.cellLook.connectorThickness}
                     value={p.cellLook.connectorThickness}
+                    onDraft={setConnectorDraft}
                     onChange={(value) =>
                       p.onCellLookChange('connectorThickness', value)
                     }
@@ -446,10 +491,30 @@ export function SettingsScreen(p: Props) {
                 )}
               </>
             )}
+            <Toggle
+              label="Tap animations"
+              value={p.tapAnimations}
+              onChange={p.onTapAnimationsChange}
+              disabled={disabled}
+            />
+          </Group>
+          <Group title="Days">
+            <Toggle
+              label="Missed day crosses"
+              value={p.cellLook.missedDays}
+              onChange={(value) => p.onCellLookChange('missedDays', value)}
+              disabled={disabled}
+            />
+            <Toggle
+              label="Week dividers"
+              value={p.weekDividers}
+              onChange={p.onWeekDividersChange}
+              disabled={disabled}
+            />
           </Group>
           <InfoNote
             label="About appearance"
-            text="System follows your phone’s light or dark mode. Text, controls and habit colours adjust to each background; your saved habit colours never change. Automatic sizes adapt to this screen; moving a slider sets an exact size, and Reset returns to automatic. Text size applies everywhere and follows your phone’s text size too. Outlines only on Today leaves other empty days blank but tappable. Missed days marks past scheduled days that missed their goal with a quiet cross and leaves unscheduled days blank. Streak numbers count each checked day’s place in its streak, and Joined checkboxes connect checked neighbours."
+            text="System follows your phone’s light or dark mode. Text, controls and habit colours adjust to each background; your saved habit colours never change. Automatic sizes adapt to this screen; moving a slider sets an exact size, and Reset returns to automatic. Text size applies everywhere and follows your phone’s text size too. Streak numbers show each checked day’s place in its streak, and Joined checkboxes connect checked neighbours. Missed day crosses mark past scheduled days that missed their goal and leave unscheduled days blank. The grid shows changes when Settings closes; the preview shows them straight away."
           />
         </>
       )}
@@ -475,9 +540,8 @@ export function SettingsScreen(p: Props) {
             <GridLivePreview
               sizing={p.sizing}
               gridWidth={p.gridWidth}
-              habits={p.snapshot.replay.state.habits.filter(
-                (habit) => !habit.archived,
-              )}
+              habits={activeHabits}
+              appearance={appearance}
             />
           }
         />
@@ -563,8 +627,56 @@ export function SettingsScreen(p: Props) {
       )}
     </ScrollView>
   );
+  if (!pinPreview) return scroll;
+  return (
+    <View style={{ flex: 1 }}>
+      <View style={styles.pinned}>
+        <View style={styles.group}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={
+              collapsed ? 'Show grid preview' : 'Hide grid preview'
+            }
+            accessibilityState={{ expanded: !collapsed }}
+            onPress={toggleCollapsed}
+            style={({ pressed }) => [
+              styles.previewToggle,
+              { opacity: pressed ? 0.55 : 1 },
+            ]}
+          >
+            <Text style={styles.previewToggleText}>Preview</Text>
+            <View
+              style={{
+                transform: [{ rotate: collapsed ? '0deg' : '180deg' }],
+              }}
+            >
+              <Icon name="chevron" size={18} />
+            </View>
+          </Pressable>
+          {!collapsed && preview}
+        </View>
+      </View>
+      {scroll}
+    </View>
+  );
 }
 const useStyles = themedStyles((t) => ({
+  previewToggle: {
+    minHeight: 40,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  previewToggleText: { color: t.ink(0x88), fontSize: 13 },
+  pinned: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 4,
+    width: '100%',
+    maxWidth: 660,
+    alignSelf: 'center',
+  },
   body: {
     padding: 20,
     paddingTop: 12,

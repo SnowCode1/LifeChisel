@@ -1,18 +1,12 @@
 import {
   Canvas,
-  FontWeight,
-  PaintStyle,
   Picture,
   Skia,
-  StrokeCap,
-  StrokeJoin,
-  TextAlign,
   TileMode,
   createPicture,
-  type SkParagraph,
 } from '@shopify/react-native-skia';
 import { useMemo, type ReactNode } from 'react';
-import { PixelRatio, View } from 'react-native';
+import { View } from 'react-native';
 import {
   Gesture,
   GestureDetector,
@@ -39,68 +33,24 @@ import { checkboxChecked } from '../habitGoals';
 import { habitType, type Habit } from '../habits';
 import type { ChangeStore } from '../storage/store';
 import type { Theme } from '../theme';
-import { civilFromDays, shadedWeekOf, weekdayOf } from './gridDates';
 import {
-  checkboxGeometry,
-  columnX,
-  dayAtX,
-  visibleDayRange,
-} from './gridGeometry';
+  boxColour,
+  cellShapes,
+  drawCellBase,
+  drawCellMark,
+  drawHeadings,
+  gridPaints,
+  hairline,
+  headingLabels,
+  pixelOffset,
+  type CellStyle,
+} from './cellPainter';
+import { columnX, dayAtX, visibleDayRange } from './gridGeometry';
 import {
   GridAccessibilityLayer,
   HeadingAccessibility,
 } from './GridAccessibilityLayer';
-import { useGridModel, type CanvasCell } from './useGridModel';
-
-const tick = Skia.Path.MakeFromSVGString('M4 12 L9 17 L20 6')!;
-const cross = Skia.Path.MakeFromSVGString('M6 6 L18 18 M18 6 L6 18')!;
-const pixelRatio = PixelRatio.get();
-const hairline = 1 / pixelRatio;
-/**
- * The offset rounded to a physical pixel. Columns are whole pixels, so every
- * cell edge then lands on a pixel boundary; at fractional offsets neighbouring
- * cells each anti-alias the shared pixel and leave a faint seam while scrolling.
- */
-function pixelOffset(offset: number) {
-  'worklet';
-  return Math.round(offset * pixelRatio) / pixelRatio;
-}
-
-function fill(colour: string) {
-  const paint = Skia.Paint();
-  paint.setAntiAlias(true);
-  paint.setColor(Skia.Color(colour));
-  return paint;
-}
-function stroke(colour: string, width = 1) {
-  const paint = fill(colour);
-  paint.setStyle(PaintStyle.Stroke);
-  paint.setStrokeWidth(width);
-  paint.setStrokeCap(StrokeCap.Round);
-  paint.setStrokeJoin(StrokeJoin.Round);
-  return paint;
-}
-function heading(
-  text: string,
-  colour: string,
-  size: number,
-  weight: FontWeight,
-  width: number,
-) {
-  const builder = Skia.ParagraphBuilder.Make({
-    maxLines: 1,
-    textAlign: TextAlign.Center,
-  });
-  builder.pushStyle({
-    color: Skia.Color(colour),
-    fontSize: size,
-    fontStyle: { weight },
-  });
-  builder.addText(text);
-  const paragraph = builder.build();
-  paragraph.layout(Math.max(1, width));
-  return paragraph;
-}
+import { useGridModel } from './useGridModel';
 
 type Row = { id: string; top: number; height: number };
 type Pointer = { id: string; day: number } | null;
@@ -202,11 +152,16 @@ export function useCanvasGrid(props: CanvasGridProps): {
   const todayOrdinal = ordinal(today);
   // Cell look preferences; primitives so the worklets capture them.
   const boxes = checkboxStyle === 'boxes';
-  const todayOutlines = cellLook.todayOutlines;
-  const missedMarks = cellLook.missedDays;
   const joinedRuns = boxes && cellLook.joinedCheckboxes;
-  const roundBoxes = boxes && cellLook.roundCheckboxes;
-  const connectorThickness = cellLook.connectorThickness / 100;
+  const style: CellStyle = useMemo(
+    () => ({
+      boxes,
+      missedMarks: cellLook.missedDays,
+      joined: joinedRuns,
+      connector: cellLook.connectorThickness / 100,
+    }),
+    [boxes, cellLook.missedDays, joinedRuns, cellLook.connectorThickness],
+  );
   const model = useGridModel({
     store,
     habits,
@@ -229,112 +184,16 @@ export function useCanvasGrid(props: CanvasGridProps): {
       })),
     [displayed, tops, heights, baseHeight],
   );
-  // Per-row checkbox shapes, centred on the cell (rows may differ in height).
-  const shapes = useMemo(() => {
-    const result: Record<
-      string,
-      {
-        fill: ReturnType<typeof Skia.RRectXY>;
-        outline: ReturnType<typeof Skia.RRectXY>;
-        stroke: number;
-        size: number;
-        box: number;
-      }
-    > = {};
-    for (const row of rows) {
-      const g = checkboxGeometry(fontScale, row.height, column);
-      // Round boxes (development look) are full circles.
-      if (roundBoxes) g.radius = g.box / 2;
-      result[row.id] = {
-        fill: Skia.RRectXY(
-          Skia.XYWHRect(-g.box / 2, -g.box / 2, g.box, g.box),
-          g.radius,
-          g.radius,
-        ),
-        outline: Skia.RRectXY(
-          Skia.XYWHRect(
-            -g.box / 2 + g.stroke / 2,
-            -g.box / 2 + g.stroke / 2,
-            Math.max(0, g.box - g.stroke),
-            Math.max(0, g.box - g.stroke),
-          ),
-          Math.max(0, g.radius - g.stroke / 2),
-          Math.max(0, g.radius - g.stroke / 2),
-        ),
-        stroke: g.stroke,
-        size: g.size,
-        box: g.box,
-      };
-    }
-    return result;
-  }, [rows, fontScale, column, roundBoxes]);
-  const paints = useMemo(() => {
-    const habitPaints: Record<
-      string,
-      Record<string, ReturnType<typeof fill>>
-    > = {};
-    for (const [id, p] of Object.entries(palettes))
-      habitPaints[id] = {
-        colour: fill(p.colour),
-        colourLine: stroke(p.colour),
-        box: stroke(p.checkbox),
-        boxFill: fill(p.checkbox),
-        mark: stroke(p.checkmark),
-        met: fill(p.completedBackground),
-        pressed: fill(p.pressed),
-        rule: stroke(p.rule, hairline),
-        dash: stroke(`${p.colour}40`, 2),
-        missed: stroke(`${p.colour}66`, 1.8),
-      };
-    return {
-      habit: habitPaints,
-      background: fill(theme.background),
-      today: fill(theme.ink(0x09)),
-      pill: fill(theme.ink(0x19)),
-      shade: fill(theme.ink(0x0c)),
-      streak: fill(theme.ink(0x8a)),
-    };
-  }, [palettes, theme]);
-  const labels = useMemo(() => {
-    const format = new Intl.DateTimeFormat(undefined, {
-      weekday: 'short',
-      timeZone: 'UTC',
-    });
-    // 4 October 2026 was a Sunday: weekday names in the device locale.
-    const weekdays = Array.from({ length: 7 }, (_, index) =>
-      heading(
-        format.format(new Date(Date.UTC(2026, 9, 4 + index, 12))),
-        theme.ink(0x97),
-        11 * fontScale,
-        FontWeight.Medium,
-        column,
-      ),
-    );
-    const todayLabel = heading(
-      'Today',
-      theme.ink(0xff),
-      11 * fontScale,
-      FontWeight.Medium,
-      column,
-    );
-    const numbers: SkParagraph[] = [];
-    for (let day = 0; day <= 31; day++)
-      numbers.push(
-        heading(
-          String(day),
-          theme.ink(0xe8),
-          19 * fontScale,
-          FontWeight.SemiBold,
-          column,
-        ),
-      );
-    return {
-      weekdays,
-      todayLabel,
-      numbers,
-      numberTop: 8 + todayLabel.getHeight() + 3,
-    };
-  }, [theme, fontScale, column]);
+  const roundBoxes = boxes && cellLook.roundCheckboxes;
+  const shapes = useMemo(
+    () => cellShapes(rows, fontScale, column, roundBoxes),
+    [rows, fontScale, column, roundBoxes],
+  );
+  const paints = useMemo(() => gridPaints(palettes, theme), [palettes, theme]);
+  const labels = useMemo(
+    () => headingLabels(theme, fontScale, column),
+    [theme, fontScale, column],
+  );
 
   // Future-pull streak: grows with the pull, fades for 180 ms after release.
   const streakDistance = useSharedValue(0);
@@ -361,28 +220,20 @@ export function useCanvasGrid(props: CanvasGridProps): {
         );
         const shift = pixelOffset(offset.value);
         const [first, last] = visibleDayRange(width, shift, column);
-        for (let day = first; day <= last; day++) {
-          const x = columnX(day, width, shift, column);
-          const epoch = todayOrdinal - day;
-          if (day === 0)
-            canvas.drawRRect(
-              Skia.RRectXY(Skia.XYWHRect(x, 0, column, headerHeight + 8), 8, 8),
-              paints.pill,
-            );
-          else if (weekDividers && shadedWeekOf(epoch, weekStart))
-            canvas.drawRect(
-              Skia.XYWHRect(x, 0, column, headerHeight),
-              paints.shade,
-            );
-          const label =
-            day === 0 ? labels.todayLabel : labels.weekdays[weekdayOf(epoch)];
-          label.paint(canvas, x, 8);
-          labels.numbers[civilFromDays(epoch)[2]].paint(
-            canvas,
-            x,
-            labels.numberTop,
-          );
-        }
+        drawHeadings(
+          canvas,
+          paints,
+          labels,
+          first,
+          last,
+          width,
+          headerHeight,
+          shift,
+          column,
+          todayOrdinal,
+          weekDividers,
+          weekStart,
+        );
         const distance = streakDistance.value;
         const alpha = streakOpacity.value * Math.min(1, distance / 16);
         if (alpha > 0) {
@@ -443,171 +294,84 @@ export function useCanvasGrid(props: CanvasGridProps): {
             const p = paints.habit[row.id];
             const shape = shapes[row.id];
             if (!p || !shape) continue;
-            const middleY = top + (row.height - hairline) / 2;
+            const moving = j !== null && j.id === row.id;
             for (let day = first; day <= last; day++) {
               const x = columnX(day, width, shift, column);
               const cell = cells[day]?.[row.id];
-              const isPressed =
-                press !== null && press.id === row.id && press.day === day;
-              if (isPressed)
-                canvas.drawRect(
-                  Skia.XYWHRect(x, top, column, row.height),
-                  p.pressed,
-                );
-              else if (cell?.m)
-                canvas.drawRect(
-                  Skia.XYWHRect(x, top, column, row.height),
-                  p.met,
-                );
-              else if (day === 0)
-                canvas.drawRect(
-                  Skia.XYWHRect(x, top, column, row.height),
-                  paints.today,
-                );
-              canvas.drawLine(
+              // Halves of a join being animated are drawn by the animation.
+              const skipLeft =
+                moving &&
+                ((day === j.day && j.left) || (day === j.day - 1 && j.right));
+              const skipRight =
+                moving &&
+                ((day === j.day && j.right) || (day === j.day + 1 && j.left));
+              drawCellBase(
+                canvas,
+                paints,
+                p,
+                shape,
+                style,
+                cell,
+                cells[day + 1]?.[row.id]?.c === true,
+                cells[day - 1]?.[row.id]?.c === true,
+                day,
                 x,
-                top + row.height - hairline / 2,
-                x + column,
-                top + row.height - hairline / 2,
-                p.rule,
+                top,
+                column,
+                row.height,
+                press !== null && press.id === row.id && press.day === day,
+                skipLeft,
+                skipRight,
               );
-              const middleX = x + column / 2;
-              if (joinedRuns && checkboxStyle === 'boxes') {
-                // Consecutive checked boxes are joined by a bar thinner than
-                // the boxes. Each cell draws only the part inside itself, so
-                // neighbouring backgrounds never cover it; older days sit to
-                // the left.
-                const bar = shape.box * connectorThickness;
-                const barTop = middleY - bar / 2;
-                const barFill = (target: CanvasCell | undefined) =>
-                  target?.m ? p.colour : p.boxFill;
-                const moving = j !== null && j.id === row.id;
-                // Halves of a joint being animated are drawn by the animation.
-                const ownLeft =
-                  moving &&
-                  ((day === j.day && j.left) || (day === j.day - 1 && j.right));
-                const ownRight =
-                  moving &&
-                  ((day === j.day && j.right) || (day === j.day + 1 && j.left));
-                if (cell?.c) {
-                  if (!ownLeft && cells[day + 1]?.[row.id]?.c)
+              if (joinedRuns && moving && Math.abs(day - j.day) <= 1) {
+                // Joins grow out of the neighbour into the tapped box, and
+                // retract back into the neighbour when broken.
+                const bar = shape.box * style.connector;
+                const barTop = top + (row.height - hairline) / 2 - bar / 2;
+                const length = column * (j.joining ? jt : 1 - jt);
+                if (j.left) {
+                  const from = columnX(j.day + 1, width, shift, column);
+                  const start = Math.max(x, from + column / 2);
+                  const end = Math.min(x + column, from + column / 2 + length);
+                  if (end > start)
                     canvas.drawRect(
-                      Skia.XYWHRect(x, barTop, column / 2, bar),
-                      barFill(cell),
-                    );
-                  if (!ownRight && cells[day - 1]?.[row.id]?.c)
-                    canvas.drawRect(
-                      Skia.XYWHRect(middleX, barTop, column / 2, bar),
-                      barFill(cell),
+                      Skia.XYWHRect(start, barTop, end - start, bar),
+                      boxColour(p, cells[j.day + 1]?.[row.id]),
                     );
                 }
-                if (moving && Math.abs(day - j.day) <= 1) {
-                  // Joins grow out of the neighbour into the tapped box, and
-                  // retract back into the neighbour when broken.
-                  const length = column * (j.joining ? jt : 1 - jt);
-                  if (j.left) {
-                    const from = columnX(j.day + 1, width, shift, column);
-                    const start = Math.max(x, from + column / 2);
-                    const end = Math.min(
-                      x + column,
-                      from + column / 2 + length,
+                if (j.right) {
+                  const from = columnX(j.day - 1, width, shift, column);
+                  const start = Math.max(x, from + column / 2 - length);
+                  const end = Math.min(x + column, from + column / 2);
+                  if (end > start)
+                    canvas.drawRect(
+                      Skia.XYWHRect(start, barTop, end - start, bar),
+                      boxColour(p, cells[j.day - 1]?.[row.id]),
                     );
-                    if (end > start)
-                      canvas.drawRect(
-                        Skia.XYWHRect(start, barTop, end - start, bar),
-                        barFill(cells[j.day + 1]?.[row.id]),
-                      );
-                  }
-                  if (j.right) {
-                    const from = columnX(j.day - 1, width, shift, column);
-                    const start = Math.max(x, from + column / 2 - length);
-                    const end = Math.min(x + column, from + column / 2);
-                    if (end > start)
-                      canvas.drawRect(
-                        Skia.XYWHRect(start, barTop, end - start, bar),
-                        barFill(cells[j.day - 1]?.[row.id]),
-                      );
-                  }
                 }
               }
-              if (!cell) {
-                canvas.drawLine(
-                  middleX - 5,
-                  middleY,
-                  middleX + 5,
-                  middleY,
-                  p.dash,
-                );
-                continue;
-              }
-              // Empty markers are unchecked boxes and unrecorded "—" labels.
-              const empty = cell.k === 0 ? !cell.c : !cell.r;
-              const missed =
-                missedMarks && empty && day > 0 && cell.s === 1 && !cell.m;
-              if (
-                empty &&
-                !missed &&
-                ((todayOutlines && day !== 0) ||
-                  (missedMarks && day > 0 && cell.s === 2))
-              )
-                continue;
-              if (missed) {
-                // Smaller than a checkbox, with the same line weight.
-                const crossSize = shape.size * 0.75;
-                canvas.save();
-                canvas.translate(
-                  middleX - crossSize / 2,
-                  middleY - crossSize / 2,
-                );
-                canvas.scale(crossSize / 24, crossSize / 24);
-                p.missed.setStrokeWidth((1.8 * shape.size) / crossSize);
-                canvas.drawPath(cross, p.missed);
-                canvas.restore();
-                continue;
-              }
-              if (cell.p) {
-                cell.p.paint(
-                  canvas,
-                  x + 4,
-                  top + (row.height - hairline - cell.p.getHeight()) / 2,
-                );
-                continue;
-              }
-              canvas.save();
-              canvas.translate(middleX, middleY);
+              let scale = 1;
               if (hit !== null && hit.id === row.id && hit.day === day)
-                canvas.scale(pulseScale.value, pulseScale.value);
+                scale *= pulseScale.value;
               if (
                 knock !== null &&
                 knock.id === row.id &&
                 knock.days.includes(day)
               )
-                canvas.scale(bumpScale.value, bumpScale.value);
-              const line = cell.m ? p.colourLine : p.box;
-              if (checkboxStyle === 'boxes') {
-                if (cell.c)
-                  canvas.drawRRect(shape.fill, cell.m ? p.colour : p.boxFill);
-                else {
-                  line.setStrokeWidth(shape.stroke);
-                  canvas.drawRRect(shape.outline, line);
-                }
-                if (cell.q)
-                  // Streak numbers replace the tick with the streak position.
-                  cell.q.paint(canvas, -shape.box / 2, -cell.q.getHeight() / 2);
-                else if (cell.c) {
-                  const glyph = shape.box * 0.85;
-                  canvas.translate(-glyph / 2, -glyph / 2);
-                  canvas.scale(glyph / 24, glyph / 24);
-                  p.mark.setStrokeWidth(2.5);
-                  canvas.drawPath(tick, p.mark);
-                }
-              } else {
-                canvas.translate(-shape.size / 2, -shape.size / 2);
-                canvas.scale(shape.size / 24, shape.size / 24);
-                line.setStrokeWidth(cell.c ? 2.3 : 1.8);
-                canvas.drawPath(cell.c ? tick : cross, line);
-              }
-              canvas.restore();
+                scale *= bumpScale.value;
+              drawCellMark(
+                canvas,
+                p,
+                shape,
+                style,
+                cell,
+                day,
+                x,
+                top,
+                column,
+                row.height,
+                scale,
+              );
             }
           }
       },

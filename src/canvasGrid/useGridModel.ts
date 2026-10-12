@@ -100,15 +100,17 @@ function numberParagraph(context: Context, text: string, colour: string) {
   return paragraph(context, text, colour, fitted, 1);
 }
 
-// A streak position inside a checked box: bold, centred and shrunk to fit.
-function streakParagraph(context: Context, habit: Habit, streak: number) {
-  const height = context.heights[habit.id] ?? context.baseHeight;
-  const { box } = checkboxGeometry(context.fontScale, height, context.column);
-  const colour = context.palettes[habit.id].checkmark;
+/** A streak position inside a checked box: bold, centred and shrunk to fit. */
+export function streakLabel(
+  cache: Map<string, SkParagraph>,
+  colour: string,
+  box: number,
+  streak: number,
+) {
   const text = String(streak);
   const size = box * (text.length > 2 ? 0.48 : 0.6);
   const key = `streak|${colour}|${box}|${text}`;
-  let result = context.paragraphs.get(key);
+  let result = cache.get(key);
   if (!result) {
     const builder = Skia.ParagraphBuilder.Make({
       maxLines: 1,
@@ -122,9 +124,19 @@ function streakParagraph(context: Context, habit: Habit, streak: number) {
     builder.addText(text);
     result = builder.build();
     result.layout(Math.max(1, box));
-    context.paragraphs.set(key, result);
+    cache.set(key, result);
   }
   return result;
+}
+function streakParagraph(context: Context, habit: Habit, streak: number) {
+  const height = context.heights[habit.id] ?? context.baseHeight;
+  const { box } = checkboxGeometry(context.fontScale, height, context.column);
+  return streakLabel(
+    context.paragraphs,
+    context.palettes[habit.id].checkmark,
+    box,
+    streak,
+  );
 }
 
 function buildCell(

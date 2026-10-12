@@ -739,9 +739,12 @@ Six preferences choose how grid cells are drawn: the booleans `todayOutlines`,
 `missedDays`, `joinedCheckboxes`, `streakNumbers` and `roundCheckboxes`, and
 `connectorThickness`, an integer percent of the checkbox height from 20 to 100
 in steps of 5. As with the v18 sizes and v19 theme, `before` is `null` until
-the first choice, so the defaults (all off, 55%) are a rendering rule that can
-change without touching stored events (`cellLookDefaults`). Older event
-versions reject these kinds.
+the first choice, so the defaults (`cellLookDefaults`: missed-day crosses,
+joined checkboxes, streak numbers and round checkboxes on, 55% connector) are a
+rendering rule that can change without touching
+stored events. Older event versions reject these kinds. `todayOutlines` was
+retired the day it arrived: replay still validates and applies it, but nothing
+reads it.
 
 The preferences stay outside History/Undo, preserve Redo and correction groups,
 and use the ordinary serialized write/restore path. The

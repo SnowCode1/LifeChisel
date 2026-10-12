@@ -196,12 +196,15 @@ docs hold the design behind each check.
   Today without bouncing past it.
 - Tap a box while a fling is still moving fast: the scroll stops and nothing is
   checked. Taps while it gently settles work normally.
-- Settings → Appearance → Cells: each switch changes the grid when Settings
-  closes and survives a restart. Missed days crosses only past scheduled days
-  (try a 5-on/2-off habit); Streak numbers count back across scrolled-off
-  days and renumber after checking a gap; Joined checkboxes grow or retract
-  their bar with a bump on contact. The Checkboxes-only rows hide for Ticks &
-  crosses.
+- Settings → Appearance: the preview stays pinned in portrait and scrolls in
+  landscape; every control (sizes while dragging, theme, checkbox style,
+  streak numbers, joins and their thickness while dragging, missed day
+  crosses, week dividers) changes it at once, and the grid when Settings
+  closes. Choices survive a restart. Missed day crosses mark only past
+  scheduled days (try a 5-on/2-off habit); Streak numbers count back across
+  scrolled-off days and renumber after checking a gap; Joined checkboxes grow
+  or retract their bar with a bump on contact. The Squares/Circles-only rows
+  hide for Ticks & crosses.
 - Closing History, Settings or Statistics (button or swipe) keeps the grid's
   dates and vertical position.
 

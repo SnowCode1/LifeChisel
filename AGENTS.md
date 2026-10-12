@@ -103,13 +103,17 @@ preserve earlier icon choices/removals and raw history.
   `rowTops`, and release on the same cell calls `onCellPress`. Disable taps when
   not editable, during a drag or in reorder mode; lock scrolling while the menu
   is open or a drag is active.
-- Cell look (v20, Settings → Appearance → Cells): `CellLook` in
-  `displayPreferences.ts` holds Outlines only on Today, Missed days (from
-  `CellState.schedule`: due, off or none; quotas and tracking-only habits are
-  never missed per day), Round checkboxes, Streak numbers (`checkedStreak`
-  counts back from saved values; the model rebuilds newer prepared days after an
-  edit), Joined checkboxes and Connector thickness (20–100% of the box). The
-  last four apply to the checkbox style only. A tapped join grows from or
+- Cell look (v20, Settings → Appearance): `CellLook` in `displayPreferences.ts`
+  holds Missed day crosses (default on; from `CellState.schedule`: due, off or
+  none; quotas and tracking-only habits are never missed per day), Round
+  checkboxes (shown as the Circles checkbox style), Streak numbers
+  (`checkedStreak` counts back from saved values; the model rebuilds newer
+  prepared days after an edit), Joined checkboxes and Connector thickness
+  (20–100% of the box); the last four apply to the checkbox style only.
+  `todayOutlines` is retired: replayed, never drawn. `canvasGrid/cellPainter.ts`
+  owns all cell and heading drawing for both the grid and the Settings preview
+  (`GridLivePreview`, pinned above Appearance on portrait phones); never draw
+  cells separately in the preview. A tapped join grows from or
   retracts into the neighbour over 220 ms and the reached box bumps to 1.07 the
   moment the bar touches it, gated like the pulse. App memoizes the look by its
   fields so acknowledgements keep its identity, and the grid defers it with the

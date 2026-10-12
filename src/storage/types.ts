@@ -33,6 +33,7 @@ export type StoredState = {
   themeMode?: ThemeMode;
   darkBackground?: string;
   lightBackground?: string;
+  // Retired 12 October 2026 (no longer drawn); kept so saved changes replay.
   todayOutlines?: boolean;
   missedDays?: boolean;
   joinedCheckboxes?: boolean;

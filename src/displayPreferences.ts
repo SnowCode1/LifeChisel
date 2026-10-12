@@ -47,8 +47,6 @@ export const displayDefaults = {
  * stay display rules that can change without rewriting saved data.
  */
 export type CellLook = {
-  /** Empty checkboxes and "—" placeholders only in the Today column. */
-  todayOutlines: boolean;
   /** A quiet cross on past scheduled days that missed; off days stay blank. */
   missedDays: boolean;
   /** Consecutive checked boxes joined by a bar (checkbox style). */
@@ -62,20 +60,12 @@ export type CellLook = {
 };
 export type CellLookKind = keyof CellLook;
 export const cellLookDefaults: CellLook = {
-  todayOutlines: false,
-  missedDays: false,
-  joinedCheckboxes: false,
-  streakNumbers: false,
-  roundCheckboxes: false,
+  missedDays: true,
+  joinedCheckboxes: true,
+  streakNumbers: true,
+  roundCheckboxes: true,
   connectorThickness: 55,
 };
-export const cellLookToggles = [
-  'todayOutlines',
-  'missedDays',
-  'joinedCheckboxes',
-  'streakNumbers',
-  'roundCheckboxes',
-] as const;
 export function isConnectorThickness(value: unknown): value is number {
   return (
     typeof value === 'number' &&
@@ -88,7 +78,6 @@ export function isConnectorThickness(value: unknown): value is number {
 /** Saved cell look with defaults for choices never made. */
 export function cellLookOf(state: Partial<CellLook>): CellLook {
   return {
-    todayOutlines: state.todayOutlines ?? cellLookDefaults.todayOutlines,
     missedDays: state.missedDays ?? cellLookDefaults.missedDays,
     joinedCheckboxes:
       state.joinedCheckboxes ?? cellLookDefaults.joinedCheckboxes,

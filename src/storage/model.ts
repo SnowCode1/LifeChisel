@@ -663,7 +663,7 @@ export function replayEvents(input: unknown): {
 }
 const cellLookNames = {
   todayOutlines: 'Outlines only on Today',
-  missedDays: 'Missed days',
+  missedDays: 'Missed day crosses',
   joinedCheckboxes: 'Joined checkboxes',
   streakNumbers: 'Streak numbers',
   roundCheckboxes: 'Round checkboxes',

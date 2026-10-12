@@ -1,6 +1,22 @@
-import { useState } from 'react';
+import { Canvas, Picture, createPicture } from '@shopify/react-native-skia';
+import { useMemo, useState } from 'react';
 import { PixelRatio, Pressable, StyleSheet, View } from 'react-native';
 import Slider from '@react-native-community/slider';
+import {
+  cellShapes,
+  drawCellBase,
+  drawCellMark,
+  drawHeadings,
+  gridPaints,
+  headingLabels,
+  type CellStyle,
+} from './canvasGrid/cellPainter';
+import { headingHeight } from './canvasGrid/gridGeometry';
+import { streakLabel, type CanvasCell } from './canvasGrid/useGridModel';
+import type { CellLook, CheckboxStyle, WeekStart } from './displayPreferences';
+import { ordinal } from './goalTiming';
+import { createGridPalette } from './gridAppearance';
+import { useLocalToday } from './useLocalToday';
 import { Text, useAppWindowDimensions } from './Typography';
 import { gridLayout } from './gridLayout';
 import { gridRowHeight } from './rowSpacing';
@@ -24,26 +40,35 @@ const labels: Record<GridSizeKind, string> = {
   gridColumnWidth: 'Day columns',
   gridRowHeight: 'Rows',
 };
-const checkedPatterns = [
-  [1, 1, 0, 1, 1, 1, 0],
-  [0, 1, 1, 0, 1, 0, 1],
-  [1, 0, 1, 1, 0, 1, 1],
-];
+// Sample days for the preview, newest (Today) first: c checked, x missed (a
+// scheduled day left unchecked), f off (unscheduled) and - open (Today,
+// unchecked). Together they show streaks, joins, missed crosses and blank
+// off days.
+const samples = ['-cccccxc', 'ccxccfcc', 'cxfccccx'];
+type SizeDrafts = Partial<Record<GridSizeKind, number>>;
+/** How the preview draws cells: the saved or drafted appearance. */
+export type PreviewAppearance = {
+  checkboxStyle: CheckboxStyle;
+  cellLook: CellLook;
+  weekDividers: boolean;
+  weekStart: WeekStart;
+};
 
-// Stepped sliders for the three grid sizes with a live preview drawn at the
-// real grid width. Drafts update the preview while dragging; a size is saved
-// once when the slider is released. Reset returns a size to automatic.
+// Stepped sliders for the three grid sizes. Drafts (held by the caller, which
+// shows them in the preview) update while dragging; a size is saved once when
+// the slider is released. Reset returns a size to automatic.
 export function GridSizeSettings({
   sizing,
   gridWidth,
-  habits,
+  drafts,
+  onDrafts,
   editable,
   onChange,
 }: {
   sizing: GridSizing;
   gridWidth: number;
-  // The first displayed habits, so the preview shows real names and icons.
-  habits: readonly Habit[];
+  drafts: SizeDrafts;
+  onDrafts: (update: (previous: SizeDrafts) => SizeDrafts) => void;
   editable: boolean;
   onChange: (kind: GridSizeKind, value: GridSize) => void;
 }) {
@@ -67,40 +92,13 @@ export function GridSizeSettings({
   const isAuto = (kind: GridSizeKind) =>
     saved[kind] === 'auto' &&
     (kind !== 'gridNameWidth' || sizing.nameFactor === 1);
-  const [drafts, setDrafts] = useState<Partial<Record<GridSizeKind, number>>>(
-    {},
-  );
+  const setDrafts = onDrafts;
   const committed = (kind: GridSizeKind) => {
     const current = saved[kind];
     return current === 'auto' ? automatic[kind] : current;
   };
-  // Preview: drafts while dragging, otherwise the saved (possibly automatic) size.
-  const preview = (kind: GridSizeKind): GridSize => drafts[kind] ?? saved[kind];
-  const layout = gridLayout(
-    width,
-    window.fontScale,
-    {
-      nameWidth: preview('gridNameWidth'),
-      nameFactor: drafts.gridNameWidth === undefined ? sizing.nameFactor : 1,
-      columnWidth: preview('gridColumnWidth'),
-    },
-    PixelRatio.get(),
-  );
-  const rowHeight = gridRowHeight(
-    preview('gridRowHeight'),
-    window.fontScale,
-    longSide,
-  );
   return (
     <View>
-      <GridPreview
-        habits={habits.length ? habits.slice(0, 3) : demoHabits.slice(0, 3)}
-        width={width}
-        nameWidth={layout.nameWidth}
-        columnWidth={layout.columnWidth}
-        visibleDays={layout.visibleDays}
-        rowHeight={rowHeight}
-      />
       {(Object.keys(labels) as GridSizeKind[]).map((kind) => {
         const range = gridSizeRanges[kind];
         const current = drafts[kind] ?? committed(kind);
@@ -164,20 +162,38 @@ export function GridSizeSettings({
   );
 }
 
-// The saved sizes drawn in the current theme, for previews elsewhere in
-// Settings (the background picker draws it in its draft theme).
+// The grid preview in the current theme (the background picker draws it in
+// its draft theme): saved sizes, or slider drafts while dragging, and the
+// cell appearance, drawn by the same painter as the grid itself.
 export function GridLivePreview({
   sizing,
+  drafts = {},
   gridWidth,
   habits,
+  appearance,
+  caption = false,
 }: {
   sizing: GridSizing;
+  drafts?: SizeDrafts;
   gridWidth: number;
   habits: readonly Habit[];
+  appearance: PreviewAppearance;
+  caption?: boolean;
 }) {
   const window = useAppWindowDimensions();
   const width = gridWidth || Math.max(0, window.width - 36);
-  const layout = gridLayout(width, window.fontScale, sizing, PixelRatio.get());
+  const preview = (kind: GridSizeKind, saved: GridSize): GridSize =>
+    drafts[kind] ?? saved;
+  const layout = gridLayout(
+    width,
+    window.fontScale,
+    {
+      nameWidth: preview('gridNameWidth', sizing.nameWidth),
+      nameFactor: drafts.gridNameWidth === undefined ? sizing.nameFactor : 1,
+      columnWidth: preview('gridColumnWidth', sizing.columnWidth),
+    },
+    PixelRatio.get(),
+  );
   return (
     <GridPreview
       habits={habits.length ? habits.slice(0, 3) : demoHabits.slice(0, 3)}
@@ -186,11 +202,12 @@ export function GridLivePreview({
       columnWidth={layout.columnWidth}
       visibleDays={layout.visibleDays}
       rowHeight={gridRowHeight(
-        sizing.rowHeight,
+        preview('gridRowHeight', sizing.rowHeight),
         window.fontScale,
         screenLongSide(),
       )}
-      caption={false}
+      appearance={appearance}
+      caption={caption}
     />
   );
 }
@@ -206,7 +223,8 @@ function GridPreview({
   columnWidth,
   visibleDays,
   rowHeight,
-  caption = true,
+  appearance,
+  caption,
 }: {
   habits: readonly Habit[];
   width: number;
@@ -214,15 +232,149 @@ function GridPreview({
   columnWidth: number;
   visibleDays: number;
   rowHeight: number;
-  caption?: boolean;
+  appearance: PreviewAppearance;
+  caption: boolean;
 }) {
   const theme = useTheme();
   const styles = useStyles();
+  const window = useAppWindowDimensions();
+  const today = useLocalToday();
   const [available, setAvailable] = useState(0);
-  const [height, setHeight] = useState(0);
+  const [measured, setMeasured] = useState<Record<string, number>>({});
   const scale = available && width ? Math.min(1, available / width) : 1;
-  const box = Math.min(26, Math.max(16, columnWidth * 0.5));
-  const days = Array.from({ length: visibleDays }, (_, index) => index);
+  const fontScale = window.fontScale;
+  const header = headingHeight(fontScale);
+  const rows = habits.map((habit) => ({
+    id: habit.id,
+    height: Math.max(rowHeight, measured[habit.id] ?? 0),
+  }));
+  const bodyHeight = rows.reduce((sum, row) => sum + row.height, 0);
+  const datesWidth = visibleDays * columnWidth;
+  const { checkboxStyle, cellLook, weekDividers, weekStart } = appearance;
+  const boxes = checkboxStyle === 'boxes';
+  const picture = useMemo(() => {
+    const palettes = Object.fromEntries(
+      habits.map((habit) => [habit.id, createGridPalette(habit.color, theme)]),
+    );
+    const paints = gridPaints(palettes, theme);
+    const labels = headingLabels(theme, fontScale, columnWidth);
+    const shapes = cellShapes(
+      rows,
+      fontScale,
+      columnWidth,
+      boxes && cellLook.roundCheckboxes,
+    );
+    const style: CellStyle = {
+      boxes,
+      missedMarks: cellLook.missedDays,
+      joined: boxes && cellLook.joinedCheckboxes,
+      connector: cellLook.connectorThickness / 100,
+    };
+    const labelCache = new Map();
+    const sample = (row: number, day: number) =>
+      samples[row % samples.length][day % 8];
+    const cellAt = (row: number, day: number): CanvasCell => {
+      const kind = sample(row, day);
+      const checked = kind === 'c';
+      let streak = 0;
+      while (checked && streak < 99 && sample(row, day + streak) === 'c')
+        streak++;
+      const habit = habits[row];
+      return {
+        k: 0,
+        c: checked,
+        m: checked,
+        r: checked,
+        s: kind === 'f' ? 2 : 1,
+        p: null,
+        q:
+          checked && boxes && cellLook.streakNumbers
+            ? streakLabel(
+                labelCache,
+                palettes[habit.id].checkmark,
+                shapes[habit.id].box,
+                streak,
+              )
+            : null,
+      };
+    };
+    return createPicture(
+      (canvas) => {
+        drawHeadings(
+          canvas,
+          paints,
+          labels,
+          0,
+          visibleDays - 1,
+          datesWidth,
+          header,
+          0,
+          columnWidth,
+          ordinal(today),
+          weekDividers,
+          weekStart,
+        );
+        let top = header;
+        rows.forEach((row, index) => {
+          const p = paints.habit[row.id];
+          const shape = shapes[row.id];
+          for (let day = 0; day < visibleDays; day++) {
+            const x = datesWidth - (day + 1) * columnWidth;
+            const cell = cellAt(index, day);
+            drawCellBase(
+              canvas,
+              paints,
+              p,
+              shape,
+              style,
+              cell,
+              cellAt(index, day + 1).c,
+              day > 0 && cellAt(index, day - 1).c,
+              day,
+              x,
+              top,
+              columnWidth,
+              row.height,
+              false,
+              false,
+              false,
+            );
+            drawCellMark(
+              canvas,
+              p,
+              shape,
+              style,
+              cell,
+              day,
+              x,
+              top,
+              columnWidth,
+              row.height,
+              1,
+            );
+          }
+          top += row.height;
+        });
+      },
+      { width: datesWidth, height: header + bodyHeight },
+    );
+    // rows is derived from habits, rowHeight and measured each render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    habits,
+    theme,
+    fontScale,
+    columnWidth,
+    visibleDays,
+    rowHeight,
+    measured,
+    boxes,
+    cellLook,
+    weekDividers,
+    weekStart,
+    today,
+  ]);
+  const height = header + bodyHeight;
   return (
     <View style={styles.previewCard}>
       <View
@@ -236,83 +388,64 @@ function GridPreview({
       >
         {available > 0 && (
           <View
-            onLayout={(event) => {
-              const next = event.nativeEvent.layout.height;
-              setHeight((previous) => (previous === next ? previous : next));
-            }}
             style={{
               width,
+              height,
+              flexDirection: 'row',
               position: 'absolute',
               left: (available - width) / 2,
               top: (height * scale - height) / 2,
               transform: [{ scale }],
             }}
           >
-            <View style={styles.previewHeadings}>
-              <View style={{ width: nameWidth }} />
-              {days.map((day) => (
-                <View
-                  key={day}
-                  style={[styles.previewHeading, { width: columnWidth }]}
-                >
-                  <Text style={styles.previewDay}>{day + 1}</Text>
-                </View>
-              ))}
-            </View>
-            {habits.map((habit, row) => {
-              const colour = theme.colour(habit.color);
-              return (
-                <View
-                  key={habit.id}
-                  style={[styles.previewRow, { minHeight: rowHeight }]}
-                >
+            <View style={{ width: nameWidth }}>
+              <View style={{ height: header }} />
+              {habits.map((habit, index) => {
+                const colour = theme.colour(habit.color);
+                return (
                   <View
-                    style={[
-                      styles.previewName,
-                      {
-                        width: nameWidth,
-                        paddingVertical: rowHeight < 52 ? 4 : 8,
-                      },
-                    ]}
+                    key={habit.id}
+                    style={[styles.previewName, { height: rows[index].height }]}
                   >
-                    <HabitSymbol icon={habit.icon} colour={colour} />
-                    <View style={{ flex: 1, gap: 2 }}>
-                      <Text style={[styles.previewNameText, { color: colour }]}>
-                        {habit.name}
-                      </Text>
-                      {habit.unit && (
-                        <Text style={[styles.previewUnit, { color: colour }]}>
-                          {habit.unit}
+                    <View
+                      onLayout={(event) => {
+                        // Names may wrap: grow the row as the grid does.
+                        const next = Math.ceil(
+                          event.nativeEvent.layout.height + 16,
+                        );
+                        // Re-centring a resized row moves its name by half a
+                        // point, and pixel rounding can then change the
+                        // measured height by one: ignore such noise, or the
+                        // row flips between two heights indefinitely.
+                        setMeasured((previous) =>
+                          Math.abs((previous[habit.id] ?? 0) - next) < 2
+                            ? previous
+                            : { ...previous, [habit.id]: next },
+                        );
+                      }}
+                      style={styles.previewNameInner}
+                    >
+                      <HabitSymbol icon={habit.icon} colour={colour} />
+                      <View style={{ flex: 1, gap: 2 }}>
+                        <Text
+                          style={[styles.previewNameText, { color: colour }]}
+                        >
+                          {habit.name}
                         </Text>
-                      )}
+                        {habit.unit && (
+                          <Text style={[styles.previewUnit, { color: colour }]}>
+                            {habit.unit}
+                          </Text>
+                        )}
+                      </View>
                     </View>
                   </View>
-                  {days.map((day) => {
-                    const pattern =
-                      checkedPatterns[row % checkedPatterns.length];
-                    const checked = pattern[day % pattern.length];
-                    return (
-                      <View
-                        key={day}
-                        style={[styles.previewCell, { width: columnWidth }]}
-                      >
-                        <View
-                          style={{
-                            width: box,
-                            height: box,
-                            borderRadius: box * 0.28,
-                            borderWidth: 2,
-                            borderColor: colour,
-                            backgroundColor: checked ? colour : 'transparent',
-                            opacity: checked ? 1 : 0.6,
-                          }}
-                        />
-                      </View>
-                    );
-                  })}
-                </View>
-              );
-            })}
+                );
+              })}
+            </View>
+            <Canvas style={{ width: datesWidth, height }}>
+              <Picture picture={picture} />
+            </Canvas>
           </View>
         )}
       </View>
@@ -357,16 +490,8 @@ const useStyles = themedStyles((t) => ({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: t.ink(0x24),
   },
-  previewHeading: { alignItems: 'center', justifyContent: 'center' },
-  previewDay: { color: t.ink(0xbb), fontSize: 15, fontWeight: '600' },
-  previewRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: t.ink(0x22),
-  },
-  previewHeadings: { flexDirection: 'row', height: 44 },
-  previewName: {
+  previewName: { justifyContent: 'center' },
+  previewNameInner: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
@@ -374,6 +499,5 @@ const useStyles = themedStyles((t) => ({
   },
   previewNameText: { fontSize: 15, lineHeight: 20, fontWeight: '500' },
   previewUnit: { fontSize: 11, lineHeight: 13, opacity: 0.8 },
-  previewCell: { alignItems: 'center', justifyContent: 'center' },
   caption: { color: t.ink(0x92), fontSize: 13, textAlign: 'center' },
 }));

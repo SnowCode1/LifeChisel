@@ -16,29 +16,36 @@ In on-screen order. Defaults come from `displayDefaults` in
 `displayPreferences.ts`, the `defaultBackgrounds` in `theme.ts`, and the
 automatic rules in `gridSizing.ts`.
 
-| Page           | Control                | Default    | Purpose                                                                                                        |
-| -------------- | ---------------------- | ---------- | -------------------------------------------------------------------------------------------------------------- |
-| Appearance     | Theme                  | Dark       | System / Dark / Light. System follows the phone's light or dark mode.                                          |
-| Appearance     | Dark background        | Black      | Six presets or a custom colour, fitted to a readable dark range.                                               |
-| Appearance     | Light background       | Paper      | Six presets or a custom colour, fitted to a readable light range.                                              |
-| Appearance     | Name column            | Auto       | Slider, 96–240 points in 4-point steps, with Reset to automatic.                                               |
-| Appearance     | Day columns            | Auto       | Slider for the minimum day width, 40–80 points in 2-point steps. Whole days then fill the available width.     |
-| Appearance     | Rows                   | Auto       | Slider for the minimum row height, 40–80 points in 2-point steps. Larger text and wrapped names can grow rows. |
-| Appearance     | Text size              | 100%       | One app-wide slider, 85–150% in 5% steps, with Reset to 100%. Includes descriptions and their editor.          |
-| Appearance     | Checkbox style         | Checkboxes | Checkboxes or Ticks & crosses.                                                                                 |
-| Appearance     | Week dividers          | On         | Faint alternating week backgrounds in the date headings.                                                       |
-| Appearance     | Tap animations         | On         | A short pulse on the tapped checkbox or mark.                                                                  |
-| Appearance     | Outlines only on Today | Off        | Empty checkboxes and “—” only in the Today column. See [Cells](#cells).                                        |
-| Appearance     | Missed days            | Off        | A quiet cross on past scheduled days that missed; unscheduled days stay blank.                                 |
-| Appearance     | Round checkboxes       | Off        | Circular checkboxes (Checkboxes style).                                                                        |
-| Appearance     | Streak numbers         | Off        | Checked boxes show their place in the streak instead of a tick (Checkboxes style).                             |
-| Appearance     | Joined checkboxes      | Off        | Consecutive checked boxes joined by a bar (Checkboxes style).                                                  |
-| Appearance     | Connector thickness    | 55%        | Bar height, 20–100% of the checkbox in 5% steps; shown with Joined checkboxes.                                 |
-| Daily tracking | Hide completed today   | Off        | Hide rows meeting their dated success goal at Today, with Show completed for corrections.                      |
-| Daily tracking | Haptic feedback        | On         | Enable or disable action feedback.                                                                             |
-| Daily tracking | Week starts on         | Monday     | Monday or Sunday. See [Week start](#week-start).                                                               |
+| Page           | Control              | Default | Purpose                                                                                                        |
+| -------------- | -------------------- | ------- | -------------------------------------------------------------------------------------------------------------- |
+| Appearance     | Theme                | Dark    | System / Dark / Light. System follows the phone's light or dark mode.                                          |
+| Appearance     | Dark background      | Black   | Six presets or a custom colour, fitted to a readable dark range.                                               |
+| Appearance     | Light background     | Paper   | Six presets or a custom colour, fitted to a readable light range.                                              |
+| Appearance     | Name column          | Auto    | Slider, 96–240 points in 4-point steps, with Reset to automatic.                                               |
+| Appearance     | Day columns          | Auto    | Slider for the minimum day width, 40–80 points in 2-point steps. Whole days then fill the available width.     |
+| Appearance     | Rows                 | Auto    | Slider for the minimum row height, 40–80 points in 2-point steps. Larger text and wrapped names can grow rows. |
+| Appearance     | Text size            | 100%    | One app-wide slider, 85–150% in 5% steps, with Reset to 100%. Includes descriptions and their editor.          |
+| Appearance     | Checkbox style       | Circles | Squares, Circles or Ticks & crosses (Circles saves Round checkboxes with the Checkboxes style).                |
+| Appearance     | Streak numbers       | On      | Checked boxes show their place in the streak instead of a tick (Squares and Circles). See [Cells](#cells).     |
+| Appearance     | Joined checkboxes    | On      | Consecutive checked boxes joined by a bar (Squares and Circles).                                               |
+| Appearance     | Connector thickness  | 55%     | Bar height, 20–100% of the checkbox in 5% steps; shown with Joined checkboxes.                                 |
+| Appearance     | Tap animations       | On      | A short pulse on the tapped checkbox or mark.                                                                  |
+| Appearance     | Missed day crosses   | On      | A quiet cross on past scheduled days that missed; unscheduled days stay blank.                                 |
+| Appearance     | Week dividers        | On      | Faint alternating week backgrounds in the date headings.                                                       |
+| Daily tracking | Hide completed today | Off     | Hide rows meeting their dated success goal at Today, with Show completed for corrections.                      |
+| Daily tracking | Haptic feedback      | On      | Enable or disable action feedback.                                                                             |
+| Daily tracking | Week starts on       | Monday  | Monday or Sunday. See [Week start](#week-start).                                                               |
 
-The three grid sizes share one live preview at the top of their group; see
+Appearance groups its controls as Theme, Size, Checkboxes and Days under one
+live grid preview. On portrait phones the preview stays pinned above the
+scrolling controls, so every grid setting changes something visible (its
+Preview bar collapses it, remembered until the app restarts); in
+landscape or on short screens it scrolls at the top of the page. It draws the
+dates with the grid's own painter (`canvasGrid/cellPainter.ts`): real dates
+ending Today, week shading, and sample days showing a streak, a missed day and
+an unscheduled day, in the current theme. Slider drafts show while dragging.
+The grid itself changes when Settings closes; see
+[Changes while Settings is open](#changes-while-settings-is-open) and
 [Grid sizes](#grid-sizes).
 
 ## Navigation
@@ -184,18 +191,13 @@ habit goals ([GOALS.md](GOALS.md)).
 ## Cells
 
 Founder decisions (12 October 2026), first tried behind development switches
-and then moved here as saved preferences. All start Off while the founder
-chooses defaults; the defaults are display rules (`cellLookDefaults`), so they
-can change without rewriting saved data.
+and then moved into Appearance as saved preferences. By default the grid shows
+Circles with streak numbers, joined checkboxes (55% connector) and missed day
+crosses. Defaults are display rules (`cellLookDefaults`), so they can change
+without rewriting saved data.
 
-- **Outlines only on Today:** empty checkboxes and the “—” of unrecorded
-  number/text cells appear only in the Today column. Other cells stay blank and
-  tappable.
-- **Missed days:** on days before today, a scheduled day of a daily goal that
-  was not met shows a small quiet cross; an unscheduled day, or a day before the
-  start date, stays blank. Weekly quotas and tracking-only habits never mark a
-  single day as missed.
-- **Round checkboxes:** circles instead of rounded squares.
+- **Checkbox style** offers Squares, Circles and Ticks & crosses. Circles is the
+  Checkboxes style with `roundCheckboxes` on; the two are saved separately.
 - **Streak numbers:** each checked box shows its position in its run of
   consecutive checked days, from 1, instead of a tick. The count runs back to
   the start of the streak beyond the visible dates (up to ten years) and
@@ -208,10 +210,16 @@ can change without rewriting saved data.
   Motion gate this like the pulse.
 - **Connector thickness:** the joining bar's height, 20–100% of the checkbox,
   saved on release.
+- **Missed day crosses** (default On): on days before today, a scheduled day of
+  a daily goal that was not met shows a small quiet cross; an unscheduled day,
+  or a day before the start date, stays blank. Weekly quotas and tracking-only
+  habits never mark a single day as missed.
 
-The last four apply to the Checkboxes style and are hidden for Ticks & crosses.
-Shading cells by progress toward a numeric goal was declined: it makes values
-harder to read.
+Streak numbers, Joined checkboxes and Connector thickness apply to Squares and
+Circles and are hidden for Ticks & crosses. Outlines only on Today (empty boxes
+only in the Today column) was tried and removed the same day because it looked
+odd; its saved choice still replays but is no longer drawn. Shading cells by
+progress toward a numeric goal was declined: it makes values harder to read.
 
 ## Removed: Fade distant dates
 

@@ -232,7 +232,6 @@ function PersistentApp({
     lightBackground = displayDefaults.lightBackground,
   } = snapshot.replay.state;
   const {
-    todayOutlines,
     missedDays,
     joinedCheckboxes,
     streakNumbers,
@@ -243,7 +242,6 @@ function PersistentApp({
   const cellLook = useMemo(
     () =>
       cellLookOf({
-        todayOutlines,
         missedDays,
         joinedCheckboxes,
         streakNumbers,
@@ -251,7 +249,6 @@ function PersistentApp({
         connectorThickness,
       }),
     [
-      todayOutlines,
       missedDays,
       joinedCheckboxes,
       streakNumbers,
