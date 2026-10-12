@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import { weekDayOrder } from '../src/displayPreferences.ts';
 import { gridLayout } from '../src/gridLayout.ts';
 import { autoNameWidth } from '../src/gridSizing.ts';
-import { createGridPalette } from '../src/gridAppearance.ts';
 import { monthDays } from '../src/statistics.ts';
 
 test('column widths fit whole dates and preserve name width across orientations and text sizes', () => {
@@ -83,16 +82,4 @@ test('week start aligns every calendar date with its weekday without changing da
   }
   assert.deepEqual(weekDayOrder('monday'), [1, 2, 3, 4, 5, 6, 0]);
   assert.deepEqual(weekDayOrder('sunday'), [0, 1, 2, 3, 4, 5, 6]);
-});
-test('disabling fading restores recent-day brightness at every history/future tone', () => {
-  for (const colour of ['#82E6BC', '#BDA5FF', '#F2ACAC', '#333333']) {
-    const faded = createGridPalette(colour);
-    const bright = createGridPalette(colour, false);
-    assert.equal(bright.checkmark, faded.checkmark);
-    for (const tone of bright.tones) assert.deepEqual(tone, faded.tones[0]);
-    // Already-dark colours retain the existing brightness floor.
-    if (colour !== '#333333')
-      assert.notDeepEqual(faded.tones[0], faded.tones[4]);
-    assert.deepEqual(createGridPalette(colour, true), faded);
-  }
 });

@@ -71,7 +71,7 @@ Grid
   src/GridCheckboxLayer.tsx    batched idle checkbox SVG per column
   src/GridCheckboxMark.tsx     checkbox drawing and tap feedback
   src/GridLoadingBackdrop.tsx  read-only fallback dates and dashes
-  src/gridAppearance.ts        cached per-habit colour levels
+  src/gridAppearance.ts        cached per-habit grid colours
   src/gridEntryText.ts         text/category cell previews
   src/ReorderRow.tsx           RowPositions: shared row movement
   src/DateNavigationSheet.tsx  date picker sheet (src/DateCalendar.tsx on Android)
@@ -493,8 +493,8 @@ dismissal, its own safe-area provider and scrollable content for larger text and
 landscape. The grid remains mounted behind it.
 
 Preferences (haptics, Hide completed today, checkbox style, week dividers, tap
-animations, grid sizes, text size, theme and backgrounds, week start and date
-fading) are saved outside History and Undo; `displayPreferences.ts` holds the
+animations, grid sizes, text size, theme and backgrounds, and week start) are
+saved outside History and Undo; `displayPreferences.ts` holds the
 display defaults. `useGridDisplayPreferences.ts` holds grid presentation values (sizes,
 styles, theme) while Settings is open and releases them together on dismissal,
 so the hidden grid is not rebuilt on every choice. Completion filtering applies
@@ -504,21 +504,13 @@ immediately. See [SETTINGS.md](SETTINGS.md).
 `ThemeContext.tsx` provides `useTheme` and cached themed styles. System, Dark and
 Light themes (Dark by default) use pure black and warm Paper backgrounds by
 default, and each background can be customised. Colours were designed on black; on other backgrounds, blends resolve
-against that background and fading moves towards it. Saved colours never change;
+against that background. Saved colours never change;
 display colours are derived.
 
-Unused future cells use a dimmer version of their habit colour. History keeps
-normal emphasis through day 4, then fades smoothly from day 5 to day 8. The fade
-is based on signed calendar age and stays bounded thereafter. Checkbox outlines,
-empty numeric marks, separators and unused date headings follow that emphasis.
-Recorded values keep full colour, including explicit numeric zero. A date with
-any recorded value keeps its heading bright. Clear and Undo restore the empty
-treatment immediately. Empty-cell alpha is first resolved against black; only
-OKLCH lightness is then reduced, by up to 30%. Hue and chroma stay fixed.
-Lightness has a floor of 0.38 for empty cells and 0.56 for date text unless the
-original was already darker. If the requested lightness cannot represent the same
-chroma/hue in sRGB, the darkest available lightness along that path is used.
-Dimming is computed during rendering, with no per-frame scroll work.
+Every date uses the same tone: empty cells show their habit colour blended
+against the background, and recorded values keep full colour, including explicit
+numeric zero. The earlier fade for older and future dates was removed (12 October
+2026); date headings therefore no longer subscribe to recorded values.
 
 `ColourPicker.tsx` shows Presets and Custom tabs one at a time to avoid a tall
 dialog; the 24 presets occupy four rows at the usual phone width. Native sliders

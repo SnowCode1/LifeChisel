@@ -29,9 +29,9 @@ import { CheckboxGraphic, GridCheckboxLayer } from './GridCheckboxLayer';
 import type { GridDay } from './calendar';
 import { habitType, isNumericHabit, type Habit } from './habits';
 import { ReorderRow, type RowMotion } from './ReorderRow';
-import { dayTone, dateTones, type GridPalette } from './gridAppearance';
+import { dateTone, type GridPalette } from './gridAppearance';
 import { themedStyles, useTheme } from './ThemeContext';
-import { entrySelection, recordedDaySelection } from './storage/selection';
+import { entrySelection } from './storage/selection';
 import type { ChangeStore } from './storage/store';
 import {
   performanceEnabled,
@@ -118,7 +118,6 @@ const GridCell = memo(function GridCell({
             evaluateGoal(habit, value, day.key),
           )
         : evaluateGoal(habit, value, day.key);
-  const tone = palette.tones[dayTone(day.daysAgo)];
   const Row = experiment === 'simple-cells' ? StaticCellRow : ReorderRow;
   const activate = () => {
     if (disabled) return;
@@ -156,7 +155,7 @@ const GridCell = memo(function GridCell({
     styles.cell,
     {
       height,
-      borderBottomColor: tone.rule,
+      borderBottomColor: palette.rule,
       backgroundColor: pressed
         ? palette.pressed
         : goal.met
@@ -174,7 +173,7 @@ const GridCell = memo(function GridCell({
       ellipsizeMode="tail"
       style={[
         numeric ? styles.numeric : styles.textEntry,
-        { color: recorded ? palette.colour : tone.number },
+        { color: recorded ? palette.colour : palette.number },
       ]}
     >
       {cellEntryLabel(habit, value)}
@@ -183,7 +182,7 @@ const GridCell = memo(function GridCell({
     <Text
       style={{
         fontSize: 22 * fontScale,
-        color: goal.met ? palette.colour : tone.checkbox,
+        color: goal.met ? palette.colour : palette.checkbox,
       }}
     >
       {checked ? '✓' : '□'}
@@ -196,7 +195,7 @@ const GridCell = memo(function GridCell({
       style={checkboxStyle}
       checkmark={palette.checkmark}
       size={Math.max(0, Math.min(28 * fontScale, height - 16, width - 16))}
-      colour={goal.met ? palette.colour : tone.checkbox}
+      colour={goal.met ? palette.colour : palette.checkbox}
     />
   ) : null;
   if (nativeControl)
@@ -511,45 +510,27 @@ function CheckboxTapFeedback({
         style={checkboxStyle}
         checkmark={palette.checkmark}
         size={Math.max(0, Math.min(28 * fontScale, height - 16, width - 16))}
-        colour={
-          met ? palette.colour : palette.tones[dayTone(day.daysAgo)].checkbox
-        }
+        colour={met ? palette.colour : palette.checkbox}
       />
     </ReorderRow>
   );
 }
 export const GridDateHeading = memo(function GridDateHeading({
-  dateFading,
   weekStart,
   weekDividers,
-  store,
-  habits,
   day,
   width,
 }: {
-  dateFading: boolean;
   weekStart: WeekStart;
   weekDividers: boolean;
-  store: ChangeStore;
-  habits: Habit[];
   day: GridDay;
   width: number;
 }) {
-  const selection = useMemo(
-    () => recordedDaySelection(store, habits, day.key),
-    [store, habits, day.key],
-  );
-  const recorded = useSyncExternalStore(
-    selection.subscribe,
-    selection.getSnapshot,
-  );
   recordPerformance('grid.heading.render');
   return (
     <GridDateLabel
       day={day}
       width={width}
-      recorded={recorded}
-      dateFading={dateFading}
       weekDividers={weekDividers}
       weekStart={weekStart}
     />
@@ -558,22 +539,17 @@ export const GridDateHeading = memo(function GridDateHeading({
 export const GridDateLabel = memo(function GridDateLabel({
   day,
   width,
-  recorded,
-  dateFading,
   weekStart,
   weekDividers,
 }: {
   day: GridDay;
   width: number;
-  recorded: boolean;
-  dateFading: boolean;
   weekStart: WeekStart;
   weekDividers: boolean;
 }) {
   const theme = useTheme();
   const headingStyles = useHeadingStyles();
-  const tone =
-    dateTones(theme)[recorded || !dateFading ? 0 : dayTone(day.daysAgo)];
+  const tone = dateTone(theme);
   return (
     <View
       testID="date-heading"

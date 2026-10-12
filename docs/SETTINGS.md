@@ -7,7 +7,8 @@ in History or Undo. Archived habits and backups are also reached from Settings.
 
 The first settings (row and column spacing) were a founder request, along with
 “a couple of genuinely useful additional settings”; week start and date fading
-were the assistant's choices within that scope.
+were the assistant's choices within that scope. Date fading was later removed
+(12 October 2026).
 
 ## Controls and defaults
 
@@ -15,22 +16,21 @@ In on-screen order. Defaults come from `displayDefaults` in
 `displayPreferences.ts`, the `defaultBackgrounds` in `theme.ts`, and the
 automatic rules in `gridSizing.ts`.
 
-| Page           | Control              | Default    | Purpose                                                                                                                     |
-| -------------- | -------------------- | ---------- | --------------------------------------------------------------------------------------------------------------------------- |
-| Appearance     | Theme                | Dark       | System / Dark / Light. System follows the phone's light or dark mode.                                                       |
-| Appearance     | Dark background      | Black      | Six presets or a custom colour, fitted to a readable dark range.                                                            |
-| Appearance     | Light background     | Paper      | Six presets or a custom colour, fitted to a readable light range.                                                           |
-| Appearance     | Name column          | Auto       | Slider, 96–240 points in 4-point steps, with Reset to automatic.                                                            |
-| Appearance     | Day columns          | Auto       | Slider for the minimum day width, 40–80 points in 2-point steps. Whole days then fill the available width.                  |
-| Appearance     | Rows                 | Auto       | Slider for the minimum row height, 40–80 points in 2-point steps. Larger text and wrapped names can grow rows.              |
-| Appearance     | Text size            | 100%       | One app-wide slider, 85–150% in 5% steps, with Reset to 100%. Includes descriptions and their editor.                       |
-| Appearance     | Checkbox style       | Checkboxes | Checkboxes or Ticks & crosses.                                                                                              |
-| Appearance     | Week dividers        | On         | Faint alternating week backgrounds in the date headings.                                                                    |
-| Appearance     | Tap animations       | On         | A short pulse on the tapped checkbox or mark.                                                                               |
-| Appearance     | Fade distant dates   | On         | Grid fading for empty older and future dates. Off gives every age the recent-day tone. Recorded values stay fully coloured. |
-| Daily tracking | Hide completed today | Off        | Hide rows meeting their dated success goal at Today, with Show completed for corrections.                                   |
-| Daily tracking | Haptic feedback      | On         | Enable or disable action feedback.                                                                                          |
-| Daily tracking | Week starts on       | Monday     | Monday or Sunday. See [Week start](#week-start).                                                                            |
+| Page           | Control              | Default    | Purpose                                                                                                        |
+| -------------- | -------------------- | ---------- | -------------------------------------------------------------------------------------------------------------- |
+| Appearance     | Theme                | Dark       | System / Dark / Light. System follows the phone's light or dark mode.                                          |
+| Appearance     | Dark background      | Black      | Six presets or a custom colour, fitted to a readable dark range.                                               |
+| Appearance     | Light background     | Paper      | Six presets or a custom colour, fitted to a readable light range.                                              |
+| Appearance     | Name column          | Auto       | Slider, 96–240 points in 4-point steps, with Reset to automatic.                                               |
+| Appearance     | Day columns          | Auto       | Slider for the minimum day width, 40–80 points in 2-point steps. Whole days then fill the available width.     |
+| Appearance     | Rows                 | Auto       | Slider for the minimum row height, 40–80 points in 2-point steps. Larger text and wrapped names can grow rows. |
+| Appearance     | Text size            | 100%       | One app-wide slider, 85–150% in 5% steps, with Reset to 100%. Includes descriptions and their editor.          |
+| Appearance     | Checkbox style       | Checkboxes | Checkboxes or Ticks & crosses.                                                                                 |
+| Appearance     | Week dividers        | On         | Faint alternating week backgrounds in the date headings.                                                       |
+| Appearance     | Tap animations       | On         | A short pulse on the tapped checkbox or mark.                                                                  |
+| Daily tracking | Hide completed today | Off        | Hide rows meeting their dated success goal at Today, with Show completed for corrections.                      |
+| Daily tracking | Haptic feedback      | On         | Enable or disable action feedback.                                                                             |
+| Daily tracking | Week starts on       | Monday     | Monday or Sunday. See [Week start](#week-start).                                                               |
 
 The three grid sizes share one live preview at the top of their group; see
 [Grid sizes](#grid-sizes).
@@ -82,8 +82,8 @@ reported slow spacing feedback when every choice relaid the hidden grid).
 
 `useGridDisplayPreferences.ts` defers these grid preferences while
 History/Settings/archive is open or dismissing: theme, Name column, Day columns,
-Rows, text size, checkbox style, week dividers, tap animations, week start and
-date fading. Hide completed today is not deferred: filtering is applied behind
+Rows, text size, checkbox style, week dividers, tap animations and week start.
+Hide completed today is not deferred: filtering is applied behind
 Settings as soon as the switch changes, so completed rows have already gone on
 return. Haptic feedback takes effect immediately.
 
@@ -173,11 +173,12 @@ haptics or navigation. Reduce Motion suppresses the pulse even when the toggle
 is On. A separate rest-day setting was declined; scheduling belongs to dated
 habit goals ([GOALS.md](GOALS.md)).
 
-## Fade distant dates
+## Removed: Fade distant dates
 
-Date fading changes only the main grid's age emphasis, including its fallback
-headings. It does not change habit colours, completed states, statistics colours
-or stored records. The lower brightness bound for very dark colours remains.
+Founder decision (12 October 2026): the grid no longer dims empty older or
+future dates, because the fading was confusing. Every date uses one tone. The
+saved `dateFading` preference still replays from older logs and backups but has
+no effect.
 
 ## Week start
 
@@ -256,9 +257,7 @@ How colours adapt (assistant design, `src/theme.ts`):
   of falling back to grey in some places. The saved colour is never changed:
   the colour picker shows the adjusted colour and says so.
 - Empty-cell blends, tinted completed cells and chart fills are mixed against
-  the active background. Distant-date fading darkens towards dark backgrounds
-  and blends towards light ones, reducing contrast by up to 40% (less for date
-  headings).
+  the active background.
 - Marks on filled colours are white when white reaches 3:1, otherwise black.
   This gives white ticks on the deeper light-theme colours; presets on black
   keep black ticks.
@@ -275,8 +274,6 @@ Still to confirm on phones (see [TESTING.md](TESTING.md)):
 - Grid sizes in both orientations and with larger text; quick scrolling,
   revealing future dates and returning to Today; press responsiveness and a
   correctly aligned grid after Settings dismisses.
-- Fading around days 5–8 and in the future; checked cells and entered zero must
-  stay prominent.
 - Switching week start: dates line up with headings and keep their entries.
 - After reloading real data, preference changes neither appear in History nor
   consume Redo.

@@ -23,7 +23,7 @@ import {
   luminance,
 } from '../src/colors.ts';
 import { habitColors } from '../src/habits.ts';
-import { createGridPalette, dateTones } from '../src/gridAppearance.ts';
+import { createGridPalette, dateTone } from '../src/gridAppearance.ts';
 import { highlightColours } from '../src/richText/highlights.ts';
 import { editorPalette, inkVariable } from '../src/richText/editorTheme.ts';
 import { ChangeStore } from '../src/storage/store.ts';
@@ -106,26 +106,19 @@ test('habit and accent colours stay readable, keeping their hue', () => {
   assert.ok(blackTheme.contrast(blackTheme.colour('#101820')) >= MIN_CONTRAST);
 });
 
-test('grid tones fade towards any background without disappearing', () => {
+test('grid palettes and date headings stay visible on any background', () => {
   for (const theme of [blackTheme, ...custom]) {
     for (const { value } of habitColors.slice(0, 6)) {
-      const palette = createGridPalette(value, true, theme);
-      const contrasts = palette.tones.map((tone) =>
-        theme.contrast(tone.checkbox),
+      const palette = createGridPalette(value, theme);
+      assert.ok(
+        theme.contrast(palette.checkbox) > 1.2,
+        `${theme.background} ${value}`,
       );
-      for (let i = 1; i < contrasts.length; i++)
-        assert.ok(contrasts[i] <= contrasts[i - 1] + 0.01);
-      assert.ok(contrasts.at(-1) < contrasts[0]);
-      assert.ok(contrasts.at(-1) > 1.2, `${theme.background} ${value}`);
       assert.equal(palette.background, theme.background);
-      assert.deepEqual(
-        createGridPalette(value, false, theme).tones[4],
-        createGridPalette(value, false, theme).tones[0],
-      );
     }
-    const dates = dateTones(theme);
-    assert.equal(dateTones(theme), dates, 'cached per theme');
-    assert.ok(theme.contrast(dates[4].number) >= 3, theme.background);
+    const dates = dateTone(theme);
+    assert.equal(dateTone(theme), dates, 'cached per theme');
+    assert.ok(theme.contrast(dates.number) >= 3, theme.background);
   }
 });
 

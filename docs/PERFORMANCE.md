@@ -36,7 +36,7 @@ release-build profiling, establish device performance.
 - **Shared row motion.** `RowPositions` gives each displayed habit one animated
   style that names, cells and loading strips share; idle date rows use static
   transforms.
-- **Cached derived values.** Per-habit colour levels (`gridAppearance.ts`), date
+- **Cached derived values.** Per-habit grid colours (`gridAppearance.ts`), date
   labels, and a goal-policy cache bounded to 256 dates per definition. The
   completion mask is selected only while Hide completed today is on.
 - **Fallback backdrop.** `GridLoadingBackdrop.tsx` paints read-only dates and
@@ -104,10 +104,10 @@ updates. Statistics calculations themselves still run when their data changes.
 
 ## Horizontal scrolling preparation
 
-- `gridAppearance.ts` precomputes five colour levels per habit. Grid rendering
-  reads those levels instead of repeating OKLCH conversions/gamut searches per
-  cell. Tests verify exact parity with the earlier formulas, including future
-  cells.
+- `gridAppearance.ts` precomputes each habit's grid colours once. Grid
+  rendering reads them instead of repeating OKLCH conversions/gamut searches per
+  cell. (It held five fade levels until date fading was removed on 12 October
+  2026.)
 - Each grid owns a local-date cache. Range expansion keeps existing date objects
   and formats only newly added days with reused Intl formatters. The cache is
   discarded on grid unmount or local-day rollover and is bounded to the loaded

@@ -1,8 +1,8 @@
 // Synthetic CPU microbenchmarks, not native frame-rate or disk-durability tests.
 import { performance } from 'node:perf_hooks';
 import { demoHabits } from '../src/habits.ts';
-import { colorOnBlack, dimmedColor } from '../src/colors.ts';
-import { createGridPalette, dayTone } from '../src/gridAppearance.ts';
+import { colorOnBlack } from '../src/colors.ts';
+import { createGridPalette } from '../src/gridAppearance.ts';
 import {
   calendarDay,
   localDateKey,
@@ -56,19 +56,16 @@ let guard = 0;
 const coloursBefore = () => {
   for (let day = 0; day < 24; day++)
     for (const habit of demoHabits) {
-      const p = Math.max(0, Math.min(1, (day - 4) / 4));
-      const amount = p * p * (3 - 2 * p);
-      guard += dimmedColor(colorOnBlack(habit.color, 170 / 255), amount).length;
-      guard += dimmedColor(colorOnBlack(habit.color, 0.65), amount).length;
-      guard += dimmedColor(habit.color, amount).length;
+      guard += colorOnBlack(habit.color, 170 / 255).length;
+      guard += colorOnBlack(habit.color, 0.65).length;
+      guard += habit.color.length;
     }
 };
 const coloursAfter = () => {
   for (let day = 0; day < 24; day++)
-    for (const palette of palettes) {
-      const tone = palette.tones[dayTone(day)];
-      guard += tone.checkbox.length + tone.number.length + tone.rule.length;
-    }
+    for (const palette of palettes)
+      guard +=
+        palette.checkbox.length + palette.number.length + palette.rule.length;
 };
 console.log(
   'Desktop Node CPU timings; do not interpret as iPhone frame timings.',

@@ -38,8 +38,6 @@ export function AppPanel({
   onTapAnimationsChange,
   checkboxStyle,
   onCheckboxStyleChange,
-  dateFading,
-  onDateFadingChange,
   textScale,
   onTextScaleChange,
   hideCompleted,
@@ -86,8 +84,6 @@ export function AppPanel({
   onTapAnimationsChange: (value: boolean) => void;
   checkboxStyle: CheckboxStyle;
   onCheckboxStyleChange: (value: CheckboxStyle) => void;
-  dateFading: boolean;
-  onDateFadingChange: (value: boolean) => void;
   textScale: number;
   onTextScaleChange: (value: number) => void;
   hideCompleted: boolean;
@@ -238,8 +234,6 @@ export function AppPanel({
                   onTapAnimationsChange={onTapAnimationsChange}
                   checkboxStyle={checkboxStyle}
                   onCheckboxStyleChange={onCheckboxStyleChange}
-                  dateFading={dateFading}
-                  onDateFadingChange={onDateFadingChange}
                   hideCompleted={hideCompleted}
                   onHideCompletedChange={onHideCompletedChange}
                   hapticsEnabled={hapticsEnabled}

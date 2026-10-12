@@ -27,7 +27,6 @@ test('settings receive every choice while mounted grid geometry and typography w
     rowSpacing,
     columnSpacing,
     nameColumnWidth,
-    dateFading,
     hideCompleted,
     checkboxStyle,
     weekDividers,
@@ -44,7 +43,6 @@ test('settings receive every choice while mounted grid geometry and typography w
       rowSpacing,
       columnSpacing,
       nameColumnWidth,
-      dateFading,
       hideCompleted,
       checkboxStyle,
       weekDividers,
@@ -69,7 +67,6 @@ test('settings receive every choice while mounted grid geometry and typography w
           rowSpacing: displayed.rowSpacing,
           columnSpacing: displayed.columnSpacing,
           nameColumnWidth: displayed.nameColumnWidth,
-          dateFading: displayed.dateFading,
           hideCompleted: displayed.hideCompleted,
           checkboxStyle: displayed.checkboxStyle,
           weekDividers: displayed.weekDividers,
@@ -88,7 +85,6 @@ test('settings receive every choice while mounted grid geometry and typography w
     columnSpacing: 'standard',
     nameColumnWidth: 'standard',
     textScale: 1,
-    dateFading: true,
     hideCompleted: false,
   };
   const render = async (current, deferred) =>
@@ -109,7 +105,6 @@ test('settings receive every choice while mounted grid geometry and typography w
         rowSpacing: 'roomy',
         columnSpacing: 'standard',
         textScale: 1.15,
-        dateFading: false,
         hideCompleted: false,
         checkboxStyle: 'marks',
         weekDividers: false,
@@ -136,7 +131,6 @@ test('settings receive every choice while mounted grid geometry and typography w
     assert.equal(grid.columnSpacing, 'standard');
     assert.equal(grid.nameColumnWidth, 'wide');
     assert.equal(grid.scale, 1.15);
-    assert.equal(grid.dateFading, false);
     assert.equal(grid.hideCompleted, false);
     assert.equal(grid.checkboxStyle, 'marks');
     assert.equal(grid.weekDividers, false);

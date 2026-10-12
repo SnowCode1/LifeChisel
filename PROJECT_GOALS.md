@@ -89,10 +89,8 @@ and uncertainty about whether something was saved.
   when adding them to an existing preset list. New custom habits start without one.
   Offer Phosphor and Tabler Outline with shared search and common habit choices.
   Open the picker on Icons and make its full search scope explicit.
-- Mute unused future dates and entries while keeping recorded values prominent.
-  Preserve habit hue and colourfulness; reduce only OKLCH lightness with a floor
-  so empty cells remain visible. The history fade starts at day 5 and reaches its
-  dimmest level at day 8, then stays bounded.
+- Show every date in the same tone. The earlier fade for older and future
+  dates was removed as confusing (12 October 2026).
 - Offer saved Name column, Day columns and Rows sizes, in that order, as stepped
   sliders with a live preview. Each starts at an automatic size that adapts to
   the device and text size, with Reset to automatic. These replace the earlier

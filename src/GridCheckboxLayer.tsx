@@ -6,7 +6,7 @@ import type { CheckboxStyle } from './displayPreferences';
 import type { ChangeStore } from './storage/store';
 import { entrySelection } from './storage/selection';
 import { checkboxChecked, evaluateGoal } from './habitGoals';
-import { dayTone, type GridPalette } from './gridAppearance';
+import type { GridPalette } from './gridAppearance';
 import { performanceEnabled, timePerformance } from './performance';
 
 export const CheckboxGraphic = memo(function CheckboxGraphic({
@@ -54,9 +54,7 @@ export const CheckboxGraphic = memo(function CheckboxGraphic({
           () => evaluateGoal(habit, value, day.key).met,
         )
       : evaluateGoal(habit, value, day.key).met);
-  const colour = met
-    ? palette.colour
-    : palette.tones[dayTone(day.daysAgo)].checkbox;
+  const colour = met ? palette.colour : palette.checkbox;
   const box = size * (22 / 28),
     stroke = Math.max(1.25, box * (1.5 / 22));
   const glyph = style === 'marks' ? size : box * 0.85;

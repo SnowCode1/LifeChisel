@@ -131,7 +131,7 @@ Global preferences, saved as `preference` events outside History and Undo (see
   spacing, column spacing/density and name-width choices they replaced;
 - text size;
 - theme mode and the dark and light backgrounds;
-- week start and date fading.
+- week start, and date fading (still saved and replayed, but no longer shown).
 
 Outside the log: recoverable description drafts and bookmarks (a separate local
 store; see [Description drafts](#description-drafts)), Quick Undo receipts,

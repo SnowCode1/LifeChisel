@@ -157,8 +157,8 @@ docs hold the design behind each check.
   reveals them; other dates show the full list; the next day uses its own results.
 - Recording a value or archiving shows Undo for four seconds; it reverses only
   that action, whatever the filter, goal or date.
-- Future cells are dimmed and older days fade; recorded values, including zero,
-  stand out and brighten their date heading.
+- Every date, past and future, uses the same tone; recorded values, including
+  zero, stand out.
 - Past midnight while open, and after an overnight background, the grid shows the
   new Today with entries on their original dates.
 - A failed save shows Retry and blocks edits; Retry saves exactly once.
@@ -250,14 +250,14 @@ See [SETTINGS.md](SETTINGS.md).
   numbers, landscape and reordering stay aligned.
 - Text size 85–150% with the phone's larger text scales the grid, statistics,
   History, menus, dialogs and editor; Reset returns to 100%.
-- Checkbox style, Week dividers, Tap animations, Fade distant dates, Week starts
-  on and Haptic feedback apply after Settings closes (Hide completed applies
+- Checkbox style, Week dividers, Tap animations, Week starts on and Haptic
+  feedback apply after Settings closes (Hide completed applies
   at once). Week shading stays in the date headings and keeps each week's shade
   while scrolling. With haptics off, everything works silently.
 - Theme on System follows the phone's mode while open. Dark or Light with the
   phone in the opposite mode: alerts, keyboards and date pickers match the app.
-- Every background preset and a custom colour, both schemes: names, cells, faded
-  dates, Today, week shading, Quick Undo, History, charts, goals, entry dialogs
+- Every background preset and a custom colour, both schemes: names, cells, dates,
+  Today, week shading, Quick Undo, History, charts, goals, entry dialogs
   and the note editor stay readable. A hex such as #808080 is adjusted, with a note.
 - Preferences survive reload and restore, never enter History or consume Redo,
   and a failed save shows Retry.

@@ -58,8 +58,6 @@ type Props = {
   onTapAnimationsChange: (value: boolean) => void;
   checkboxStyle: CheckboxStyle;
   onCheckboxStyleChange: (value: CheckboxStyle) => void;
-  dateFading: boolean;
-  onDateFadingChange: (value: boolean) => void;
   hideCompleted: boolean;
   onHideCompletedChange: (value: boolean) => void;
   hapticsEnabled: boolean;
@@ -348,12 +346,6 @@ export function SettingsScreen(p: Props) {
               label="Tap animations"
               value={p.tapAnimations}
               onChange={p.onTapAnimationsChange}
-              disabled={disabled}
-            />
-            <Toggle
-              label="Fade distant dates"
-              value={p.dateFading}
-              onChange={p.onDateFadingChange}
               disabled={disabled}
             />
           </Group>

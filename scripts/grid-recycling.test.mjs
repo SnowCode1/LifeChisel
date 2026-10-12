@@ -148,7 +148,7 @@ test('recycled date columns keep row views while switching subscriptions, taps a
     },
     { timeout: 500 },
   );
-  const palette = appearance.createGridPalette(h.color, true);
+  const palette = appearance.createGridPalette(h.color);
   const props = {
     store,
     habits: [h],

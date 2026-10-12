@@ -71,7 +71,7 @@ preserve earlier icon choices/removals and raw history.
   shared goal cache), bins, observations, the centred smoothed trend and streak runs;
   `categoryColours.ts` derives OKLCH category hues; `outcomeColours.ts` is the
   one colour language. `statisticsFormatting.ts` owns shared display helpers.
-- `src/GridCells.tsx` selects individual entries/date-heading state from the store.
+- `src/GridCells.tsx` selects individual entries from the store.
   Keep grid callbacks/definitions stable across save acknowledgements. Cache colour
   levels in `gridAppearance.ts` and retain date identities when extending history.
   See `docs/PERFORMANCE.md`; never infer iPhone frame rates from Node benchmarks.
@@ -128,7 +128,8 @@ preserve earlier icon choices/removals and raw history.
   name control so position animation does not report per-frame layout to JS.
   `src/motion.ts` shares reduced-motion-aware row/menu transitions; keep name and
   date-cell layout timing aligned.
-- `src/displayPreferences.ts` owns column spacing, week start and date fading defaults; keep absent-field defaults compatible with old logs and all preferences outside History/Undo. Read docs/SETTINGS.md.
+- `src/displayPreferences.ts` owns column spacing and week start defaults (the retired `dateFading` default
+  stays only so saved changes replay); keep absent-field defaults compatible with old logs and all preferences outside History/Undo. Read docs/SETTINGS.md.
 - `useGridDisplayPreferences.ts` holds only grid display preferences while the
   History/Settings/archive sheet is presented or dismissing. Settings and storage
   use current values immediately; native `AppPanel.onDismiss` releases the latest

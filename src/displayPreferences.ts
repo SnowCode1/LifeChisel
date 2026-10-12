@@ -35,6 +35,7 @@ export const displayDefaults = {
   columnDensity: 'standard',
   nameColumnWidth: 'standard',
   weekStart: 'monday',
+  // No longer shown (fading was removed); kept so saved changes still replay.
   dateFading: true,
   themeMode: 'dark',
   darkBackground: defaultBackgrounds.dark,

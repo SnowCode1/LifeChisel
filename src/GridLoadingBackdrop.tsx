@@ -16,14 +16,12 @@ import { useTheme } from './ThemeContext';
 // These dates are cheap, read-only native text. They are prepared with each date
 // range, so a virtualized-list spacer never hides the calendar during a JS stall.
 const FallbackDate = memo(function FallbackDate({
-  dateFading,
   weekStart,
   weekDividers,
   day,
   index,
   width,
 }: {
-  dateFading: boolean;
   weekStart: WeekStart;
   weekDividers: boolean;
   day: GridDay;
@@ -43,23 +41,19 @@ const FallbackDate = memo(function FallbackDate({
       <GridDateLabel
         day={day}
         width={width}
-        recorded={false}
         weekDividers={weekDividers}
         weekStart={weekStart}
-        dateFading={dateFading}
       />
     </View>
   );
 });
 export const GridDateBackdrop = memo(function GridDateBackdrop({
-  dateFading,
   weekStart,
   weekDividers,
   days,
   width,
   offset,
 }: {
-  dateFading: boolean;
   weekStart: WeekStart;
   weekDividers: boolean;
   days: GridDay[];
@@ -93,7 +87,6 @@ export const GridDateBackdrop = memo(function GridDateBackdrop({
           <FallbackDate
             weekDividers={weekDividers}
             weekStart={weekStart}
-            dateFading={dateFading}
             key={day.key}
             day={day}
             index={index}

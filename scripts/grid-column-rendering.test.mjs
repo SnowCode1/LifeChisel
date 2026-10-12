@@ -234,10 +234,7 @@ test('native columns share controls/drawing while preserving dated input, access
     store,
     habits: definitions,
     palettes: Object.fromEntries(
-      definitions.map((h) => [
-        h.id,
-        appearance.createGridPalette(h.color, true),
-      ]),
+      definitions.map((h) => [h.id, appearance.createGridPalette(h.color)]),
     ),
     motions: Object.fromEntries(
       definitions.map((h, i) => [

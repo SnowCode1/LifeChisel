@@ -78,7 +78,6 @@ type Props = {
   weekStart: WeekStart;
   // Reports the measured grid width so Settings can preview it exactly.
   onWidthChange?: (width: number) => void;
-  dateFading: boolean;
   hideCompleted: boolean;
   sampleData?: boolean;
   HeadingComponent: ComponentType<TextProps>;
@@ -107,7 +106,6 @@ export const HabitGrid = memo(function HabitGrid({
   tapAnimations,
   weekStart,
   onWidthChange,
-  dateFading,
   hideCompleted,
   sampleData = false,
   HeadingComponent,
@@ -258,10 +256,10 @@ export const HabitGrid = memo(function HabitGrid({
       Object.fromEntries(
         habits.map((habit) => [
           habit.id,
-          createGridPalette(habit.color, dateFading, theme),
+          createGridPalette(habit.color, theme),
         ]),
       ),
-    [habits, dateFading, theme],
+    [habits, theme],
   );
   const { tops, total: gridHeight } = useMemo(
     () =>
@@ -302,14 +300,11 @@ export const HabitGrid = memo(function HabitGrid({
       <GridDateHeading
         weekDividers={weekDividers}
         weekStart={weekStart}
-        dateFading={dateFading}
-        store={store}
-        habits={sourceHabits}
         day={day}
         width={columnWidth}
       />
     ),
-    [store, sourceHabits, columnWidth, dateFading, weekStart, weekDividers],
+    [columnWidth, weekStart, weekDividers],
   );
   const cellsDisabled = !editable || !!dragId || reorderMode;
   const renderColumn = useCallback(
@@ -563,7 +558,6 @@ export const HabitGrid = memo(function HabitGrid({
                 <GridDateBackdrop
                   weekDividers={weekDividers}
                   weekStart={weekStart}
-                  dateFading={dateFading}
                   days={days}
                   width={columnWidth}
                   offset={offset}

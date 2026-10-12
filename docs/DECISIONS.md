@@ -1830,3 +1830,14 @@ signing and device enrolment are still prerequisites, not completed deployment.
   headings about a third of a column off the cells. Suspected cause: FlashList
   re-applying its initial index after launch. Superseded if the Skia grid test
   replaces FlashList.
+
+## 12 October 2026 — Date fading removed
+
+- Founder decision: remove all distance fading from the grid, for both older and
+  future dates, because it was confusing. The Fade distant dates setting is gone
+  and every date uses one tone.
+- Assistant implementation: grid palettes hold one tone instead of five levels,
+  and date headings no longer subscribe to whether a day has entries (that only
+  drove the fade), removing one live store subscription per visible heading. The
+  saved `dateFading` preference still validates and replays from older logs and
+  backups but has no effect; no storage version change.

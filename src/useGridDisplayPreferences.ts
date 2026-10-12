@@ -15,7 +15,6 @@ export type GridDisplayPreferences = {
   tapAnimations: boolean;
   weekStart: WeekStart;
   textScale: number;
-  dateFading: boolean;
   hideCompleted: boolean;
 };
 

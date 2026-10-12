@@ -224,7 +224,6 @@ function PersistentApp({
     values,
     hapticsEnabled,
     weekStart = displayDefaults.weekStart,
-    dateFading = displayDefaults.dateFading,
     checkboxStyle = displayDefaults.checkboxStyle,
     weekDividers = displayDefaults.weekDividers,
     tapAnimations = displayDefaults.tapAnimations,
@@ -272,7 +271,6 @@ function PersistentApp({
       columnWidth,
       rowHeight,
       textScale,
-      dateFading,
       hideCompleted,
       checkboxStyle,
       weekDividers,
@@ -690,21 +688,12 @@ function PersistentApp({
           if (store.change({ kind: 'checkboxStyle', before, after }))
             feedback('selection');
         }}
-        dateFading={dateFading}
         onWeekStartChange={(after) => {
           if (!editable) return;
           const before =
             store.getSnapshot().replay.state.weekStart ??
             displayDefaults.weekStart;
           if (store.change({ kind: 'weekStart', before, after }))
-            feedback('selection');
-        }}
-        onDateFadingChange={(after) => {
-          if (!editable) return;
-          const before =
-            store.getSnapshot().replay.state.dateFading ??
-            displayDefaults.dateFading;
-          if (store.change({ kind: 'dateFading', before, after }))
             feedback('selection');
         }}
         textScale={textScale}
@@ -806,7 +795,6 @@ function PersistentApp({
                         tapAnimations={gridDisplay.tapAnimations}
                         checkboxStyle={gridDisplay.checkboxStyle}
                         weekStart={gridDisplay.weekStart}
-                        dateFading={gridDisplay.dateFading}
                         hideCompleted={gridDisplay.hideCompleted}
                         sampleData={sampleData}
                         HeadingComponent={PreviewHeading}
