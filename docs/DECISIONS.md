@@ -1894,3 +1894,24 @@ signing and device enrolment are still prerequisites, not completed deployment.
   [Android date-list jumps](#12-october-2026--android-date-list-jumps) and
   [Android future dates load up front](#12-october-2026--android-future-dates-load-up-front)).
   The open Android launch-position issue is resolved by removing FlashList.
+
+## 12 October 2026 — Canvas grid momentum
+
+- Founder request: bring date scrolling up to the polish of native iOS
+  scrolling, and have flings decelerate smoothly into an exact column instead of
+  stopping anywhere and correcting at the last moment. A tap on fast momentum
+  should only stop the scroll, not check a box.
+- Founder tuning on the phones: iOS's normal deceleration (0.998) and a middle
+  value (0.995) felt too floaty; keep the earlier fast rate (0.99).
+- Assistant implementation: each release is planned before it moves
+  (`gridMotion.ts`). The natural stopping point is projected, the nearest
+  column chosen and the exponential slowdown retuned to end exactly there at
+  the finger's speed; slow releases use a critically damped spring and flings
+  into an edge bounce back onto it. A custom Reanimated animation
+  (`withFling.ts`) runs these closed-form curves. Drags absorb the 10-point
+  activation distance instead of jumping. Touches on momentum faster than 0.15
+  points per millisecond only stop it.
+- Also added `CADisableMinimumFrameDurationOnPhone` to `app.json` so our own
+  iPhone builds may run at 120 Hz; Expo Go stays at 60 on the iPhone.
+- Supersedes the decay-then-snap release described in
+  [Skia canvas grid](#12-october-2026--skia-canvas-grid).

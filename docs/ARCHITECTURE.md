@@ -64,7 +64,9 @@ Grid
   src/canvasGrid/
     useCanvasGrid.tsx          heading and cell canvases, taps, pressed highlight, pulse
     useCanvasGrid.web.tsx      web notice in place of the grid
-    useCanvasGridScroll.ts     UI-thread pan, momentum, snapping and future pull
+    useCanvasGridScroll.ts     UI-thread pan, release and future pull
+    gridMotion.ts              release planning: momentum that ends exactly on a column
+    withFling.ts               runs a planned release as a Reanimated animation
     useGridModel.ts            JS-thread cell records in 30-day chunks, Skia paragraphs
     GridAccessibilityLayer.tsx invisible native views for screen readers
     cellAccessibility.ts       cell state, roles and labels
@@ -183,7 +185,8 @@ see [PERFORMANCE.md](PERFORMANCE.md).
 | ----------------------- | --------------------------------------------------------------------------------------------------------------- |
 | HabitGrid               | Measured outer width, names, rows, vertical scrolling, reorder controls, toolbar and the date picker            |
 | useGridDates            | Settled rightmost day, unlocked future, month/year label, Today/date/future navigation and resize anchoring     |
-| useCanvasGridScroll     | Gesture-handler pan on the UI thread: drag, momentum, column snapping, rubber band, pull threshold and arrivals |
+| useCanvasGridScroll     | Gesture-handler pan on the UI thread: drag, release, rubber band, pull threshold and arrivals                   |
+| gridMotion, withFling   | Release planning (momentum landing exactly on a column, springs, edge bounces) and the animation that runs it   |
 | useGridModel            | JS-thread cell records in 30-day chunks around the visible dates, Skia paragraphs, updates on changed days      |
 | useCanvasGrid           | Heading and cell canvases, Today pill, week shading, streak, tap hit testing, pressed highlight, checkbox pulse |
 | GridAccessibilityLayer  | Invisible native views giving visible cells and headings their roles, states, labels and actions                |
@@ -230,13 +233,22 @@ Every date is generated on the fly from the offset, so there are no date lists,
 windows, remounts or anchoring. Offset 0 places Today in the rightmost column;
 positive offsets show older days and negative offsets show unlocked future days
 (day _d_ sits at x = width − (_d_ + 1) × column + offset). About a century of
-past days is reachable. Dragging moves the offset directly; release continues
-with momentum (`withDecay`, deceleration 0.99, as iOS's fast rate) and then snaps
-to a column, after which the settled day is sent to React for the month/year
-label and the Today action.
+past days is reachable. Dragging moves the offset directly, picking up under
+the finger without jumping by the 10-point activation distance. Each release
+is planned before it moves (`gridMotion.ts`): the natural stopping point under
+iOS's fast deceleration (0.99 per millisecond) is projected from the release
+velocity, the nearest column to it is chosen, and the exponential slowdown is
+retuned to end exactly there, starting at the finger's speed. A release too
+slow to reach a column eases onto the nearest one with a critically damped
+spring. There is no separate correction after momentum. The curves are
+functions of time, so 60 and 120 Hz screens trace the same path. Once the
+remaining movement is under 2 points the settled day is sent to React for the
+month/year label and the Today action. A touch on momentum faster than 0.15
+points per millisecond only stops it; it never checks a box or opens a dialog.
 
-The Today/future boundary sits at −unlocked future × column, and ordinary flings
-stop there. Both platforms use the same iOS-style pull: dragging past the
+The Today/future boundary sits at −unlocked future × column. A fling that would
+pass it decelerates to the boundary, overshoots briefly (at most 80 points) and
+springs back, as native iOS lists do; this bounce never reveals dates. Both platforms use the same iOS-style pull: dragging past the
 boundary moves the columns with rubber-band resistance, the heading streak grows
 with the pull, and the threshold haptic fires once at 64 points. Releasing past
 64 points unlocks 30 more future days (`FUTURE_BATCH`) and animates by the
@@ -629,8 +641,6 @@ checks.
   histories is unmeasured; see [PERFORMANCE.md](PERFORMANCE.md).
 - **Grid accessibility unverified on phones.** The invisible accessibility layer
   over the canvas has not yet been checked with VoiceOver or TalkBack.
-- **Date-scrolling feel still being tuned.** The founder confirmed the canvas
-  grid feels right; momentum, snapping and pull tuning remain open polish.
 - **No grid on web.** The web preview shows a notice instead of the habit grid.
 - **No release-build profiling yet.** Measurements so far come from development
   JavaScript and production JavaScript in Expo Go; the EAS internal build still

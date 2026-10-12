@@ -8,7 +8,10 @@
     "userInterfaceStyle": "automatic",
     "backgroundColor": "#000000",
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "infoPlist": {
+        "CADisableMinimumFrameDurationOnPhone": true
+      }
     },
     "android": {
       "adaptiveIcon": {

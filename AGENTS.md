@@ -75,8 +75,16 @@ preserve earlier icon choices/removals and raw history.
   2026); there is no second renderer. `useCanvasGrid.tsx` returns two canvases
   (fixed headings; body inside the vertical ScrollView at full grid height),
   both drawn with `createPicture` from one shared offset so they cannot drift.
-  `useCanvasGridScroll.ts` owns drag, decay, column snapping, the Today/future
-  boundary, the iOS-style rubber-band future pull (both phones) and `scrollToDay`.
+  `useCanvasGridScroll.ts` owns drag, release, the Today/future boundary, the
+  iOS-style rubber-band future pull (both phones) and `scrollToDay`. Pure
+  `gridMotion.ts` plans each release before it moves: it projects iOS fast
+  deceleration (0.99), picks the nearest column and retunes the curve to end
+  exactly there (springs for slow releases, bounces at edges); `withFling.ts`
+  runs that closed-form curve. Never add a separate snap after momentum. A
+  touch on momentum faster than `TAP_STOP_SPEED` only stops it, never edits.
+  Worklets do not capture default-parameter identifiers or call JS functions
+  (resolve theme colours before drawing); a crash on first scroll usually means
+  one of these.
   `gridGeometry.ts`/`gridDates.ts` hold worklet geometry and integer date maths.
   Keep all per-frame work on the UI thread; React receives only settles, reveals
   and arrivals. `useGridModel.ts` prepares cell records on JS in 30-day chunks

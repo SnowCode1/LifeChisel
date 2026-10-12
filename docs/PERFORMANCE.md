@@ -69,9 +69,12 @@ and [ARCHITECTURE.md](ARCHITECTURE.md#grid)).
 
 ### Known costs and open problems
 
-- **Date-scrolling feel is still being tuned.** The founder confirmed the canvas
-  grid feels right on the phones; momentum, snapping and pull feel remain open
-  polish.
+- **iPhone limited to 60 fps in Expo Go.** Reanimated asks iOS for 120 frames
+  per second, but iOS only allows more than 60 when the app opts in with
+  `CADisableMinimumFrameDurationOnPhone`. `app.json` sets it for our own builds;
+  Expo Go is Expo's app and stayed at 60 on the iPhone 16 Pro, while the S21
+  reaches 120. Low Power Mode and Limit Frame Rate (Accessibility → Motion) also
+  cap iPhones at 60. Confirm 120 Hz in the first EAS iPhone build.
 - **Accessibility overlay unverified.** The invisible native layer that gives
   screen readers the visible cells has not been checked with VoiceOver or
   TalkBack, nor has its cost while a screen reader scrolls.

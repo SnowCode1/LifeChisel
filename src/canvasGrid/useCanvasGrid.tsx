@@ -121,6 +121,8 @@ export type CanvasGridProps = {
   offset: SharedValue<number>;
   pull: SharedValue<number>;
   pan: () => PanGesture;
+  /** UI-thread check: a touch now would only stop fast momentum. */
+  flinging: () => boolean;
   rowTops: SharedValue<Record<string, number>>;
   dragY: SharedValue<number>;
   bodyTop: SharedValue<number>;
@@ -159,6 +161,7 @@ export function useCanvasGrid(props: CanvasGridProps): {
     offset,
     pull,
     pan,
+    flinging,
     rowTops,
     dragY,
     bodyTop,
@@ -307,6 +310,8 @@ export function useCanvasGrid(props: CanvasGridProps): {
     },
   );
 
+  // Theme functions live on the JS thread; resolve colours before drawing.
+  const streakColour = theme.ink(0x8a);
   const headerPicture = useDerivedValue(() =>
     createPicture(
       (canvas) => {
@@ -343,7 +348,7 @@ export function useCanvasGrid(props: CanvasGridProps): {
         const alpha = streakOpacity.value * Math.min(1, distance / 16);
         if (alpha > 0) {
           const length = width * Math.min(1, distance / FUTURE_PULL_DISTANCE);
-          const colour = Skia.Color(theme.ink(0x8a));
+          const colour = Skia.Color(streakColour);
           paints.streak.setShader(
             Skia.Shader.MakeLinearGradient(
               { x: width - length, y: 0 },
@@ -511,7 +516,8 @@ export function useCanvasGrid(props: CanvasGridProps): {
     .maxDistance(12)
     .maxDuration(60_000)
     .onBegin((event) => {
-      pressed.set(hitTest(event.x, event.y));
+      // As in native lists, a touch on fast momentum only stops it.
+      pressed.set(flinging() ? null : hitTest(event.x, event.y));
     })
     .onEnd((event, success) => {
       const start = pressed.value;

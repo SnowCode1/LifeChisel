@@ -100,6 +100,7 @@ export function useGridDates({
     offset: scroll.offset,
     pull: scroll.pull,
     pan: scroll.pan,
+    flinging: scroll.flinging,
     prepareResize,
     returnToToday,
     openDateActions,

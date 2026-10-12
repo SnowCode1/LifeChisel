@@ -6,17 +6,16 @@ import {
   runOnJS,
   runOnUI,
   useSharedValue,
-  withDecay,
   withTiming,
 } from 'react-native-reanimated';
 import { FUTURE_PULL_DISTANCE } from '../gridNavigation';
 import { feedback } from '../haptics';
-import { rightmostDayAt, rubberBand, snapOffset } from './gridGeometry';
+import { rightmostDayAt, rubberBand } from './gridGeometry';
+import { planFling, rubberBandSlope, TAP_STOP_SPEED } from './gridMotion';
+import { withFling } from './withFling';
 
 // A century of history is effectively unlimited: dates are generated per frame.
 const PAST_DAYS = 36_600;
-// iOS UIScrollView.DecelerationRate.fast, per millisecond.
-const DECELERATION = 0.99;
 const navigation = {
   duration: 280,
   easing: Easing.out(Easing.cubic),
@@ -46,6 +45,9 @@ export function useCanvasGridScroll({
   const start = useSharedValue(0);
   const dragged = useSharedValue(false);
   const ticked = useSharedValue(false);
+  // Momentum speed and when it was measured, for telling taps from stops.
+  const speed = useSharedValue(0);
+  const speedAt = useSharedValue(0);
   const minimum = -unlockedFuture * column;
   const maximum = PAST_DAYS * column;
 
@@ -53,17 +55,30 @@ export function useCanvasGridScroll({
     'worklet';
     runOnJS(onSettle)(rightmostDayAt(target, column));
   }
-  function snapTo(target: number) {
+  // Momentum, edge bounces and snapping are one planned curve that ends
+  // exactly on a column (see gridMotion.ts).
+  function release(velocity: number) {
     'worklet';
+    const fling = planFling(offset.value, velocity, column, minimum, maximum);
     offset.set(
-      withTiming(
-        target,
-        { duration: 140, easing: Easing.out(Easing.quad) },
-        (done) => {
-          if (done) settleAt(target);
+      withFling(
+        fling,
+        () => settleAt(fling.rest),
+        (current) => {
+          speed.set(current);
+          speedAt.set(Date.now());
         },
       ),
     );
+  }
+
+  /**
+   * Whether a touch now lands on fast momentum. Read at touch-down, it stays
+   * true after the pan stops the fling, so that touch only stops the scroll.
+   */
+  function flinging() {
+    'worklet';
+    return speed.value > TAP_STOP_SPEED && Date.now() - speedAt.value < 100;
   }
 
   function pan() {
@@ -76,10 +91,12 @@ export function useCanvasGridScroll({
         cancelAnimation(offset);
         dragged.set(false);
       })
-      .onStart(() => {
+      .onStart((event) => {
         dragged.set(true);
         ticked.set(false);
-        start.set(offset.value);
+        // The pan activates after 10 pt of travel; absorb that slop so the
+        // grid picks up under the finger instead of jumping to catch up.
+        start.set(offset.value - event.translationX);
       })
       .onUpdate((event) => {
         const raw = start.value + event.translationX;
@@ -104,30 +121,18 @@ export function useCanvasGridScroll({
           runOnJS(onReveal)(distance);
           return;
         }
-        if (offset.value < minimum) {
-          snapTo(minimum);
-          return;
-        }
-        offset.set(
-          withDecay(
-            {
-              velocity: event.velocityX,
-              deceleration: DECELERATION,
-              clamp: [minimum, maximum],
-            },
-            (done) => {
-              if (done)
-                snapTo(snapOffset(offset.value, column, minimum, maximum));
-            },
-          ),
+        // Past the edge, the content moves slower than the finger.
+        const over = minimum - (start.value + event.translationX);
+        release(
+          event.velocityX * (distance > 0 ? rubberBandSlope(over, width) : 1),
         );
       })
       .onFinalize(() => {
         // A touch that never became a drag may have stopped a fling between
         // columns; settle it on the nearest one.
         if (dragged.value) return;
-        const target = snapOffset(offset.value, column, minimum, maximum);
-        if (Math.abs(target - offset.value) > 0.5) snapTo(target);
+        const target = rightmostDayAt(offset.value, column) * column;
+        if (Math.abs(target - offset.value) > 0.01) release(0);
       });
   }
 
@@ -154,5 +159,5 @@ export function useCanvasGridScroll({
     })(day * nextColumn);
   }
 
-  return { offset, pull, pan, scrollToDay, placeDay };
+  return { offset, pull, pan, flinging, scrollToDay, placeDay };
 }

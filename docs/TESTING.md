@@ -190,8 +190,12 @@ docs hold the design behind each check.
 - The month/year button jumps to near and distant dates accurately.
 - Rotate deep in history and in future dates: the rightmost date is kept and
   values stay on their dates.
-- Date-scrolling feel (deceleration, snapping, rubber band) is still being
-  tuned; note anything that feels off.
+- Flings slow straight into a column with no correction at the end; a slow
+  release eases onto the nearest column; a drag picks up without a jump.
+- A fling into Today overshoots briefly and springs back without revealing
+  future dates.
+- Tap a box while a fling is still moving fast: the scroll stops and nothing is
+  checked. Taps while it gently settles work normally.
 - Closing History, Settings or Statistics (button or swipe) keeps the grid's
   dates and vertical position.
 

@@ -1892,3 +1892,21 @@ daylight saving in Melbourne, Lord Howe and New York. Not yet checked on a phone
 - With months of history (or the sample data), check scrolling stays smooth,
   older days keep loading, and the calendar opens without a visible pause.
 - VoiceOver: headings remain headings and say whether they are expanded.
+
+## 12 October 2026
+
+### Canvas grid momentum
+
+`scripts/grid-motion.test.mjs` samples planned releases at 120 Hz: flings end
+exactly on a column inside the limits with no final jump, start at the release
+velocity without reversing, land within half a column of the natural
+projection, bounce back onto edges and settle slow releases without overshoot.
+
+On the iPhone 16 Pro and Galaxy S21 (Expo Go, development JavaScript) the
+founder found the first version crashed when scrolling past Today and had no
+momentum. Causes, all fixed: a default parameter not captured by the release
+worklet, the future-pull streak calling a theme function on the UI thread (an
+older bug, reached by pulling past Today), and Reanimated skipping the custom
+animation. The founder then confirmed the flings and tap-to-stop on both
+phones, judged 0.998 and 0.995 deceleration too floaty and chose the earlier
+0.99. The iPhone shows 60 fps in Expo Go; 120 Hz awaits our own build.
