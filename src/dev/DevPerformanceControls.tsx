@@ -6,9 +6,8 @@ import type { GridExperiment } from '../performanceModel';
 import { uploadPerformance } from './performanceUpload';
 import { useTheme } from '../ThemeContext';
 const options: { value: GridExperiment; label: string }[] = [
+  // The canvas grid has no reduced renderer modes; reports keep the field.
   { value: 'normal', label: 'Normal' },
-  { value: 'no-goal-tint', label: 'No goal tint' },
-  { value: 'simple-cells', label: 'Simple cells' },
 ];
 export function DevPerformanceLifecycle() {
   useEffect(() => {
@@ -117,7 +116,7 @@ export function DevPerformanceControls({
       <Text style={{ color: theme.ink(0x96), fontSize: 14, lineHeight: 21 }}>
         {running
           ? 'Close Settings and wait two seconds, then scroll and rotate. Return here to send timings. Stops automatically after one minute.'
-          : 'Compare the same scroll and rotation in each mode. Simple cells keep data and goals but remove row/mark animations and SVG checks. Reordering is disabled in that mode.'}
+          : 'Repeat the same scrolls and rotations in each run. The canvas grid draws on the UI thread; JS timings here do not measure its frame rate.'}
       </Text>
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16 }}>
         {!running && (

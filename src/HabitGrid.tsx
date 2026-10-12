@@ -1,5 +1,4 @@
 import { useMeasuredRowHeights } from './useMeasuredRowHeights';
-import { useGridRowWindow } from './useGridRowWindow';
 import { QuickUndoActions } from './QuickUndoActions';
 import type { QuickUndo } from './quickUndo';
 import { DateNavigationSheet } from './DateNavigationSheet';
@@ -7,7 +6,7 @@ import { ordinal, timingDate } from './goalTiming';
 import { useDelayedCompletionMask } from './useDelayedCompletionMask';
 import { HabitNameDivider } from './HabitNameDivider';
 import type { CheckboxStyle, WeekStart } from './displayPreferences';
-import { gridSizeRanges, type GridSize } from './gridSizing';
+import type { GridSize } from './gridSizing';
 import { Text, useAppWindowDimensions } from './Typography';
 import { completedHabitsSelection } from './storage/selection';
 import { visibleHabitRows } from './habitCompletion';
@@ -16,7 +15,6 @@ import { screenLongSide } from './screenSize';
 import {
   type ComponentType,
   memo,
-  useCallback,
   useMemo,
   useState,
   useSyncExternalStore,
@@ -24,14 +22,13 @@ import {
 import {
   type TextProps,
   PixelRatio,
-  Platform,
   Pressable,
   type PressableProps,
   ScrollView,
   StyleSheet,
   View,
 } from 'react-native';
-import { type GridDay } from './calendar';
+import type { EntryDay } from './calendar';
 import type { Habit } from './habits';
 import { HabitName, type HabitAction } from './HabitName';
 import { habitRowPositions, moveHabit } from './habitOrdering';
@@ -39,33 +36,17 @@ import { RowPositions, type RowMotion } from './ReorderRow';
 import { useHabitReorder } from './useHabitReorder';
 import { createGridPalette } from './gridAppearance';
 import { themedStyles, useTheme } from './ThemeContext';
-import { GridDateColumn, GridDateHeading } from './GridCells';
-import { GridDateBackdrop, GridLoadingBackdrop } from './GridLoadingBackdrop';
 import type { ChangeStore } from './storage/store';
-import { performanceRun, recordPerformance } from './performance';
+import { recordPerformance } from './performance';
 import { gridLayout } from './gridLayout';
-import Animated, {
-  useAnimatedReaction,
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
+import Animated from 'react-native-reanimated';
 import { useGridDates } from './useGridDates';
-import { DateColumns } from './DateColumns';
-import { FuturePullZone } from './FuturePullZone';
-import { FUTURE_PULL_DISTANCE } from './gridNavigation';
+import { useCanvasGrid } from './canvasGrid/useCanvasGrid';
+import { headingHeight } from './canvasGrid/gridGeometry';
 import { feedback } from './haptics';
 import { Icon } from './Icon';
 import { rowTransition } from './motion';
 import { HabitContextMenu } from './HabitContextMenu';
-
-// Android loads future dates ahead of the Today boundary: enough to fill the
-// screen's long side at the narrowest column, so a pull needs no new columns.
-const ANDROID_FUTURE_PRELOAD =
-  Platform.OS === 'android'
-    ? Math.ceil(screenLongSide() / gridSizeRanges.gridColumnWidth.min)
-    : 0;
 
 type Props = {
   nameWidth: GridSize;
@@ -89,7 +70,7 @@ type Props = {
   onHabitAction: (habit: Habit, action: HabitAction) => void;
   onReorder: (ids: string[]) => boolean;
   editable: boolean;
-  onCellPress: (habit: Habit, day: GridDay) => void;
+  onCellPress: (habit: Habit, day: EntryDay) => void;
   quickUndo: QuickUndo;
   onHistoryPress: () => void;
   onSettingsPress: () => void;
@@ -124,10 +105,6 @@ export const HabitGrid = memo(function HabitGrid({
   onAddHabit,
 }: Props) {
   recordPerformance('grid.container.render');
-  const experiment = useSyncExternalStore(
-    performanceRun.subscribe,
-    performanceRun.getMode,
-  );
   const { fontScale } = useAppWindowDimensions();
   const theme = useTheme();
   const styles = useStyles();
@@ -136,31 +113,21 @@ export const HabitGrid = memo(function HabitGrid({
     width,
     fontScale,
     { nameWidth: nameWidthSize, nameFactor, columnWidth: columnWidthSize },
-    Platform.OS === 'android' ? PixelRatio.get() : undefined,
+    // Whole-pixel columns keep canvas cell edges crisp.
+    PixelRatio.get(),
   );
+  const [scrollLocked, setScrollLocked] = useState(false);
   const {
-    days,
     rightmostDay,
+    unlockedFuture,
     atTodayBoundary,
     datePickerOpen,
     setDatePickerOpen,
     month,
     year,
-    layoutBusy,
-    frame,
-    rangeReset,
-    columnReadiness,
-    header,
-    body,
-    headerScroll,
-    bodyScroll,
-    edgePull,
     pull,
     offset,
-    shared,
-    listLaidOut,
-    listLoaded,
-    listSized,
+    pan,
     prepareResize,
     returnToToday,
     openDateActions,
@@ -170,7 +137,7 @@ export const HabitGrid = memo(function HabitGrid({
     columnWidth,
     dateWidth,
     visibleDays,
-    futurePreload: ANDROID_FUTURE_PRELOAD,
+    enabled: !scrollLocked,
   });
   const [completionView, setCompletionView] = useState({
     enabled: hideCompleted,
@@ -254,12 +221,12 @@ export const HabitGrid = memo(function HabitGrid({
   const palettes = useMemo(
     () =>
       Object.fromEntries(
-        habits.map((habit) => [
+        sourceHabits.map((habit) => [
           habit.id,
           createGridPalette(habit.color, theme),
         ]),
       ),
-    [habits, theme],
+    [sourceHabits, theme],
   );
   const { tops, total: gridHeight } = useMemo(
     () =>
@@ -288,64 +255,44 @@ export const HabitGrid = memo(function HabitGrid({
       ),
     [habits, rowTops, dragId, tops, dragY, bodyTop, scrollOffset],
   );
-  const rowWindow = useGridRowWindow(
-    habits,
-    tops,
-    rowHeights,
-    baseRowHeight,
-    !!habitMenu || !!dragId || reorderMode,
-  );
-  const renderHeading = useCallback(
-    ({ item: day }: { item: GridDay }) => (
-      <GridDateHeading
-        weekDividers={weekDividers}
-        weekStart={weekStart}
-        day={day}
-        width={columnWidth}
-      />
-    ),
-    [columnWidth, weekStart, weekDividers],
-  );
   const cellsDisabled = !editable || !!dragId || reorderMode;
-  const renderColumn = useCallback(
-    ({ item: day }: { item: GridDay }) => (
-      <GridDateColumn
-        store={store}
-        habits={rowWindow.rows}
-        day={day}
-        palettes={palettes}
-        motions={rowMotion}
-        heights={rowHeights}
-        checkboxStyle={checkboxStyle}
-        tapAnimations={tapAnimations}
-        baseHeight={baseRowHeight}
-        fontScale={fontScale}
-        width={columnWidth}
-        height={gridHeight}
-        disabled={cellsDisabled}
-        onPress={onCellPress}
-        experiment={experiment}
-        batchCheckboxes={!rowWindow.moving}
-      />
-    ),
-    [
-      store,
-      rowWindow.rows,
-      palettes,
-      rowMotion,
-      rowHeights,
-      baseRowHeight,
-      checkboxStyle,
-      tapAnimations,
-      fontScale,
-      columnWidth,
-      gridHeight,
-      cellsDisabled,
-      onCellPress,
-      experiment,
-      rowWindow.moving,
-    ],
-  );
+  if (scrollLocked !== (!!habitMenu || !!dragId))
+    setScrollLocked(!scrollLocked);
+  const headerHeight = headingHeight(fontScale);
+  const canvas = useCanvasGrid({
+    store,
+    habits: sourceHabits,
+    rows: habits,
+    tops,
+    heights: rowHeights,
+    baseHeight: baseRowHeight,
+    gridHeight,
+    headerHeight,
+    palettes,
+    theme,
+    today,
+    fontScale,
+    column: columnWidth,
+    width: dateWidth,
+    visibleDays,
+    rightmostDay,
+    unlockedFuture,
+    checkboxStyle,
+    weekDividers,
+    weekStart,
+    tapAnimations,
+    offset,
+    pull,
+    pan,
+    rowTops,
+    dragY,
+    bodyTop,
+    scrollOffset,
+    dragId,
+    disabled: cellsDisabled,
+    onCellPress,
+    onNavigate: navigateToDate,
+  });
   function actOnHabit(habit: Habit, action: HabitAction) {
     if (action === 'moveUp' || action === 'moveDown') {
       const ids = habits.map((row) => row.id);
@@ -361,35 +308,6 @@ export const HabitGrid = memo(function HabitGrid({
         feedback('selection');
     } else onHabitAction(habit, action);
   }
-  // Android only: matches when the date lists themselves can be dragged.
-  const futurePullEnabled = !layoutBusy && !habitMenu && !dragId;
-  // Android's scroll view keeps re-applying a contentOffset prop on later
-  // layout passes, snapping a scrolled list back to its mount position and
-  // feeding a correction loop. There the initial index and alignGeometry
-  // position each new list generation instead.
-  const listStartOffset = Platform.OS === 'android' ? undefined : frame.offset;
-  const streakDistance = useSharedValue(0);
-  const streakOpacity = useSharedValue(0);
-  useAnimatedReaction(
-    () => pull.value,
-    (distance) => {
-      if (distance > 0) {
-        streakDistance.set(distance);
-        streakOpacity.set(1);
-      } else {
-        // Keep the last geometry during the fade, avoiding a jump on release.
-        streakOpacity.set(withTiming(0, { duration: 180 }));
-      }
-    },
-  );
-  const pullStreakStyle = useAnimatedStyle(() => {
-    const progress = Math.min(1, streakDistance.value / FUTURE_PULL_DISTANCE);
-    return {
-      width: dateWidth * progress,
-      opacity: streakOpacity.value * Math.min(1, streakDistance.value / 16),
-    };
-  });
-
   return (
     <RowPositions
       motions={rowMotion}
@@ -500,20 +418,6 @@ export const HabitGrid = memo(function HabitGrid({
             }
             style={styles.header}
           >
-            <Animated.View
-              pointerEvents="none"
-              accessibilityElementsHidden
-              importantForAccessibility="no-hide-descendants"
-              style={[styles.pullStreak, pullStreakStyle]}
-            >
-              <LinearGradient
-                colors={[`${theme.ink(0x8a)}00`, theme.ink(0x8a)]}
-                locations={[0, 1]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.streakGradient}
-              />
-            </Animated.View>
             <View style={[styles.namesHeader, { width: nameWidth }]}>
               <DateButtonComponent
                 style={({ pressed }) => [
@@ -546,44 +450,7 @@ export const HabitGrid = memo(function HabitGrid({
               </DateButtonComponent>
               <HabitNameDivider />
             </View>
-            <FuturePullZone pull={edgePull} enabled={futurePullEnabled}>
-              <View
-                pointerEvents={layoutBusy ? 'none' : 'auto'}
-                accessibilityElementsHidden={layoutBusy}
-                importantForAccessibility={
-                  layoutBusy ? 'no-hide-descendants' : 'auto'
-                }
-                style={{ width: dateWidth, minHeight: 56, overflow: 'hidden' }}
-              >
-                <GridDateBackdrop
-                  weekDividers={weekDividers}
-                  weekStart={weekStart}
-                  days={days}
-                  width={columnWidth}
-                  offset={offset}
-                />
-                <DateColumns
-                  {...shared}
-                  ref={header}
-                  key={`header-${columnWidth}-${rangeReset}`}
-                  initialScrollIndex={frame.index}
-                  contentOffset={listStartOffset}
-                  style={[{ width: dateWidth, flex: 1 }, columnReadiness]}
-                  onScroll={headerScroll}
-                  onLoad={({ elapsedTimeInMs }) => {
-                    recordPerformance('grid.header.load', elapsedTimeInMs);
-                    listLoaded('header');
-                  }}
-                  onLayout={(event) =>
-                    listLaidOut('header', event.nativeEvent.layout.width)
-                  }
-                  onContentSizeChange={(contentWidth) =>
-                    listSized('header', contentWidth)
-                  }
-                  renderItem={renderHeading}
-                />
-              </View>
-            </FuturePullZone>
+            {canvas.header}
           </View>
           <View
             accessibilityElementsHidden={!!habitMenu}
@@ -593,8 +460,6 @@ export const HabitGrid = memo(function HabitGrid({
             collapsable={false}
             ref={reorderViewport}
             onLayout={(event) => {
-              const height = event.nativeEvent.layout.height;
-              rowWindow.setViewport(height);
               measureReorder();
             }}
             style={{ flex: 1 }}
@@ -605,7 +470,6 @@ export const HabitGrid = memo(function HabitGrid({
               onScroll={(event) => {
                 const y = event.nativeEvent.contentOffset.y;
                 updateVerticalOffset(y);
-                rowWindow.updateOffset(y);
               }}
               scrollEventThrottle={16}
               scrollEnabled={!habitMenu && !dragId}
@@ -640,7 +504,7 @@ export const HabitGrid = memo(function HabitGrid({
                       selected={habitMenu?.id === habit.id}
                       motion={rowMotion[habit.id]}
                       reorder={reorderMode}
-                      disabled={!editable || experiment === 'simple-cells'}
+                      disabled={!editable}
                       onPress={() => {
                         if (habitMenu) setHabitMenu(null);
                         else onHabitPress(habit);
@@ -663,57 +527,7 @@ export const HabitGrid = memo(function HabitGrid({
                   ))}
                   <HabitNameDivider />
                 </View>
-                <FuturePullZone pull={edgePull} enabled={futurePullEnabled}>
-                  <View
-                    pointerEvents={layoutBusy ? 'none' : 'auto'}
-                    accessibilityElementsHidden={layoutBusy}
-                    importantForAccessibility={
-                      layoutBusy ? 'no-hide-descendants' : 'auto'
-                    }
-                    style={{
-                      width: dateWidth,
-                      height: gridHeight,
-                      overflow: 'hidden',
-                    }}
-                  >
-                    <GridLoadingBackdrop
-                      habits={habits}
-                      motions={rowMotion}
-                      heights={rowHeights}
-                      baseHeight={baseRowHeight}
-                      columnWidth={columnWidth}
-                      viewportWidth={dateWidth}
-                      maximumOffset={Math.max(
-                        0,
-                        days.length * columnWidth - dateWidth,
-                      )}
-                      offset={offset}
-                    />
-                    <DateColumns
-                      {...shared}
-                      ref={body}
-                      key={`body-${columnWidth}-${rangeReset}`}
-                      initialScrollIndex={frame.index}
-                      contentOffset={listStartOffset}
-                      style={[
-                        { width: dateWidth, height: gridHeight, flexGrow: 0 },
-                        columnReadiness,
-                      ]}
-                      onScroll={bodyScroll}
-                      onLoad={({ elapsedTimeInMs }) => {
-                        recordPerformance('grid.body.load', elapsedTimeInMs);
-                        listLoaded('body');
-                      }}
-                      onLayout={(event) =>
-                        listLaidOut('body', event.nativeEvent.layout.width)
-                      }
-                      onContentSizeChange={(contentWidth) =>
-                        listSized('body', contentWidth)
-                      }
-                      renderItem={renderColumn}
-                    />
-                  </View>
-                </FuturePullZone>
+                {canvas.body}
               </View>
               {hideCompleted && completedCount > 0 && rightmostDay === 0 && (
                 <Pressable
@@ -793,14 +607,6 @@ export const HabitGrid = memo(function HabitGrid({
 });
 
 const useStyles = themedStyles((t) => ({
-  pullStreak: {
-    position: 'absolute',
-    right: 0,
-    bottom: 0,
-    height: 1,
-    zIndex: 2,
-  },
-  streakGradient: { width: '100%', height: '100%' },
   container: { flex: 1 },
   toolbar: {
     flexDirection: 'row',

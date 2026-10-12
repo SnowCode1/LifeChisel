@@ -34,7 +34,6 @@ import {
   ActivityIndicator,
   Alert,
   Appearance,
-  Platform,
   Pressable,
   type PressableProps,
   type TextProps,
@@ -115,12 +114,10 @@ export default function App() {
       <StoreApp />
     </>
   );
-  // The grid's Android future pull is a gesture-handler pan, which needs this
-  // root. iOS keeps its original tree; its sheets bring their own root.
-  return Platform.OS === 'android' ? (
+  // The canvas grid scrolls and taps through gesture-handler gestures, which
+  // need this root on every platform.
+  return (
     <GestureHandlerRootView style={{ flex: 1 }}>{app}</GestureHandlerRootView>
-  ) : (
-    app
   );
 }
 function StoreApp() {

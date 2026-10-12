@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { PixelRatio, Pressable, StyleSheet, View } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { Text, useAppWindowDimensions } from './Typography';
 import { gridLayout } from './gridLayout';
@@ -76,11 +76,16 @@ export function GridSizeSettings({
   };
   // Preview: drafts while dragging, otherwise the saved (possibly automatic) size.
   const preview = (kind: GridSizeKind): GridSize => drafts[kind] ?? saved[kind];
-  const layout = gridLayout(width, window.fontScale, {
-    nameWidth: preview('gridNameWidth'),
-    nameFactor: drafts.gridNameWidth === undefined ? sizing.nameFactor : 1,
-    columnWidth: preview('gridColumnWidth'),
-  });
+  const layout = gridLayout(
+    width,
+    window.fontScale,
+    {
+      nameWidth: preview('gridNameWidth'),
+      nameFactor: drafts.gridNameWidth === undefined ? sizing.nameFactor : 1,
+      columnWidth: preview('gridColumnWidth'),
+    },
+    PixelRatio.get(),
+  );
   const rowHeight = gridRowHeight(
     preview('gridRowHeight'),
     window.fontScale,
@@ -172,7 +177,7 @@ export function GridLivePreview({
 }) {
   const window = useAppWindowDimensions();
   const width = gridWidth || Math.max(0, window.width - 36);
-  const layout = gridLayout(width, window.fontScale, sizing);
+  const layout = gridLayout(width, window.fontScale, sizing, PixelRatio.get());
   return (
     <GridPreview
       habits={habits.length ? habits.slice(0, 3) : demoHabits.slice(0, 3)}

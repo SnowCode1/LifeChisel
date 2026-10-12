@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import { runInNewContext } from 'node:vm';
 import ts from 'typescript';
 import {
   gridEntryTextLines,
@@ -55,18 +54,8 @@ function autosizingExpressions(path) {
   return expressions;
 }
 
-test('actual grid and recording-calendar text cannot enter iOS autosizing that ignores minimumFontScale', () => {
-  // Execute the actual JSX prop expression. The prior unconditional fitting
-  // fails here even though its advertised minimum was 95%. No native/DOM graph.
-  const grid = autosizingExpressions('../src/GridCells.tsx');
-  assert.equal(grid.length, 1);
-  assert.equal(
-    runInNewContext(grid[0], { numeric: false }, { timeout: 100 }),
-    false,
-  );
-  assert.equal(
-    runInNewContext(grid[0], { numeric: true }, { timeout: 100 }),
-    true,
-  );
+test('recording-calendar text cannot enter iOS autosizing that ignores minimumFontScale', () => {
+  // The canvas grid fits numbers itself (down to 65%); native text elsewhere
+  // must not use autosizing, which ignores the advertised minimum on iOS.
   assert.deepEqual(autosizingExpressions('../src/RecordStatsScreen.tsx'), []);
 });

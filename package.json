@@ -7,7 +7,7 @@
     "@expo/metro-runtime": "~57.0.16",
     "@react-native-community/datetimepicker": "9.1.0",
     "@react-native-community/slider": "5.2.0",
-    "@shopify/flash-list": "2.3.3",
+    "@shopify/react-native-skia": "2.6.2",
     "@tiptap/core": "^3.31.4",
     "@tiptap/extension-highlight": "^3.31.4",
     "@tiptap/extension-placeholder": "^3.31.4",
