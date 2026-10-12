@@ -1,18 +1,44 @@
 # Documentation
 
-Start with [PROJECT_GOALS.md](../PROJECT_GOALS.md) for the purpose, confirmed
-requirements, proposed scope, and questions to discuss with the founder.
+Start with [PROJECT_GOALS.md](../PROJECT_GOALS.md) for the product's purpose,
+confirmed requirements and open questions.
 
-| Document                                   | Purpose                                                               |
-| ------------------------------------------ | --------------------------------------------------------------------- |
-| [DEVELOPMENT.md](DEVELOPMENT.md)           | Linux tools, iPhone and Android setup, commands, MCP limits           |
-| [ARCHITECTURE.md](ARCHITECTURE.md)         | Current code and proposed next architecture                           |
-| [STORAGE.md](STORAGE.md)                   | Incremental changes, export, replay, and history design               |
-| [HABIT_MANAGEMENT.md](HABIT_MANAGEMENT.md) | Habit actions, editing, ordering, archival, and statistics limits     |
-| [DESCRIPTIONS.md](DESCRIPTIONS.md)         | Optional Markdown notes, editor drafts, links and description history |
-| [DECISIONS.md](DECISIONS.md)               | Choices, rationale, and reconsideration triggers                      |
-| [TESTING.md](TESTING.md)                   | Automated checks and actual phone usability testing                   |
-| [RELEASING.md](RELEASING.md)               | Development builds, TestFlight, App Store, open source                |
+## Working on the code
 
-These are living repository documents. Record outcomes and evidence, not just
-plans. Do not mark phone tests or milestones complete until they actually happen.
+| Document                           | Purpose                                                                               |
+| ---------------------------------- | ------------------------------------------------------------------------------------- |
+| [DEVELOPMENT.md](DEVELOPMENT.md)   | Setup on Linux, Windows or macOS; iPhone, Android and web; commands; optional tooling |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | How the app is structured, subsystem responsibilities, known limits                   |
+| [STORAGE.md](STORAGE.md)           | Event log, replay, Undo, versions, backup format                                      |
+| [PERFORMANCE.md](PERFORMANCE.md)   | Grid rendering design, diagnostics and investigation log                              |
+| [TESTING.md](TESTING.md)           | Automated checks, phone regression checklist, usability study                         |
+| [RELEASING.md](RELEASING.md)       | Internal builds, TestFlight, the in-app unlock and the path to the App Store          |
+
+## Features
+
+| Document                                   | Purpose                                                     |
+| ------------------------------------------ | ----------------------------------------------------------- |
+| [HABIT_MANAGEMENT.md](HABIT_MANAGEMENT.md) | Adding, editing, reordering, archiving and deleting habits  |
+| [GOALS.md](GOALS.md)                       | Completion goals, schedules, period quotas and cycles       |
+| [STATISTICS.md](STATISTICS.md)             | Per-habit statistics screens and how results are calculated |
+| [DESCRIPTIONS.md](DESCRIPTIONS.md)         | Markdown notes, the editor, drafts and note history         |
+| [SETTINGS.md](SETTINGS.md)                 | Every setting, its default, and how preferences are stored  |
+| [HABIT_ICONS.md](HABIT_ICONS.md)           | Emoji and icon-pack habit symbols                           |
+
+## Records
+
+| Document                                 | Purpose                                               |
+| ---------------------------------------- | ----------------------------------------------------- |
+| [DECISIONS.md](DECISIONS.md)             | Decisions, their rationale and what would change them |
+| [TEST_LOG.md](TEST_LOG.md)               | Dated phone and automated test evidence               |
+| [licenses/README.md](licenses/README.md) | Third-party notices                                   |
+
+## Conventions
+
+- **Founder** means the project owner and maintainer. **Assistant** means an AI
+  coding assistant used during development. The docs record which decisions the
+  founder made and which are assistant proposals awaiting review.
+- Guides describe current behaviour. History belongs in DECISIONS.md and
+  TEST_LOG.md.
+- Do not mark phone tests or milestones complete until they have actually
+  happened.

@@ -1,177 +1,199 @@
 # Habit statistics
 
-Implemented 4 October 2026. The founder requested full-screen statistics with
-streaks, success-rate charts, and numeric charts. The calculations below are
-implementation choices for the current daily habit model, awaiting phone feedback.
-Effective-dated success conditions and weekday schedules are now supported; see
-[GOALS.md](GOALS.md). Weekly frequency quotas remain deferred.
+Tap a habit name to see how it is going: a headline for the chosen period,
+streaks, charts of success and totals, and a calendar where past days can be
+corrected. Choose 30 days, 90 days, a year or all time, each ending today, and
+step back through earlier periods with ‹ ›. The habit's note lives on the Notes
+tab of the same sheet; see [DESCRIPTIONS.md](DESCRIPTIONS.md).
 
-## Screen
+Full-screen statistics with streaks, success-rate charts and numeric charts were
+a founder request, implemented 4 October 2026. The founder-directed layout and
+chart revision of 10 October 2026 has been reviewed on the Android phone; iPhone
+review is pending. Calculation rules are assistant implementation choices unless
+marked founder-confirmed. Effective-dated goals, weekday schedules, period
+quotas and on/off cycles are covered in [GOALS.md](GOALS.md). Skipped or excused
+days, manual success overrides, rolling windows and comments remain deferred.
 
-Tap a habit name to open a large native iOS page sheet, matching History and
-Settings. The founder requested bottom-up entry and easier downward dismissal.
-This supersedes the sideways full-screen transition and custom 76-point
-overscroll gate. UIKit owns the slide and interactive swipe dismissal; the
-content is an ordinary native ScrollView. Pull down from the header or the top
-of the content, or use the accessible Close button. From deeper content, scroll
-back to the top first. The founder confirmed the revised sheet looks good on the iPhone. Detailed
-short/reversed drag, nested-editor and Reduce Motion checks remain in TESTING.md.
+## Opening and dismissal
+
+Statistics opens in a native sheet, matching History and Settings (founder
+request for bottom-up entry and easy downward dismissal). On iOS this is the
+UIKit page sheet, which owns the slide and interactive swipe dismissal; the
+content is an ordinary native ScrollView. On Android, `SheetModal.tsx` provides
+a gesture-handler sheet that a downward drag closes when the touched content is
+at its top. Pull down from the header or the top of the content, or use the
+accessible Close button; from deeper content, scroll back to the top first. The
+founder confirmed the sheet on the iPhone. Short/reversed drag, nested-editor
+and Reduce Motion checks are in [TESTING.md](TESTING.md).
 
 The mounted grid keeps its viewed dates and scroll position beneath the sheet.
-`App.tsx` hosts statistics and its numeric/habit/description/version dialogs within
-the same presentation tree so nested editors present above it. Save failure/retry
-is also visible inside the statistics sheet. Edits update derived statistics
-without introducing separate statistics events. Development preview capture is
-now globally available through face-down-and-back; title holds remain optional.
+`App.tsx` hosts statistics and its numeric, habit, description and version
+dialogs in the same presentation tree, so nested editors present above it and
+save failure/retry stays visible inside the sheet. Edits update derived
+statistics without separate statistics events.
 
-Optional habit descriptions appear first in a compact rounded note card,
-before the range controls and charts,
-with a bounded Markdown preview, Read more/Show less and direct full-screen editing.
-Links open only when tapped. See [DESCRIPTIONS.md](DESCRIPTIONS.md). These notes do
-not change statistical calculations.
+`HabitDetailsScreen.tsx` holds Notes and Statistics as two tabs in one sheet.
+A name tap opens Notes when the habit has a description and Statistics
+otherwise. The header has an X to close, the habit name, and a pencil that edits
+the description on Notes and the habit on Statistics. A floating bottom
+Notes/Statistics switch and horizontal swipes share native paging through
+`useHabitPages.ts`. Panels keep their scroll, range and chart state, and the
+measured height of the switch pads the bottom so the last controls stay
+reachable. Notes never change statistical calculations.
 
-Choose 30 days, 90 days, one year (365 days), or All time. Ranges include today.
-The founder requested a more natural layout instead of a large marketing-style
-completion percentage and repeated cards. A plain summary now leads: for example,
-“20 of 30 days checked,” followed by a quieter percentage and actual date range.
-Compact label/value rows show current and all-time longest streaks. Numeric habits
-lead with their recorded total and show average per calendar day, highest daily
-total, recorded-day count and recording streaks. The previous-period KPI is no
-longer displayed; its pure calculation remains available. Notes remain first.
-The founder confirmed this presentation looks better on the phone; the
-calendar-day denominators and all calculations are unchanged.
+## Screen layout
 
-Charts show checkbox completion percentages or numeric totals. Numeric 30-day
-charts use daily bars; longer ranges aggregate into labelled multi-day buckets.
-Checkbox charts use up to seven days per bar for shorter ranges, with wider
-buckets for long histories. Partial last buckets are labelled with their actual
-bounds. Tap a bar/period to inspect it; tap it again or use Clear to deselect it.
-VoiceOver provides previous/next period and Clear selection actions. Keep the
-detail area and Clear space reserved to avoid shifting the screen on selection.
-Selection uses the bucket's date bounds, not its array index; if an older edit
-changes those bounds, the chart stops highlighting rather than inspecting another
-period. Changing range or rolling into a new day resets selection. The vertical
-value scale is separate from the date labels, which include years across year
-boundaries. Weekday breakdowns use the selected range and show numeric units.
+The founder found an earlier version cluttered, especially a goal card at the
+top, and asked for chart explanations to sit behind an information control
+because the screen is visited daily. Earlier, the founder had also asked for a
+plain summary instead of a large marketing-style percentage. The current order
+for checkbox and Daily total habits (`HabitStatsScreen.tsx`) is:
 
-The calendar browses months independently of the range. Coloured checkbox days
-are completed; numeric colour intensity scales against that month's highest
-recorded total. Zero remains coloured, blanks remain empty, future dates are dim.
-Day cells have no selection/Today border, as requested by the founder. Today
-remains identified in its accessibility label. Dim numeric backgrounds separately
-from text and choose text contrast against the actual background, so small totals
-and zero retain readable dates. Each day has a spoken date and value.
+1. **Range tabs:** 30 days, 90 days, Year (365 days) and All time. They show two
+   per row once the combined app/system text scale exceeds 130%.
+2. **Period dates** with ‹ › to step back by whole ranges. A future start date
+   shows “Starts” and the date instead.
+3. **Headline** with a short note. Checkbox habits show, for example, “20 of 30
+   days” and “67% successful”. Daily total habits show the period's total and
+   “Recorded on N of M days”.
+4. **Number tiles** in an even two-column grid. Daily total habits add Days
+   meeting the goal (when a goal applies), Average per day and Best day. Current
+   and Longest streak follow; without a goal, numeric habits show Days recorded
+   in a row instead. When the count would be odd, current and longest streak
+   share one tile. Daily streak tiles are hidden while a period goal is active.
+5. **Goal row** (`GoalSummary compact`), opening the Goal editor. The habit
+   editor keeps the full goal card.
+6. **Period progress**, a compact card shown for the current window only.
+7. **Charts:** Daily totals or Average per day (Daily total habits), Success
+   over time (Days recorded when there is no goal), Streaks, Calendar, By day of
+   the week, then Time of day.
+8. **How statistics work**, a collapsed explanation.
 
-Tap any calendar day to toggle a checkbox or open the grid's daily-total editor.
-The exact selected date is passed to the same entry handler, including future days
-visible in the current month. Future records are shown in the calendar but remain
-excluded from statistical calculations. Edits immediately update charts and grid
-values and use normal saving, haptics, grouped History, and Undo/Redo. Numeric zero,
-blank-to-clear, and Cancel retain their grid meanings. Save failures disable edits
-and expose the existing retry banner. Calendar checkboxes expose their checked state
-to VoiceOver; numeric days announce the full date and recorded value.
+Categories and Free text habits use `RecordStatsScreen.tsx` with the same range
+tabs, dates, tiles, goal row and period progress. Their headline counts days
+meeting the goal when one applies, otherwise days recorded. Recording tiles are
+hidden when they would repeat the goal tiles. The sections are Categories
+(Categories habits only), Success over time or Days recorded, Streaks, Calendar,
+Time of day and a virtualized Entries list, followed by How recording statistics
+work.
 
-## Layout revision (10 October 2026)
+Every chart section has a title and an (i) button that expands its explanation;
+nothing explanatory is shown by default. Live one-line facts, such as the
+current trend, the longest streak in view or Most often 9 pm–10 pm, stay
+visible. One reserved line under each chart names what the bars measure and
+becomes the selected item's date and value, with ‹ › and an ✕ to clear it, so a
+selection never shifts the screen. Metric values can wrap rather than push
+labels off the screen. The previous-period comparison is no longer displayed;
+its pure calculation remains available and tested.
 
-The founder found the screen cluttered, especially the goal card at the top, and
-asked for chart explanations to move behind an information control because the
-screen is visited daily. Assistant implementation, reviewed on the Android
-phone; iPhone review pending. It supersedes the ordering and caption details
-above; calculations are unchanged.
+Header Close and Edit are icons (X and pencil) in Notes and Statistics, and
+header Close is an X in the other full-screen editors and sheets. Back links
+keep text. The numeric entry dialog puts Close (X) at the top right and Done
+beside the field, both above the keyboard.
 
-- Order: range tabs, period dates, one large headline with a short note, a
-  two-column grid of number tiles, a slim goal row, period progress, then the
-  charts, time of day, calendar and How statistics work.
-- Tiles keep an even grid: when the count would be odd, current and longest
-  streak share one tile. The goal row (`GoalSummary compact`) keeps the same
-  editor entry point; the habit editor keeps the full card.
-- Every chart section has a title and an (i) button that expands its
-  explanation; nothing explanatory is shown by default. Live one-line facts,
-  such as Most often 9 pm–10 pm, stay visible.
-- Charts no longer show a unit line above or Tap a bar hints below. One reserved
-  line under each chart names what the bars measure and becomes the selected
-  bar's date and value, with an X icon to clear it, so selection never shifts
-  the screen.
-- `src/StatsLayout.tsx` owns the shared range tabs, sections, tiles and month
-  arrows used by both statistics screens. Period progress is a compact card.
-- Header Close and Edit are icons (X and pencil) in Notes and Statistics, and
-  header Close is an X in the other full-screen editors and sheets. Paired
-  bottom actions (Close/Done in the numeric dialog) and back links keep text.
+`src/StatsLayout.tsx` owns the shared range tabs, ‹ › period stepping, titled
+sections and tiles used by both statistics screens.
 
-## Charts (10 October 2026)
-
-Founder decisions: merge the numeric value and completion charts by colour;
-add success over time as weekly columns with a weighted trend line; give
-categories their own colour-coded view; make every chart and the calendar follow
-the selected range; ranges stay "ending today" with ‹ › to step back; the year
-calendar shows 12 small months; category colours are automatic OKLCH; entries
-stay at the bottom. Assistant implementation, reviewed on the Android phone with
-sample data; iPhone review pending. These supersede the chart, calendar and
-month-arrow details in Screen above; calculation rules below are unchanged.
+## Windows and colour
 
 - **Windows.** `statsWindow` gives the range ending today, stepped back by whole
-  ranges; ‹ is disabled once the window reaches the habit's start. Charts and the
-  calendar begin at the start when the window reaches further back. Headline,
-  tiles, weekday and time-of-day figures follow the window; current/longest
-  streak tiles and current period progress still describe today.
-- **One colour language** (`outcomeColours.ts`): met = habit colour; scheduled
-  but missed = the same hue faded; not scheduled/rest = neutral grey; combined
-  weeks/months step brightness by the share of scheduled days met. The calendar
-  tints missed days faintly, keeps days off black and today neutral until done.
-- **Daily totals** (number habits): one bar per day up to ~3 months, coloured by
-  that day's goal outcome, with the effective goal as one continuous dashed line
-  (a band for "between"). Longer windows show the average per calendar day of
-  each week (year) or month (all time) so bars compare with the daily goal.
-- **Success over time:** faint columns are each week's (month's) share of
-  scheduled days met; the line is a centred Gaussian smoothing of the success
-  observations (sigma 7 calendar days, so about two weeks either side carry the
-  weight). The founder found the first, one-sided weighted average jagged; the
-  centred curve has no daily kinks, and at today only earlier days exist. It
-  uses the whole history (the value at a date never changes with the range),
-  skips days off, counts today only once it succeeds, and appears once about
-  two observations are nearby. Period goals smooth finished whole periods over
-  two periods; habits without a goal show days recorded.
-- **Streaks:** the founder found the first, climbing-line streak chart broke
-  down for long streaks. Now a timeline: each bar spans the calendar days a
-  streak lasted and gaps are breaks, so 5-day and 500-day streaks read alike;
-  the ongoing streak is brightest, a streak that began before the window is cut
-  off square at the left edge, and bars wide enough show their length. Below it, the best
-  three streaks of all time with dates. Runs are carried across days off and
-  rest periods, an unfinished today keeps the streak, and period goals count
-  periods; the longest run equals the longest-streak tile and the ongoing run
-  the current streak (tested). Windows up to about six weeks use one row;
-  longer ones get a row per month and histories beyond about two years a row
-  per quarter, as the founder asked, so short streaks stay visible. After the
-  founder found multi-row alignment odd: every row spans the full width with
-  day 1 at the left (days 1–31 line up down the rows); days outside the period
-  or month stay darker; labels are short months in the same 30-point column as
-  every other chart, with a year heading where rows cross into a new year. A
-  single row (up to about six weeks) has no labels and uses the full width. A
-  streak crossing rows is one shape per row with square ends at the join, and
-  shows its length on its last part.
-- **Calendar:** up to ~3 months, continuous rows of weeks (values inside number
-  days, category dots, a dot for text); successful days in a row join into one
-  bar, bridged across days off within the row; tapping edits as before. Longer
-  windows show compact months (3 per row; 4 beyond a year); tapping selects a
-  day and shows its reading with an Edit button.
+  ranges; ‹ is disabled once the window reaches the habit's start. Charts and
+  the calendar begin at the start when the window reaches further back. The
+  headline, tiles, weekday and time-of-day figures follow the window. Current
+  and longest streak tiles and current period progress always describe today.
+- **One colour language** (`outcomeColours.ts`): met is the habit colour;
+  scheduled but missed is the same hue faded; not scheduled is neutral grey.
+  Combined weeks or months step brightness by the share of scheduled days met.
+
+## Charts
+
+Value axes sit in a shared 30-point column. Time ticks mark weeks (from the Week
+starts on day) for windows up to about six weeks, months up to about 400 days,
+and years beyond.
+
+- **Daily totals** (Daily total habits): one bar per day for windows up to 100
+  days, coloured by that day's goal outcome. The effective goal is a dashed line
+  that runs continuously across consecutive bars with the same target, or a
+  faint band for a Between goal. Longer windows show the average per calendar
+  day of each week (up to about 400 days) or month, counting blank days as zero,
+  so the bars compare with the daily goal; brightness follows the share of
+  scheduled days met.
+- **Success over time:** faint columns are each week's share of scheduled days
+  met (each month's beyond about 400 days). The line is a centred Gaussian
+  smoothing of the success observations (sigma 7 calendar days, so about two
+  weeks either side carry the weight). The founder found the first, one-sided
+  weighted average jagged; the centred curve has no daily kinks, and at today
+  only earlier days exist. It uses the whole history, so the value at a date
+  never changes with the range. It skips days off, counts today only once it
+  succeeds, and appears once about two observations are nearby. Period goals
+  smooth finished whole periods over two periods. Habits without a goal show
+  the share of days recorded.
+- **Streaks:** a timeline (founder request, after a climbing-line chart broke
+  down for long streaks). Each bar spans the calendar days a streak lasted and
+  gaps are breaks, so 5-day and 500-day streaks read alike. The ongoing streak is
+  brightest, a streak that began before the window is cut off square at the
+  left edge, and bars wide enough show their length. Below it are the best three
+  streaks of all time with dates. Runs carry across days off and rest periods,
+  an unfinished today keeps the streak, and period goals count periods. The
+  longest run equals the longest-streak tile and the ongoing run the current
+  streak (tested). Windows up to about six weeks use one unlabelled full-width
+  row. Longer ones get a row per month, and windows beyond about two years a row
+  per quarter, so short streaks stay visible. Every row spans the full width
+  with day 1 at the left, so days 1–31 line up down the rows; days outside the
+  period or month stay darker. Row labels are short months in the same 30-point
+  column as the other charts, with a year heading where rows cross into a new
+  year. A streak crossing rows is one shape per row with square ends at the
+  join, and shows its length on its last part.
+- **Calendar:** windows up to 100 days show continuous week rows, starting on the
+  Week starts on day, with values inside number days, category dots, and a dot
+  for text. Successful days in a row join into one bar, bridged across days off
+  within the row. Longer windows show compact months, three per row (four when
+  there are more than 12 months); tapping a day there selects it and shows its
+  reading with an Edit button. Met days use the habit colour, missed days a
+  faint tint, days off stay close to the background, and today stays neutral
+  until done. Without a goal, numeric intensity scales against the window's
+  highest total; zero stays coloured, blanks stay empty and future dates are
+  dim. Day cells have no selection or Today border (founder request); Today is
+  identified in its accessibility label. Numeric backgrounds dim separately from
+  their text, and text contrast is chosen against the actual background so small
+  totals and zero keep readable dates.
+- **By day of the week** (checkbox and Daily total habits): the share of each
+  weekday's scheduled days that succeeded, or the average per weekday (blank
+  days count as zero), for the selected window, ordered by Week starts on.
 - **Categories:** one row per category in saved order with automatic OKLCH
   colours (golden-angle hue steps from the habit colour, fixed lightness), as a
   timeline (days, or weeks/months shaded by how often) or by weekday. Rows never
   stack, because several categories can share a day. Tapping a row filters the
-  calendar dots and the entries list; tapping again or the chip clears it.
+  calendar dots and the entries list; tapping again or the chip's ✕ clears it.
 - **Entries:** a month-grouped journal, newest first: day number and weekday,
   category chips or text, goal status when an entry can miss its goal, and the
   entry time when it was made that day.
-- **Interaction:** every chart, including time of day, uses `ChartFrame`: tap
-  a bar, hold for about 0.2 s and drag to track through it with the thumb (a
-  selection haptic confirms the hold; the reading follows the finger, across
-  rows on the streak timeline, and stays after release), step with ‹ ›, clear
-  with ✕; VoiceOver adjusts item by item. A quick swipe still scrolls or pages:
-  only a hold starts tracking, and Notes/Statistics paging pauses while it
-  lasts (`ChartScrubLock`). Each chart has its own gesture-handler root view,
-  because the iOS page sheet has none. Selection follows a date key, so data
-  changes never move it to another period. Requested by the founder; tested in
-  code and on Android, iPhone feel pending.
+
+### Editing from the calendar
+
+Tap a calendar day to toggle a checkbox or open the same daily editor as the
+grid; the exact date goes to the same entry handler. In the current window,
+future days that complete the last week row are shown and can be edited, but
+stay out of every calculation until they arrive. Edits update charts and grid
+values immediately and use normal saving, haptics, grouped History and
+Undo/Redo. Numeric zero, blank-to-clear and Close keep their grid meanings. Save
+failures disable edits and show the existing retry banner. Calendar checkboxes
+expose their checked state to VoiceOver/TalkBack; other days announce the full
+date and recorded value.
+
+### Chart interaction
+
+Every chart, including Time of day, uses `ChartFrame` (founder request). Tap a
+bar to select it and tap it again to deselect. Hold for about 0.2 s and drag to
+track through the chart with the thumb: a selection haptic confirms the hold,
+the reading follows the finger (across rows on the streak timeline) and stays
+after release. Step with ‹ ›, and clear with ✕. VoiceOver/TalkBack adjust item by
+item, with a Clear selection action. A quick swipe still scrolls or pages: only
+a hold starts tracking, and Notes/Statistics paging pauses while it lasts
+(`ChartScrubLock`). Each chart has its own gesture-handler root view, because
+the iOS page sheet has none. Selection follows a date key, not an array index,
+so data changes never move it to another period; changing range or stepping
+resets it. Tested in code and on Android; iPhone feel is pending.
 
 `scripts/stats-series.test.mjs` checks day outcomes against `evaluateGoal` for
 every sample habit and day, streak lines against the streak tiles, period
@@ -180,141 +202,140 @@ helpers and category colours.
 
 ## Calculation rules
 
-- Read current values from the replayed projection, not a count of raw edit events.
-  Corrections and Undo therefore affect a day only through its final current value.
-- Future-dated values contribute to neither charts nor streaks until their day arrives.
-- For legacy habits without an explicit start date, creation comes from initialization or the first saved definition. Use the event's
-  captured UTC offset to identify its local edit day. Earlier dated entries extend
-  the tracking start to their earliest date, including intervening days.
-- Explicit start dates replace that inferred lower bound. Backdating includes empty
-  elapsed days before app creation without needing a fabricated first entry.
-  Moving the start forward excludes older records from all metrics, charts,
-  comparisons and streaks, but never deletes values or events. Moving it back
-  includes them again. Future start dates show “Starts”
-  and no eligible records until that date. Calendar/grid entries remain editable;
-  entries before the start date stay saved, outside statistics. This is an
+- Read current values from the replayed projection, not a count of raw edit
+  events. Corrections and Undo therefore affect a day only through its final
+  current value.
+- Future-dated values contribute to neither charts nor streaks until their day
+  arrives.
+- For legacy habits without an explicit start date, creation comes from
+  initialization or the first saved definition. Use the event's captured UTC
+  offset to identify its local edit day. Earlier dated entries extend the
+  tracking start to their earliest date, including intervening days.
+- Explicit start dates replace that inferred lower bound. Backdating includes
+  empty elapsed days before app creation without needing a fabricated first
+  entry. Moving the start forward excludes older records from all metrics,
+  charts, comparisons and streaks, but never deletes values or events; moving it
+  back includes them again. Future start dates show “Starts” and no eligible
+  records until that date. Calendar and grid entries remain editable; entries
+  before the start date stay saved, outside statistics. This is an
   implementation rule; the continuous calendar denominator is founder-confirmed.
 - Founder-confirmed denominator: every calendar day from the habit's own start
-  through today, intersected with the selected range. Activity in other habits
-  never changes its start or denominator. Checkbox rates divide checked scheduled days by
-  applicable scheduled days; the default remains every day. An unfinished today counts as a calendar day; a new habit
-  starting today therefore shows 0% until checked. Days before the start and future
-  days have no denominator. This supersedes the old unfinished-today grace for rates.
-- Archive controls list visibility; it does not pause the calendar denominator.
-  Restoring, Undo/Redo or timestamp rollback in archive edits cannot change the
-  period. Saved entries remain intact. This follows the continuous start-to-today
-  rule and supersedes the earlier archive-pause implementation.
-- Checkbox streaks count consecutive successful scheduled dates; off-days are neutral. The current streak
-  ends today if checked, otherwise yesterday, so an unfinished today has a grace
-  period. A missing earlier day breaks the streak. Archive does not bridge gaps.
-- Founder-confirmed numeric averages divide the total by all calendar days in the
-  period since the start, including blank days and today. For example, 30 minutes
-  across four days averages 7.5 minutes/day even with only three records. Blanks
-  stay blank in storage and daily charts; an explicit zero remains a recorded day.
-  A period with calendar days but no records averages zero; a period before the
-  start has no average. Without an explicit goal, numeric streaks mean consecutive days **recorded**.
-  Explicit goals add a separate scheduled-day success rate and success streak.
-- Current/best streaks use the entire history. Period totals, averages, rates,
-  chart buckets, and weekday breakdowns use the selected range.
+  through today, intersected with the selected window. Activity in other habits
+  never changes its start or denominator. Checkbox rates divide successful
+  scheduled days by applicable scheduled days; the default schedule is every
+  day. An unfinished today counts as a calendar day, so a new habit starting
+  today shows 0% until checked. Days before the start and future days have no
+  denominator. (This replaced an earlier unfinished-today grace for rates.)
+- Archiving controls list visibility only; it does not pause the calendar
+  denominator. Restoring, Undo/Redo or timestamp rollback in archive edits
+  cannot change the period, and saved entries remain intact. (This replaced an
+  earlier archive-pause implementation.)
+- Checkbox streaks count consecutive successful scheduled dates; off-days are
+  neutral. The current streak ends today if checked, otherwise yesterday, so an
+  unfinished today has a grace period. A missing earlier day breaks the streak.
+  Archiving does not bridge gaps.
+- Founder-confirmed numeric averages divide the total by all calendar days in
+  the period since the start, including blank days and today. For example, 30
+  minutes across four days averages 7.5 minutes/day even with only three
+  records. Blanks stay blank in storage and daily charts; an explicit zero
+  remains a recorded day. A period with calendar days but no records averages
+  zero; a period before the start has no average. Without an explicit goal,
+  numeric streaks mean consecutive days **recorded**. Explicit goals add a
+  separate scheduled-day success rate and success streak.
+- Current and best streaks use the entire history. Period totals, averages,
+  rates, chart bins and weekday breakdowns use the selected window.
 - Date arithmetic uses calendar-day ordinals rather than elapsed local hours,
-  avoiding daylight-saving discontinuities. Weekday groups and calendar headings follow Settings → Week starts on
-  (Monday by default, optionally Sunday). This changes presentation order only;
-  recording dates, statistics totals and chart buckets remain the same.
+  avoiding daylight-saving discontinuities.
+- Settings → Week starts on (Monday by default, optionally Sunday) sets weekday
+  order, calendar rows, week ticks and where weekly chart bins begin, so weekly
+  columns and averages regroup when it changes. It never changes recording
+  dates, window totals, rates or streaks, and saved goal periods keep their own
+  anchors ([GOALS.md](GOALS.md)).
 
 ## Ownership and verification
 
-`src/statistics.ts` is pure derived logic. `src/HabitDetailsScreen.tsx` owns the Notes/Statistics tab trial and common header.
-`src/HabitStatsScreen.tsx` owns Statistics content, charts and month/range selection.
-Habits with notes open the full reader directly, others open Statistics. The
-floating bottom Notes/Statistics island and horizontal swipes share native
-paging through `useHabitPages.ts`. Panels retain their scroll/range/chart state;
-measured island height keeps final chart/calendar/info controls reachable. The
-outer page sheet still enters upward and dismisses downward through UIKit.
-Nothing is stored separately; the existing version-1–12 logs and projection remain authoritative.
+`src/statistics.ts` is pure derived logic. `src/HabitDetailsScreen.tsx` owns the
+Notes/Statistics tabs and common header; `src/HabitStatsScreen.tsx` owns
+checkbox and Daily total statistics, and `src/RecordStatsScreen.tsx` with pure
+`src/recordStatistics.ts` owns Categories and Free text. Pure `statsSeries.ts`
+owns day outcomes, bins, observations, the smoothed trend and streak runs.
+Nothing is stored separately; the change log and its replayed projection remain
+authoritative (see [STORAGE.md](STORAGE.md)).
 
 `node --max-old-space-size=256 --test --test-timeout=15000 scripts/statistics.test.mjs`
-covers per-habit calendar denominators, unfinished today,
-streaks, zero versus blank, future exclusion, archive/restore including Undo/Redo,
-backdating, timezone offsets, DST dates, leap years, weekday/bucket partitioning,
-previous periods, independence from other habits, clock rollback, and unchanged
-legacy backup fixtures.
-Native chart interaction, VoiceOver, larger text, landscape, and animation feel
-remain device acceptance checks in [TESTING.md](TESTING.md).
+covers per-habit calendar denominators, unfinished today, streaks, zero versus
+blank, future exclusion, archive/restore including Undo/Redo, backdating,
+timezone offsets, DST dates, leap years, weekday/bin partitioning, previous
+periods, independence from other habits, clock rollback, and unchanged legacy
+backup fixtures. Native chart interaction, VoiceOver/TalkBack, larger text,
+landscape and animation feel remain device acceptance checks in
+[TESTING.md](TESTING.md).
 
 ## Reviewing with fictional history
 
 Settings → Development → Sample data supplies 180 days for every preset without
 mixing with real entries. Read has increasing minutes; Drink water has decimal
 values, zeros, and missing days. Go for a walk has a recent uninterrupted streak;
-Meditate has a recent gap. Stretch/Learn trend upward, while Write a little trends
-downward; outdoor/cooking/contact habits vary by weekday. Today is partly recorded,
-and no future sample entries are generated. These are synthetic UI test scenarios,
-not proposed habit targets or product scoring rules.
+Meditate has a recent gap. Stretch/Learn trend upward, while Write a little
+trends downward; outdoor/cooking/contact habits vary by weekday. Today is partly
+recorded, and no future sample entries are generated. These are synthetic UI
+test scenarios, not proposed habit targets or product scoring rules.
 
-Test 30-day/90-day/year/all ranges, bucket inspection, weekday bars, and calendar
-months. Settings can reset the sample or return to real data. Sample edits are
-session-only; see DEVELOPMENT.md for the startup env switch.
+Test all four ranges, ‹ › stepping, chart selection and tracking, weekday bars
+and the calendar. Settings can reset the sample or return to real data. Sample
+edits are session-only; see [DEVELOPMENT.md](DEVELOPMENT.md) for the startup env
+switch.
 
-The founder subsequently requested less explanatory copy. Calendar guidance and
-calculation details now use collapsed labelled info disclosures. Daily bars no
-longer repeat “One bar per day”; aggregation bounds remain visible for multi-day
-bars. This preserves necessary chart units and period context. New disclosure
-interaction remains a device check.
+## Categories and Free text
 
-Range controls measure their available width and wrap into two rows when four
-labels cannot fit at the combined app/system text scale. Normal-size portrait
-and wide landscape keep one row. Metric values can wrap rather than pushing
-labels out of the screen. Web layouts were inspected at 100% and 150%; native
-large-text comfort remains a device check.
-
-## Categorical and text recording statistics
-
-`RecordStatsScreen.tsx` uses pure `recordStatistics.ts` and the shared trend
-chart in recording mode. Both types show recorded days out of all eligible
-calendar days since the habit start, logging streaks, recording-rate bars, an
-editable month calendar and a virtualized dated entry list. These are recording
-metrics; explicit goals add separate scheduled-day success counts/rates/streaks. Streaks
-exclude pre-start/future entries and allow an unfinished Today as other types do.
+Both types show recorded days out of all eligible calendar days since the habit
+start, logging streaks, the Days recorded (or Success over time) chart, an
+editable calendar and a virtualized dated entry list. These are recording metrics; explicit goals add
+separate scheduled-day success counts, rates and streaks. Streaks exclude
+pre-start and future entries and allow an unfinished today, as other types do.
 
 Categories show days each stable option was selected, including archived options
-when they have records. Counts are not mutually exclusive; selecting several on
-a day counts that day for each option. Bars divide by all eligible calendar days
-of the selected period. Text entries preserve full strings; list previews are
-bounded to three lines and open the same daily editor as the grid. Corrections
-update all derived views and use normal Undo/Redo. Month/range/scroll state stays
-within the existing floating Notes/Statistics sheet. Sample mode adds Workout
-and Daily highlight with sixty days of fictional records, isolated from real data.
+when they have records. Counts are not mutually exclusive: selecting several on
+a day counts that day for each option. Shares divide by all eligible calendar
+days of the selected window. Text entries preserve full strings; list previews
+are bounded to three lines and open the same daily editor as the grid.
+Corrections update all derived views and use normal Undo/Redo. Range and scroll
+state stay within the Notes/Statistics sheet. Sample mode adds Workout and Daily
+highlight with sixty days of fictional records, isolated from real data.
 
 ## Effective-dated goals
 
-Goal opens the condition/repeat/date form from Statistics, with its timeline one tap away. Each date uses its effective
-rule/schedule, retaining historical results when a new goal starts Today. Success
-charts and weekday rates use applicable-day denominators; Track only and off-days
-contribute no failure. Today counts toward rates with the existing streak grace.
-Numerical totals/averages and category frequency/recording metrics remain separate.
-Numeric daily charts show dashed target marks for each scheduled day and both
-bounds for range rules. Calendar/grid accessibility announces dated goal state.
-Editing an earlier goal is explicit and undoable without replacing any entries.
-See [GOALS.md](GOALS.md) for full semantics and tests.
+Goal opens the condition/repeat/date form from Statistics, with its timeline one
+tap away. Each date uses its effective rule and schedule, retaining historical
+results when a new goal starts today. Success charts and weekday rates use
+applicable-day denominators; Track only and off-days contribute no failure.
+Today counts toward rates with the existing streak grace. Numeric totals and
+averages and category frequency/recording metrics remain separate. The Daily
+totals chart draws the goal as described under [Charts](#charts). Calendar and
+grid accessibility announce dated goal state. Editing an earlier goal is
+explicit and undoable without replacing any entries. See [GOALS.md](GOALS.md)
+for full semantics and tests.
 
 ## Fixed-period results and cycles
 
-`goalTiming.ts` supplies anchored on/off eligibility to daily statistics. Off dates
-are neutral; cycles may be in days or seven-day weeks. `periodStatistics.ts`
-counts distinct dates meeting the daily condition into saved fixed windows.
-`PeriodProgress.tsx` shows current progress plus expandable recent results. Open
-periods, rest periods and boundary fragments are distinct from failed finished
-periods. Only complete finished windows wholly in the selected range enter its
-period totals. Period streaks are all-time; raw logging metrics stay separate.
-Daily success streaks are hidden while a period goal is active. See GOALS.md.
+`goalTiming.ts` supplies anchored on/off eligibility to daily statistics. Off
+dates are neutral; cycles may be in days or seven-day weeks.
+`periodStatistics.ts` counts distinct dates meeting the daily condition into
+saved fixed windows. `PeriodProgress.tsx` shows current progress plus expandable
+recent results. Open periods, rest periods and boundary fragments are distinct
+from failed finished periods. Only complete finished windows wholly in the
+selected range enter its period totals. Period streaks are all-time; raw logging
+metrics stay separate. Daily success streaks are hidden while a period goal is
+active. See [GOALS.md](GOALS.md).
 
 ## Time of day
 
-Added 10 October 2026. Both statistics screens show a Time of day section after
-the period charts: 24 hourly bars for the selected period, the most common hour,
-and how many of the period's recorded days the chart covers. Tap a bar, or use
-the VoiceOver adjustable actions, to inspect an hour. `src/timeOfDay.ts` owns the
-pure calculation; `src/TimeOfDayChart.tsx` is the shared chart.
+Added 10 October 2026 (founder request). Both statistics screens show a Time of
+day section: 24 hourly bars for the selected window, the most common hour, and
+how many of the window's recorded days the chart covers. Tap or track a bar, or
+use the VoiceOver/TalkBack adjustable actions, to inspect an hour.
+`src/timeOfDay.ts` owns the pure calculation; `src/TimeOfDayChart.tsx` is the
+shared chart.
 
 Founder decisions:
 
@@ -323,21 +344,22 @@ Founder decisions:
   caption says how many were left out.
 - Undone changes never count, here or in any other statistic.
 
-Assistant choices, accepted by the founder where noted:
+Assistant choices:
 
 - Times use the UTC offset captured with each edit, so an entry made while
-  travelling keeps the local time where it was made (recommended and accepted).
+  travelling keeps the local time where it was made (recommended and accepted
+  by the founder).
 - The time counted is when the entry last went from empty to recorded. Later
   corrections, such as raising a numeric total, keep that time; clearing and
   re-entering it later moves it. A correction group counts from its first edit.
 - Checkbox Off (an explicit 0) is not a recorded entry; numeric zero, text and
   category selections are. Days that succeed only through a dated checkbox
   default have no tap and no time.
-- The period is the selected range, bounded by the habit's start date.
+- The period is the selected window, bounded by the habit's start date.
 
 The calculation reads the active History actions (`replay.undo`), which already
 exclude undone groups and restore redone ones with their original time. No
-event, preference, schema or backup format changes. Sample presets now record
+event, preference, schema or backup format changes. Sample presets record
 deterministic typical times of day (for example Meditate around 6:45, Read
 around 21:30), sorted within each day so History stays in time order. Sample
 Workout/Daily highlight records are entered on a later day and show the empty

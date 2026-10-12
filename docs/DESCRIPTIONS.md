@@ -1,30 +1,33 @@
 # Habit descriptions
 
-Date: 5 October 2026. Status: requested by the founder and implemented;
-the founder confirmed improved formatting selection and bottom-link-sheet spacing
-on the iPhone on 5 October 2026. Broader keyboard, accessibility and recovery
-acceptance remains pending.
+A habit can have an optional note in plain text or Markdown, keeping motivation,
+reminders and links one tap away from the grid. Tapping a habit's name opens
+the note on its own Notes tab, beside Statistics. Notes are written in a
+full-screen formatted editor, and every applied change can be compared with
+earlier versions and restored.
+
+Requested by the founder and implemented 5 October 2026. The founder confirmed
+formatting selection and the link-sheet spacing on the iPhone that day; broader
+keyboard, accessibility and recovery acceptance remains pending.
 
 ## Reading and editing
 
-A habit can have an optional description containing plain text or Markdown.
-Its purpose is to keep motivation, reminders and links one habit-name tap away.
-The founder confirmed the long-note reader feels instant at all three sample
-sizes, but wants the full note one tap from the grid. The compact-card experiment
-is superseded by a **Notes / Statistics tab trial** in the same habit page sheet.
+Notes and Statistics are two tabs in the same habit sheet (founder request for
+the full note one tap from the grid; this replaced an earlier compact note card
+after the founder found the long-note reader instant at all three sample sizes).
 Name taps open Notes when a description exists and Statistics otherwise. Notes
-shows the full formatted reader immediately; there is no preview or second Open
-note step. Empty Notes offers Add a note. The common header shows the habit and
-Close, with Edit description on Notes and Edit habit on Statistics. Versions
-remains available within Notes when history exists.
+shows the full formatted reader immediately, with no preview or second Open
+step. Empty Notes offers Add a note. The common header shows the habit with
+Close and an Edit control: Edit description on Notes, Edit habit on Statistics.
+Versions sits at the top of Notes once description history exists.
 
-The founder found top tabs hard to reach and delegated the choice between
-swiping and a floating bottom control. The assistant chose both: a compact
-floating Notes/Statistics island inside the sheet's bottom safe area, plus
-native horizontal paging. The active pill follows page motion on the UI thread;
-a tab tap scrolls to its page, respecting Reduce Motion. Vertical child scrollers
-and the outer horizontal pager use native directional locking. The sheet's
-upward entry/downward dismissal remain unchanged.
+The tabs are switched by a compact floating Notes/Statistics island inside the
+sheet's bottom safe area and by native horizontal paging (assistant choice,
+after the founder found top tabs hard to reach and left the choice between the
+two open). The active pill follows page motion on the UI thread; a tab tap
+scrolls to its page, respecting Reduce Motion. Vertical child scrollers and the
+outer horizontal pager use native directional locking. The sheet's upward entry
+and downward dismissal are unchanged.
 
 The first selected panel mounts alone, with its neighbour warmed after 200 ms
 or at the first horizontal drag/tab tap. Both then stay mounted side by side,
@@ -37,9 +40,9 @@ Inactive panels retain their layout but accept no touches
 and are hidden from accessibility. The reader FlatList mounts nearby passages
 and splits top-level lists into individual rows, retaining nesting and numbering.
 Its disposable cache is capped at five documents/100,000 source characters.
-Edit/version/numeric dialogs still present inside the same native sheet;
-save failure/retry is visible there. This is an authorised phone trial, not a
-final navigation decision. Edit and version-list summaries still parse at most
+Edit/version/numeric dialogs present inside the same native sheet, and save
+failure/retry is visible there. The tabs are a founder-authorised phone trial,
+not a final navigation decision. Edit and version-list summaries parse at most
 600 source characters.
 
 Creation and Edit have one compact Description control, showing a two-line text
@@ -94,9 +97,7 @@ initial or matching saved scroll target until the user interacts, then normal
 typing/scrolling takes over. Both the writing viewport and editor content are
 observed. The DOM root does not scroll; the writing area owns document scrolling.
 A native Opening editor indicator covers startup and stops on readiness or a
-load error. The end-caret mismatch is a plausible source of the reported first-open
-blank jump. The founder confirmed Read/Meditate now start correctly without
-a black jump on the iPhone. Wider bookmark/keyboard/orientation checks remain. `richText/useEditorReady.ts` owns this boundary.
+load error; `richText/useEditorReady.ts` owns this boundary.
 
 Select words and paste a full web or app URL to turn the words into a link,
 retaining their other formatting and selection. Pasting onto an existing linked
@@ -160,10 +161,12 @@ paste is rejected as a whole, with existing text and Undo retained.
 `richText/useFloatingMenuSpace.ts` sizes overlay menus locally without sending
 per-frame layout through the native bridge. No storage schema changes are needed.
 
-The editor's MIT notices are retained in
-[TIPTAP_LICENSE.txt](licenses/TIPTAP_LICENSE.txt),
-[PROSEMIRROR_LICENSES.txt](licenses/PROSEMIRROR_LICENSES.txt) and
-[MARKED_LICENSE.txt](licenses/MARKED_LICENSE.txt).
+The editor's licence notices are retained for Tiptap
+([TIPTAP_LICENSE.txt](licenses/TIPTAP_LICENSE.txt), MIT), the ProseMirror
+packages beneath it ([PROSEMIRROR_LICENSES.txt](licenses/PROSEMIRROR_LICENSES.txt),
+MIT) and `marked` ([MARKED_LICENSE.txt](licenses/MARKED_LICENSE.txt), MIT with
+the original Markdown licence). `marked` is not imported directly; it arrives
+through `@tiptap/markdown`, which uses it to parse Markdown.
 References: [Expo DOM components](https://docs.expo.dev/guides/dom-components/),
 [Tiptap Markdown](https://tiptap.dev/docs/editor/markdown/getting-started/basic-usage).
 
@@ -172,7 +175,8 @@ Upstream: [markdown-it](https://github.com/markdown-it/markdown-it).
 
 ## History and durable storage
 
-Descriptions are an optional `description` string on v7 habit definitions.
+Descriptions are an optional `description` string on habit definitions, added
+in v7.
 Before/after definitions use the existing atomic event/projection transaction,
 serialized writes and visible failure/retry. Creation, ordinary editing, clearing,
 Undo/Redo, archive/restore and full backups retain descriptions. Statistics read
@@ -195,16 +199,16 @@ ends unchanged. This prevents quadratic memory growth for unrelated long notes. 
 restored redundantly. Visible History continues to contain active actions only;
 Undo removes rows and Redo restores them, while the raw log remains complete.
 
-Versions beside Edit/Add opens a compact, virtualized list of this habit's active
-description changes, newest by sequence first. It uses the same Before/After
+Versions, at the top of Notes, opens a compact, virtualized list of this habit's
+active description changes, newest by sequence first. It uses the same Before/After
 reader and Restore path as History. Rows include saved time and a short text
 summary; only the latest matching applied version is marked Current. Repeated
 text is retained because different Before versions may contain recoverable notes.
-Cleared notes retain Versions even without a note card. The control is absent
+A cleared note keeps Versions above the empty Notes tab. The control is absent
 until a description action exists. Initial/seed text is available as Before the
 first edit; this is not a second snapshot store. Undo/Redo affect the rows exactly
-as in History, with all raw events retained in export. Access from the statistics
-card also keeps restoring separate from unfinished creation/edit-form drafts.
+as in History, with all raw events retained in export. Opening Versions from the
+Notes tab keeps restoring separate from unfinished creation/edit-form drafts.
 
 ## Interrupted drafts
 
@@ -228,7 +232,7 @@ and disappear on full reload. They cannot write to real drafts or real habit dat
 
 Version-2 local draft JSON optionally includes validated anchor/head/scrollTop;
 version-1 drafts remain readable without being rewritten. No draft SQL schema or
-main v7 event/export change is needed. Separate `position:` keys in the same local
+main event/export change is needed. Separate `position:` keys in the same local
 draft store retain clean, text-matched bookmarks after Done. An unchanged note
 closed normally retains its location. Discarded text does not replace the applied
 note's bookmark. An outer creation/edit Done transfers the matching position to
@@ -260,7 +264,7 @@ For a pre-description store, `storage/presetDescriptions.ts` adds placeholders
 through normal undoable edits to existing habits, including custom and archived
 habits. Custom habits receive a generic note rather than an invented motivation.
 Existing descriptions and any past assignment/removal/Undo are preserved. Raw
-history prevents repeating the update after Undo or reload. New v7 custom habits
+history prevents repeating the update after Undo or reload. New custom habits
 start with an optional empty description and receive no automatic placeholder.
 No store is reset or reseeded. Older backups may receive the one-time update on
 next opening; a restore itself still reproduces the validated archive exactly.
@@ -282,8 +286,8 @@ the highlight-colour indicator. A generated fourteen-icon subset avoids importin
 the complete catalogue into the DOM editor. Regenerate it with
 `node scripts/generate-editor-icons.mjs`; the existing Tabler MIT notice applies.
 
-Descriptions and all editor controls follow Settings → Text size and the iPhone
-text-size multiplier. There is no separate description-size preference. The
+Descriptions and all editor controls follow Settings → Text size multiplied by
+the system text size. There is no separate description-size preference. The
 keyboard toolbar and menus wrap or scroll while keeping minimum touch targets.
 
 ## Large-note performance experiment

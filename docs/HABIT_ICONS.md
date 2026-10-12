@@ -1,11 +1,12 @@
 # Optional habit icons
 
-Requested by the founder on 4 October 2026. A habit may have no icon, an emoji, or
-a monochrome pack icon. Custom habits start name-only; the founder subsequently
-requested icons on all 12 presets. An icon
-appears beside the name in the grid, statistics, and archive list. It is decorative
-for accessibility: the habit's name remains its spoken identity. Icons never
-replace names or shrink date-cell touch targets.
+A habit may have no icon, an emoji, or a monochrome pack icon. An icon appears
+beside the name in the grid, statistics, and archive list. It is decorative for
+accessibility: the habit's name remains its spoken identity. Icons never replace
+names or shrink date-cell touch targets.
+
+Requested by the founder on 4 October 2026. Custom habits start name-only; the
+founder subsequently requested icons on all 12 presets.
 
 ## Selection
 
@@ -65,7 +66,7 @@ validation on dependency updates without testing previously accepted sequences.
 
 ## Persistence
 
-Version 4 adds `icon?: string` to a habit definition, represented as e.g.
+Version 4 added `icon?: string` to a habit definition, represented as e.g.
 `phosphor:book-open`, `tabler:yoga`, or `emoji:📚`. None omits the field. Null, unknown packs/IDs,
 URLs, malformed emoji, and extra object fields are rejected before saving/import.
 Old v1/v2/v3 events retain their original validation and interpretation. A log may
@@ -74,7 +75,7 @@ upgrade but cannot downgrade after a v4 event. The SQL schema stays at version 1
 Applying/removing icons is an ordinary before/after habit-definition change.
 It saves atomically, appears in History, survives archive/restore and reload,
 and supports Undo/Redo. Icon-only edits read “Icon changed” or “Icon removed”.
-The v4 backup exports every raw event, including older events without rewriting.
+Backups export every raw event, including older events, without rewriting them.
 See [STORAGE.md](STORAGE.md) and [the synthetic v4 backup](examples/storage-v4.json).
 
 Tests cover valid emoji sequences, malformed inputs, catalogue/glyph completeness,
@@ -89,21 +90,21 @@ regular designs are now available. The upstream 9k+ total counts six styles:
 covers every design once. The founder subsequently approved Tabler Outline.
 
 To regenerate, download the official npm tarballs for `@phosphor-icons/core@2.1.1`
-and `@tabler/icons@3.48.0`,
-extract it into an ignored local folder, then run:
+and `@tabler/icons@3.48.0`, extract each into an ignored local folder, then run:
 
 ```sh
 node scripts/generate-phosphor.mjs /absolute/path/to/phosphor/package
 node scripts/generate-tabler.mjs /absolute/path/to/tabler/package
 ```
 
-The generators verify package/version, icon counts, supported SVG/path attributes,
-and common IDs; it writes deterministic, formatted catalogue/path modules. These
-are committed, so normal development/builds need no asset download. Preserve
-the upstream MIT notice and all previously accepted IDs on future upgrades.
-Expanded choices use the same v4 representation; older builds with the 56-icon
-registry, or builds without Tabler, will reject backups containing unfamiliar IDs. Update the receiving
-build before importing those backups.
+The generators verify the package and version, icon counts, supported SVG/path
+attributes, and common IDs, then write deterministic, formatted catalogue and
+path modules. These are committed, so normal development and builds need no
+asset download. Preserve the upstream MIT notices and all previously accepted
+IDs on future upgrades. Expanded choices use the same v4 representation, but
+older builds with the 56-icon registry, or builds without Tabler, reject backups
+containing unfamiliar IDs. Update the receiving build before importing those
+backups.
 
 ## Preset assignments
 

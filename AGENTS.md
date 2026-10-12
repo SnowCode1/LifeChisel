@@ -2,9 +2,15 @@
 
 ## Start here
 
-Read `PROJECT_GOALS.md`, `docs/DEVELOPMENT.md`, and `docs/DECISIONS.md`.
-OnPurpose is a provisional name. The founder is new to the stack: explain
-technical choices in plain language and connect them to the product goal.
+Read `PROJECT_GOALS.md`, `docs/DEVELOPMENT.md`, and `docs/DECISIONS.md`;
+`docs/README.md` lists every guide. OnPurpose is a provisional name. The founder
+(project owner and maintainer) is new to the stack: explain technical choices in
+plain language and connect them to the product goal.
+
+Current storage writers and backup exports are v19 with SQL schema 1;
+`docs/STORAGE.md` is the authority. Version numbers in the sections below record
+when a feature's fields arrived, and each older version must keep replaying
+unchanged.
 
 ## Duplicate messages
 
@@ -17,16 +23,18 @@ Treat deliberate requests to retry or repeat an action as new instructions.
 ## Product direction
 
 The core goal is minimising cognitive friction so tracking becomes a seamless
-part of life. The home view is a habit-by-day grid with checkbox and numeric
-cells, distinct name taps for statistics, and user-chosen stable row order.
+part of life. The home view is a habit-by-day grid with checkbox, numeric,
+category and text cells, distinct name taps for the habit's Notes/Statistics
+sheet, and user-chosen stable row order.
 Protect stable row positions, direct access to the list, and immediate feedback.
 Do not add navigation, dashboards, celebrations, login, or a backend without a
 requirement. Distinguish founder decisions from assistant proposals in the docs.
 Incremental change storage and export are confirmed requirements; read
-`docs/STORAGE.md` before implementing persistence. Entries, colours, start dates, haptics and row spacing now persist. Sample habits are initialized
+`docs/STORAGE.md` before implementing persistence. Entries, habit definitions and
+preferences persist locally. Sample habits are initialized
 once; never reset or reseed an existing store during loading or an error.
-The requested preset icon update uses normal undoable edits in
-`src/storage/presetIcons.ts`; preserve earlier icon choices/removals and raw history.
+`src/storage/presetIcons.ts` applies preset icons as normal undoable edits;
+preserve earlier icon choices/removals and raw history.
 
 ## Stack and layout
 
@@ -64,6 +72,12 @@ The requested preset icon update uses normal undoable edits in
 - `src/HistoryView.tsx` renders compact action rows and sticky edit-day groups;
   `src/history.ts` keeps grouping separate from effective habit dates. Preserve
   reverse sequence order; do not reorder logged actions by their timestamps.
+  `historyRows` collapses only neighbouring same-date entries within 5 minutes,
+  keyed by their oldest member. Filters are unsaved view state; the floating
+  Undo bar always names the newest action, even when filtered out.
+  `historyDays` pages whole days and caches per-action day/kind; never rescan
+  the full log per render (only the open jump calendar does). Today/Yesterday
+  start open; `HistoryFilters.tsx` owns the chips, habit picker and calendar.
 - `src/HabitName.tsx` and `src/useHabitReorder.ts` own hold/menu/drag interactions.
   Only completed drops persist. Keep cells distinct, support cancellation, and
   preserve archive entries. `src/HabitDialog.tsx` owns editor/colour drafts;
@@ -85,7 +99,7 @@ The requested preset icon update uses normal undoable edits in
   `docs/DESCRIPTIONS.md`. `src/RichDescription.tsx` is the offline Expo DOM/Tiptap
   editing surface; `src/richText/` owns safe document mapping, formatting, local
   Undo/Redo and bounded highlights. Preserve native readers and request a current
-  DOM snapshot before applying. Applied descriptions use ordinary habit changes (v12 for new writes);
+  DOM snapshot before applying. Applied descriptions use ordinary habit changes (introduced in v7);
   recoverable drafts stay outside History/backups in a separate local store. Keep
   `storage/descriptionDraftModel.ts` distinct from native/web adapters for Metro.
   `src/dev/sampleData.ts` owns isolated mock history for statistics testing. Keep
@@ -117,7 +131,7 @@ The requested preset icon update uses normal undoable edits in
   DateNavigationSheet and StartDateField show the dark `DateCalendar.tsx` there;
   iOS keeps its native inline/compact pickers. `useKeyboardFocus.ts` replaces
   autoFocus in Android dialogs, where autoFocus inside a Modal shows no keyboard.
-- `src/StartDateField.tsx` owns the native draft date picker; existing dates remain inferred until edited. Explicit start dates bound statistics without deleting entries. New edits/exports use v12, retaining v1–v11 replay.
+- `src/StartDateField.tsx` owns the native draft date picker; existing dates remain inferred until edited. Explicit start dates bound statistics without deleting entries. Start dates arrived in v5; keep older replay unchanged.
 - Statistics uses the same native pageSheet/slide/swipe dismissal as History and
   Settings; UIKit owns its gesture on iOS. `SheetModal.tsx` keeps that iOS Modal
   unchanged and gives Android a react-native-gesture-handler sheet: a downward
@@ -132,13 +146,16 @@ The requested preset icon update uses normal undoable edits in
 - `src/useGridScroll.ts` synchronizes native scrolling on the UI thread; never
   put per-frame list synchronization back on the JavaScript thread.
 - `src/gridNavigation.ts` owns the future-pull threshold and signed date offsets.
+  Android cannot overscroll, so `src/FuturePullZone.tsx` (Android-only pan, app
+  root `GestureHandlerRootView` on Android only) feeds `useGridScroll`'s
+  `edgePull`; keep the iOS native pull and tree unchanged.
 - `src/ColourPicker.tsx` and `src/colors.ts` own preset/custom colours and OKLCH.
 - `src/haptics.ts` owns action feedback; never trigger it from state updaters
   or await it before updating UI. Keep routine scrolling quiet.
 - `src/calendar.ts` and `src/useLocalToday.ts` handle local dates and rollover.
 - `src/habits.ts` contains demo habits/colours. `index.ts` registers the app.
 - `app.json` owns Expo configuration. Generated native folders stay ignored.
-- Linux is the development host; a physical iPhone is the primary test device.
+- Development happens on Linux and Windows (no Mac); a physical iPhone is the primary test device.
   Android testing over USB/adb started 8 October 2026; iOS remains the release
   target. Keep iOS behaviour unchanged when adapting a screen for Android.
 - Use `npx expo install <package>` for Expo/native dependencies to match the SDK.
@@ -176,8 +193,8 @@ presentation until Settings dismisses. The DOM editor gets CSS variables from
 `richText/editorTheme.ts`. `themeMode`/`darkBackground`/`lightBackground` are v19
 preferences outside History/Undo with `before: null` until first chosen; defaults
 (Dark, #000000, Paper #F6F3EC) are display rules in displayDefaults. Backgrounds are
-fitted to readable ranges at display time, never rejected. Current writers/exports
-are v19, retaining v1–v18 prefixes and SQL schema 1. Read docs/SETTINGS.md.
+fitted to readable ranges at display time, never rejected. Theme fields arrived
+in v19, retaining v1–v18 prefixes and SQL schema 1. Read docs/SETTINGS.md.
 The description editor uses `@expo/dom-webview`, falling back to
 `react-native-webview` where its native view is missing (Expo Go on Android).
 
@@ -222,6 +239,12 @@ release JS and never print pairing tokens.
 ## Documentation and release
 
 Update relevant docs when changing commands, architecture, or confirmed scope.
+Guides describe current behaviour: edit the relevant section in place rather than
+appending dated narrative, and mark replaced behaviour as superseded instead of
+leaving contradictions. Record decisions in `docs/DECISIONS.md` and dated test
+evidence in `docs/TEST_LOG.md`; `docs/TESTING.md` stays the current procedure.
+State the current storage version only in `docs/STORAGE.md`. Keep chat/session
+state (running terminals, received captures, local flags) out of the docs.
 Keep credentials, signing files, tokens, local logs, and real user habit data out
 of Git. `EXPO_PUBLIC_*` variables are public in the app, not secret storage.
 Keep deployment and signing manual until release automation is deliberately set
@@ -275,8 +298,8 @@ counts/streaks, category frequency, editable calendar and virtualized entries,
 without claiming completion. `habitCompletion.ts` delegates all four types to effective-dated conditions in
 `habitGoals.ts`; absent non-checkbox goals remain Track only. `sampleRecords.ts` appends
 fictional Workout/Highlight examples only to the isolated sample store, leaving
-the original v7 sample fixture and real presets untouched. Main log/export v12
-retains unchanged v1–v11 prefixes; array preconditions/grouping/inverses compare
+the original v7 sample fixture and real presets untouched. Text/category entries
+arrived in v10; keep older prefixes unchanged; array preconditions/grouping/inverses compare
 values rather than references. SQL stays at schema 1. Grid text/category cells
 use readable 12-point text with app/OS scaling, native tail truncation and
 geometry-based 1–3 lines from `gridEntryText.ts`. Only numeric cells may autosize;
@@ -295,7 +318,7 @@ category IDs, earlier-period confirmation, ordinary undoable definition edits,
 unchanged values and v1–v10 prefixes. `completionStatistics.ts` counts scheduled
 opportunities without allocating lifetime calendars; numeric averages still use
 all calendar days. `dev/sampleGoals.ts` adds fictional goals only to the isolated
-sample log. Weekly quotas, skipping and manual overrides remain deferred.
+sample log. Skipping and manual overrides remain deferred; period quotas are below.
 
 Archived habit Delete requires a named native confirmation and uses the v12
 `deleteHabit` snapshot action through `ChangeStore.deleteArchivedHabit`.
@@ -316,7 +339,7 @@ open. `GoalTimingFields.tsx` owns compact schedule drafts; Try a value is remove
 Create/Edit habit and Goal are full-screen editors with short parent navigation,
 fixed actions, safe areas and staged subpage edits. `PeriodProgress.tsx` keeps
 quota progress out of the grid. Hide completed remains a daily predicate.
-Current writers/exports use v13, retaining v1–v12 replay and schema 1. Older event
+Period/cycle fields arrived in v13, retaining v1–v12 replay and schema 1. Older event
 versions must reject period/cycle fields. `sampleTiming.ts` appends fictional
 timing examples only in the isolated sample store.
 
@@ -328,14 +351,14 @@ shared subtle top separator/spacing; do not add unrelated per-screen divider hac
 
 Checkbox goals now support `unchecked` and dated optional `defaultChecked` in
 `habitGoals.ts`. Use `checkboxChecked`/`toggleCheckboxValue` everywhere: saved 0
-is an explicit Off override, 1 is On, absent inherits the dated default. Current
-writes/exports are v14; v1–v13 keep old validation and exact prefixes. SQL stays 1.
+is an explicit Off override, 1 is On, absent inherits the dated default. These
+fields arrived in v14; v1–v13 keep old validation and exact prefixes. SQL stays 1.
 Default changes from habit editing use `withCheckboxDefault`; goal editing stages
 the same timeline field. Count implicit successes arithmetically through policies
 and repeating periods, never materialize lifetime daily values. Primary goal
 section choices open directly; do not nest a duplicate selected-value dropdown.
 
-Current writers/exports are v15. `checkboxStyle` is a strict boxes/marks preference
+v15 added `checkboxStyle`, a strict boxes/marks preference
 (default boxes), outside History/Undo, retaining v1–v14 prefixes and SQL schema 1.
 `GridCheckboxMark.tsx` scales both styles and owns tap-only UI-thread feedback.
 Never animate on cell mount, store acknowledgements, Undo or scroll. Respect
@@ -347,7 +370,7 @@ Defer checkboxStyle and weekStart with other grid presentation preferences until
 Settings dismisses. A separate rest-day feature was declined; keep scheduling in
 effective-dated habit goals.
 
-Current writers/exports are v16. `weekDividers` and `tapAnimations` are boolean
+v16 added `weekDividers` and `tapAnimations`, boolean
 preferences defaulting On; keep v1–v15 prefixes, schema 1, History/Redo isolation
 and grid-presentation deferral. Week dividers now controls faint alternating
 header backgrounds; Today retains its own highlight. `HabitNameDivider.tsx` owns
@@ -356,8 +379,8 @@ Never reintroduce full-height week lines. The name/day separator is an overlay,
 independent of the week toggle. Gate tap-only pulses with tapAnimations while
 retaining Reduce Motion and immediate saves; haptics remains a separate setting.
 
-Current writers/exports are v18. `gridNameWidth`, `gridColumnWidth` and
-`gridRowHeight` are stepped point sizes or `auto`, outside History/Undo, preserving
+v18 added `gridNameWidth`, `gridColumnWidth` and
+`gridRowHeight`: stepped point sizes or `auto`, outside History/Undo, preserving
 Redo, schema 1 and exact v1–v17 prefixes; `before` is null until first chosen.
 Absent v18 fields still honour v5–v17 `rowSpacing`, `columnSpacing`/`columnDensity`
 (via `effectiveColumnSpacing`) and `nameColumnWidth`, whose Standard means
@@ -372,6 +395,8 @@ existing discrete callbacks into useGridScroll; keep old/future entry keys
 exact, date identities shared and windows compact only at final native settling.
 Android FlashList re-applies its initial index after first layout, so far
 navigation on Android lands directly instead of animating its final columns.
+Its prepend anchoring also settles after content-size events, so Android future
+reveals remount both lists at the new date rather than animating after anchoring.
 `DateColumns.tsx` owns native FlashList 2.3.3/web FlatList adaptation and the
 frozen native initial index; list keys still reset width/range generations.
 `HabitContextMenu.tsx` owns menu measurement/placement, staying mounted when closed
@@ -458,7 +483,7 @@ without animated descriptors. One temporary feedback overlay per tapped column
 hides its corresponding idle shape; external edits/Undo/recycling never pulse.
 
 developmentFeatures.ts supplies the temporary EXPO_PUBLIC_DEV_COMPARISON override
-for paired Saved-data Expo Go sessions. Keep literal **DEV** guards on native dev
+for paired Saved-data Expo Go sessions. Keep literal `__DEV__` guards on native dev
 imports; comparison disables App sample/preview/performance mounts and recording
 without changing env files or storage. scripts/start-comparison.mjs owns ports
 8083 (unprofiled development) and 8082 (production JS), one worker and cleared cache.
@@ -473,6 +498,6 @@ contains type-only shapes; `storage/validation.ts` owns exact fields/version gat
 date/daily/habit validation and precondition assertions; `storage/changeUtils.ts`
 owns preference classification, structural equality and inversion. Validation
 must not import replay/model at runtime. Preserve all public model exports,
-legacy rejection semantics, mutable replay versus immutable live updates, v17
-writers and schema 1 when changing these modules. Do not bypass validation to
+legacy rejection semantics, mutable replay versus immutable live updates, the
+current writer version and schema 1 when changing these modules. Do not bypass validation to
 make the split appear faster.
