@@ -343,8 +343,11 @@ See [GOALS.md](GOALS.md).
 - Number, text and new-habit dialogs open the keyboard; its Done key saves.
 - Jump to date and start dates use the dark calendar with a month/year chooser.
 - Far jumps and Today from far away land directly; near ones animate.
-- Future pull: release past the tick lands on tomorrow; scroll both ways, Today,
-  and pull again at the new edge.
+- Future pull: release past the tick slides to tomorrow without the grid
+  blanking and redrawing; scroll both ways, Today, and pull again at the new
+  edge (that second pull may redraw once). Flings toward Today stop there
+  until a deliberate pull. The grid opens on Today, and Today realigns columns
+  exactly with their headings.
 - In the future region, and after a far jump into the past, fling both ways:
   no jumps, and nothing moves on its own after the finger lifts.
 - Auto sizes on the S21: four days, 130-point names, 48-point rows. Landscape
@@ -430,6 +433,9 @@ measure, not an achieved claim; acceptance thresholds are still to be agreed.
 - **Grid rendering speed:** entry rendering felt noticeably slow on the iPhone in
   Expo Go development mode (7 October 2026). No Release build has been measured;
   see [PERFORMANCE.md](PERFORMANCE.md).
+- **Android launch position:** a production-JavaScript launch on the S21 opened
+  three days back with headings about a third of a column off the cells
+  (12 October 2026). See DECISIONS.md.
 - **Android number dialog:** with the keyboard open, Close/Done need scrolling.
   Decide whether that is acceptable or the dialog should be more compact.
 - **Android over Wi-Fi:** Expo Go could not reach Metro over Wi-Fi (cause

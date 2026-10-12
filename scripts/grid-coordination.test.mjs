@@ -116,7 +116,12 @@ async function datesFixture(t, os = 'ios') {
     });
     return null;
   }
-  const geometry = { columnWidth: 55, dateWidth: 220, visibleDays: 4 };
+  const geometry = {
+    columnWidth: 55,
+    dateWidth: 220,
+    visibleDays: 4,
+    futurePreload: os === 'android' ? 23 : 0,
+  };
   await render(React.createElement(Host, geometry));
   async function resize(next) {
     await act(() => view.prepareResize());
@@ -204,27 +209,56 @@ test('future pull waits for both expanded lists, retains date identities and col
   assert.equal(f.view().atTodayBoundary, true);
 });
 
-test('Android future reveals remount both lists at the new date instead of settling after anchoring', async (t) => {
+test('Android preloads future dates: reveals move the boundary without remounting and Today folds it back', async (t) => {
   const f = await datesFixture(t, 'android');
   await f.ready();
   const before = f.view().days;
-  await act(() => f.view().revealFuture(-100));
-  assert.equal(f.view().days.length, 120);
-  assert.equal(f.view().days[30], before[0]);
-  assert.equal(f.view().rightmostDay, -2);
+  assert.equal(before.length, 90 + 23);
+  assert.equal(f.view().frame.index, 23, 'Today sits at the boundary');
+  assert.equal(f.options().futureCount, 23);
+  assert.equal(f.options().lockedDays, 23);
+  await act(() => f.view().revealFuture(-55));
+  const trip = f.calls.at(-1);
+  assert.equal(trip.kind, 'navigate');
+  assert.equal(trip.day, -1, 'tomorrow lands beside the old edge');
+  await act(() => trip.arrive());
+  assert.equal(f.view().days, before, 'no columns are inserted');
+  assert.equal(f.view().rangeReset, 0, 'no remount');
+  assert.equal(f.view().layoutBusy, false);
+  assert.equal(f.view().rightmostDay, -1);
+  assert.equal(f.options().lockedDays, 0, 'the whole preload is unlocked');
+  assert.equal(f.offset.value, 22 * 55);
+  assert.equal(f.haptics.length, 0, 'pull threshold owns its feedback');
+  await act(() => f.view().returnToToday());
+  const back = f.calls.at(-1);
+  assert.equal(back.day, 0);
+  await act(() => back.arrive());
+  assert.equal(f.view().days, before);
+  assert.equal(f.view().rangeReset, 0);
+  assert.equal(f.options().lockedDays, 23);
+  assert.equal(f.view().atTodayBoundary, true);
+});
+
+test('Android remounts with a fresh preload only once revealed dates use it up', async (t) => {
+  const f = await datesFixture(t, 'android');
+  await f.ready();
+  const before = f.view().days;
+  await act(() => f.view().revealFuture(-55));
+  assert.equal(f.calls.at(-1).day, -1);
+  await act(() => f.calls.at(-1).arrive());
+  assert.equal(f.view().days, before);
+  assert.equal(f.options().lockedDays, 0);
+  assert.equal(f.view().rangeReset, 0);
+  await act(() => f.view().revealFuture(-55));
   assert.equal(f.view().rangeReset, 1);
-  assert.equal(f.view().frame.offset.x, 28 * 55);
+  assert.equal(f.view().rightmostDay, -24);
+  assert.equal(f.view().days.length, 90 + 53 + 23);
+  assert.equal(f.view().days[f.view().frame.index].daysAgo, -24);
+  assert.equal(f.options().lockedDays, 23);
   assert.equal(f.view().layoutBusy, true);
-  await act(() => f.view().listSized('header', 120 * 55));
-  await act(() => f.view().listSized('body', 120 * 55));
-  assert.equal(
-    f.calls.some((call) => call.kind === 'reveal'),
-    false,
-  );
   await f.ready();
   assert.equal(f.view().layoutBusy, false);
-  assert.equal(f.offset.value, 28 * 55);
-  assert.equal(f.haptics.length, 0);
+  assert.equal(f.offset.value, f.view().frame.offset.x);
 });
 
 test('Android never anchors inserted columns; newer history remounts once a gesture settles near its edge', async (t) => {

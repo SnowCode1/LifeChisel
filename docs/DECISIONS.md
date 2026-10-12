@@ -1802,3 +1802,31 @@ signing and device enrolment are still prerequisites, not completed deployment.
 - Founder confirmed on the phone the same day: the loop and teleports are gone.
   The blank-and-redraw at a future reveal remains (it is that remount); the
   founder asked to remove it by loading future dates up front.
+
+## 12 October 2026 — Android future dates load up front
+
+- Founder request: remove the blank-and-redraw when pulling past Today on
+  Android, by loading future dates up front if that is the best way.
+- First attempt (assistant): preload 120 future days. Founder report: the list
+  opened far to the right of Today, Today did not line up, and scrolling felt
+  laggier; the founder questioned loading 120 days. Diagnosis: FlashList places
+  undrawn columns by the average of the last five measured widths, and Android
+  rounds each fractional column to whole pixels, so widths alternate (for
+  example 127 and 128 pixels). Scrolling assumes index × column width, so the
+  error grew with every undrawn column before Today and shifted with each new
+  measurement.
+- Assistant change, iOS unchanged: Android day columns are whole physical
+  pixels (the name column takes the remainder), so every column measures the
+  same and FlashList's estimates match the scroll arithmetic. Following the
+  founder's suggestion, the preload is as many days as could fit across the
+  screen's long side at the narrowest column (about 23 on the S21). Ordinary
+  scrolling stops at the boundary (the scroll handler holds both lists there on
+  the UI thread) and the pull still starts there. A reveal unlocks the preload
+  and animates to tomorrow without changing the data, so nothing remounts;
+  arriving at Today folds the boundary back. A pull at the unlocked edge
+  remounts once with the next batch and a fresh preload.
+- Founder confirmed on the Galaxy S21 the same day: the future pull is stable.
+  Open: a production-JavaScript launch opened three days back, with the date
+  headings about a third of a column off the cells. Suspected cause: FlashList
+  re-applying its initial index after launch. Superseded if the Skia grid test
+  replaces FlashList.

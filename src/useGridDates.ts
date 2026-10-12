@@ -14,14 +14,22 @@ export function useGridDates({
   columnWidth,
   dateWidth,
   visibleDays,
+  futurePreload = 0,
 }: {
   today: string;
   columnWidth: number;
   dateWidth: number;
   visibleDays: number;
+  /** Future days loaded beyond the Today boundary (Android); 0 elsewhere. */
+  futurePreload?: number;
 }) {
   const [dayCount, setDayCount] = useState(90);
+  // futureCount is the unlocked future; Android also loads futurePad more
+  // days beyond that boundary so revealing them needs no new columns.
   const [futureCount, setFutureCount] = useState(0);
+  const preload = futurePreload;
+  const [futurePad, setFuturePad] = useState(preload);
+  const loadedFuture = futureCount + futurePad;
   const [origin, setOrigin] = useState(0);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const layoutStarted = useRef(0);
@@ -50,21 +58,21 @@ export function useGridDates({
     rightmostDay === 0 && futureCount === 0 && origin === 0;
   const dateCache = useMemo(() => createGridDayCache(today), [today]);
   const days = useMemo(
-    () => dateCache(dayCount, futureCount, origin),
-    [dateCache, dayCount, futureCount, origin],
+    () => dateCache(dayCount, loadedFuture, origin),
+    [dateCache, dayCount, loadedFuture, origin],
   );
-  const [frame, setFrame] = useState({
+  const [frame, setFrame] = useState(() => ({
     width: columnWidth,
     reset: rangeReset,
-    index: 0,
-    offset: { x: 0, y: 0 },
-  });
+    index: preload,
+    offset: { x: preload * columnWidth, y: 0 },
+  }));
   const [readyFrame, setReadyFrame] = useState<object | null>(null);
   const layoutBusy = readyFrame !== frame;
   if (frame.width !== columnWidth || frame.reset !== rangeReset) {
     const index = Math.max(
       0,
-      Math.min(days.length - visibleDays, futureCount + rightmostDay - origin),
+      Math.min(days.length - visibleDays, loadedFuture + rightmostDay - origin),
     );
     setFrame({
       width: columnWidth,
@@ -99,10 +107,19 @@ export function useGridDates({
     // The pull already ticks at its threshold. Explicit menu access gets a tick.
     if (offset === undefined) feedback('selection');
     if (Platform.OS === 'android') {
-      // Android FlashList corrects for prepended columns after its content-size
-      // events, so settling the reveal then raced each list's correction and
-      // left them drifting. Remount both at the new date, as far navigation does.
+      if (futurePad > 0) {
+        // The dates are already loaded: move the boundary and scroll there,
+        // keeping every column and index.
+        const unlocked = Math.min(FUTURE_BATCH, futurePad);
+        setFutureCount(futureCount + unlocked);
+        setFuturePad(futurePad - unlocked);
+        scrollToDay(day, () => setRightmostDay(day));
+        return;
+      }
+      // Preload used up: Android cannot insert columns before the visible ones
+      // in place, so remount both at the new date with a fresh preload.
       setFutureCount(futureCount + FUTURE_BATCH);
+      setFuturePad(preload);
       setRightmostDay(day);
       setRangeReset((value) => value + 1);
       return;
@@ -135,8 +152,9 @@ export function useGridDates({
     columnWidth,
     visibleDays,
     dayCount,
-    futureCount,
+    futureCount: loadedFuture,
     origin,
+    lockedDays: futurePad,
     onSettle: settleDate,
     onReveal: revealFuture,
   });
@@ -171,10 +189,15 @@ export function useGridDates({
     }
     scrollToDay(0, () => {
       setRightmostDay(0);
-      if (futureCount) {
+      if (!futureCount) return;
+      if (Platform.OS === 'android') {
+        // The revealed dates stay loaded, beyond the boundary again.
+        setFuturePad((pad) => pad + futureCount);
         setFutureCount(0);
-        setRangeReset((reset) => reset + 1);
+        return;
       }
+      setFutureCount(0);
+      setRangeReset((reset) => reset + 1);
     });
   }
 
@@ -207,8 +230,11 @@ export function useGridDates({
     // under an active finger or allocate a lifetime of fallback date labels.
     stopSync();
     const first = origin - futureCount;
-    setOrigin(day > 90 ? day - 90 : first < 0 ? Math.max(first, day - 90) : 0);
+    const next =
+      day > 90 ? day - 90 : first < 0 ? Math.max(first, day - 90) : 0;
+    setOrigin(next);
     setFutureCount(0);
+    setFuturePad(next <= 0 ? preload : 0);
     setDayCount(270);
     setRangeReset((value) => value + 1);
   }
@@ -232,6 +258,7 @@ export function useGridDates({
     pendingNavigation.current = animateArrival ? day : null;
     setOrigin(nextOrigin);
     setFutureCount(0);
+    setFuturePad(nextOrigin <= 0 ? preload : 0);
     setDayCount(120);
     setRightmostDay(animateArrival ? day + visibleDays : day);
     setRangeReset((value) => value + 1);
@@ -241,12 +268,13 @@ export function useGridDates({
     if (origin <= 0 || pendingReveal.current || layoutReady.current) return;
     const added = Math.min(90, origin);
     const day =
-      settled ?? origin + Math.round(offset.value / columnWidth) - futureCount;
+      settled ?? origin + Math.round(offset.value / columnWidth) - loadedFuture;
     if (Platform.OS === 'android') {
       // Native anchoring is off on Android (see `shared`), so inserted newer
       // days would shift the visible columns. Remount at this date instead.
       stopSync();
       setOrigin(origin - added);
+      setFuturePad(origin - added <= 0 ? preload : 0);
       setDayCount(dayCount + added);
       setRightmostDay(day);
       setRangeReset((value) => value + 1);
@@ -386,7 +414,7 @@ export function useGridDates({
     const anchor =
       origin +
       Math.round(offset.value / Math.max(1, columnWidth)) -
-      futureCount;
+      loadedFuture;
     setRightmostDay(anchor);
     setDayCount((count) => Math.max(count, rightmostDay - origin + 90));
   }

@@ -30,6 +30,7 @@ export function useGridScroll({
   dayCount,
   futureCount,
   origin,
+  lockedDays = 0,
   onSettle,
   onReveal,
 }: {
@@ -38,6 +39,8 @@ export function useGridScroll({
   dayCount: number;
   futureCount: number;
   origin: number;
+  /** Loaded days newer than the scroll boundary (Android's future preload). */
+  lockedDays?: number;
   onSettle: (day: number, finished: boolean) => void;
   onReveal: (offset: number) => void;
 }) {
@@ -53,6 +56,7 @@ export function useGridScroll({
   const edgeStartX = useSharedValue(0);
   const edgeStartY = useSharedValue(0);
   const edgeDistance = useSharedValue(0);
+  const boundary = lockedDays * columnWidth;
 
   useAnimatedReaction(
     () => (driver.value === 3 ? navigationOffset.value : null),
@@ -100,8 +104,32 @@ export function useGridScroll({
     'worklet';
     return (
       origin +
-      settledDay(offset, columnWidth, dayCount, futureCount, visibleDays)
+      settledDay(
+        Math.max(offset, boundary),
+        columnWidth,
+        dayCount,
+        futureCount,
+        visibleDays,
+      )
     );
+  }
+
+  // Android's preloaded future dates sit beyond the boundary; ordinary
+  // scrolling stops there as it would at a list's own edge. Navigation (3) and
+  // geometry alignment (4) may cross it.
+  function holdAtBoundary(x: number) {
+    'worklet';
+    if (
+      boundary <= 0 ||
+      x >= boundary - 0.5 ||
+      driver.value === 3 ||
+      driver.value === 4
+    )
+      return false;
+    offset.set(boundary);
+    scrollTo(header, boundary, 0, false);
+    scrollTo(body, boundary, 0, false);
+    return true;
   }
 
   const headerScroll = useAnimatedScrollHandler({
@@ -112,6 +140,7 @@ export function useGridScroll({
       thresholdTicked.set(false);
     },
     onScroll: (event) => {
+      if (holdAtBoundary(event.contentOffset.x)) return;
       if (driver.value !== 1) return;
       offset.set(event.contentOffset.x);
       scrollTo(body, event.contentOffset.x, 0, false);
@@ -152,6 +181,7 @@ export function useGridScroll({
       thresholdTicked.set(false);
     },
     onScroll: (event) => {
+      if (holdAtBoundary(event.contentOffset.x)) return;
       if (driver.value === 0 || driver.value === 2)
         offset.set(event.contentOffset.x);
       if (driver.value !== 2) return;
@@ -247,13 +277,13 @@ export function useGridScroll({
       edgeStartX.set(x);
       edgeStartY.set(y);
       edgeDistance.set(0);
-      // Only a list resting on its newest loaded date, not navigating or
-      // resetting geometry, can be pulled.
+      // Only a list resting on its boundary (its newest unlocked date), not
+      // navigating or resetting geometry, can be pulled.
       return (
         driver.value !== 3 &&
         driver.value !== 4 &&
         geometryReady.value &&
-        offset.value <= 1
+        offset.value <= boundary + 1
       );
     },
     move(x: number, y: number) {

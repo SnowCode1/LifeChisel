@@ -22,6 +22,24 @@ test('portrait and landscape use whole columns with usable touch targets', () =>
   assert.ok(gridLayout(716, 1).visibleDays > gridLayout(366, 1).visibleDays);
 });
 
+test('a pixel ratio makes every day column whole physical pixels and fills the width', () => {
+  for (const ratio of [2, 2.625, 3]) {
+    for (const width of [339, 366, 404, 716, 812]) {
+      const layout = gridLayout(width, 1, undefined, ratio);
+      const pixels = layout.columnWidth * ratio;
+      assert.ok(Math.abs(pixels - Math.round(pixels)) < 1e-9);
+      assert.ok(
+        Math.abs(layout.dateWidth - layout.columnWidth * layout.visibleDays) <
+          1e-9,
+      );
+      assert.ok(Math.abs(layout.nameWidth + layout.dateWidth - width) < 1e-9);
+      const plain = gridLayout(width, 1);
+      assert.equal(layout.visibleDays, plain.visibleDays);
+      assert.ok(plain.columnWidth - layout.columnWidth < 1 / ratio);
+    }
+  }
+});
+
 test('large text trades date count for readable names and larger controls', () => {
   const regular = gridLayout(366, 1);
   for (const scale of [1.3, 1.5, 2, 3]) {

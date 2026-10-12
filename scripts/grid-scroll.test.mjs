@@ -144,6 +144,33 @@ test('newer historical dates load without future resistance/haptics; deliberate 
   assert.deepEqual(future.reveals, [-70]);
   assert.deepEqual(future.haptics, ['boundary']);
 });
+test('Android holds ordinary scrolling at the preload boundary; pulls start there and navigation may cross it', () => {
+  const f = fixture({
+    dayCount: 90,
+    futureCount: 120,
+    origin: 0,
+    lockedDays: 120,
+  });
+  const boundary = 120 * 55;
+  f.hook.alignGeometry(boundary, true);
+  f.hook.bodyScroll.onBeginDrag();
+  f.hook.bodyScroll.onScroll(f.event(boundary + 300));
+  assert.equal(f.hook.offset.value, boundary + 300);
+  f.hook.bodyScroll.onScroll(f.event(boundary - 40));
+  assert.equal(f.hook.offset.value, boundary);
+  assert.deepEqual(
+    f.calls.slice(-2).map((call) => call.x),
+    [boundary, boundary],
+  );
+  f.hook.bodyScroll.onEndDrag(f.event(boundary - 40));
+  assert.deepEqual(f.settles.at(-1), [0, true], 'settles on Today, not beyond');
+  assert.equal(f.reveals.length, 0);
+  assert.equal(f.hook.edgePull.begin(300, 400), true);
+  f.hook.bodyScroll.onScroll(f.event(boundary + 200));
+  assert.equal(f.hook.edgePull.begin(300, 400), false);
+  f.hook.scrollToDay(-1, () => {});
+  assert.equal(f.hook.offset.value, 119 * 55);
+});
 test('Android edge pulls decide before the list slop and fail for past-ward or vertical movement', () => {
   const { hook } = fixture({ origin: -5000 });
   assert.equal(hook.edgePull.begin(300, 400), true);

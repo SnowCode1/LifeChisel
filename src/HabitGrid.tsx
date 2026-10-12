@@ -7,7 +7,7 @@ import { ordinal, timingDate } from './goalTiming';
 import { useDelayedCompletionMask } from './useDelayedCompletionMask';
 import { HabitNameDivider } from './HabitNameDivider';
 import type { CheckboxStyle, WeekStart } from './displayPreferences';
-import type { GridSize } from './gridSizing';
+import { gridSizeRanges, type GridSize } from './gridSizing';
 import { Text, useAppWindowDimensions } from './Typography';
 import { completedHabitsSelection } from './storage/selection';
 import { visibleHabitRows } from './habitCompletion';
@@ -23,6 +23,7 @@ import {
 } from 'react';
 import {
   type TextProps,
+  PixelRatio,
   Platform,
   Pressable,
   type PressableProps,
@@ -58,6 +59,13 @@ import { feedback } from './haptics';
 import { Icon } from './Icon';
 import { rowTransition } from './motion';
 import { HabitContextMenu } from './HabitContextMenu';
+
+// Android loads future dates ahead of the Today boundary: enough to fill the
+// screen's long side at the narrowest column, so a pull needs no new columns.
+const ANDROID_FUTURE_PRELOAD =
+  Platform.OS === 'android'
+    ? Math.ceil(screenLongSide() / gridSizeRanges.gridColumnWidth.min)
+    : 0;
 
 type Props = {
   nameWidth: GridSize;
@@ -130,6 +138,7 @@ export const HabitGrid = memo(function HabitGrid({
     width,
     fontScale,
     { nameWidth: nameWidthSize, nameFactor, columnWidth: columnWidthSize },
+    Platform.OS === 'android' ? PixelRatio.get() : undefined,
   );
   const {
     days,
@@ -158,7 +167,13 @@ export const HabitGrid = memo(function HabitGrid({
     returnToToday,
     openDateActions,
     navigateToDate,
-  } = useGridDates({ today, columnWidth, dateWidth, visibleDays });
+  } = useGridDates({
+    today,
+    columnWidth,
+    dateWidth,
+    visibleDays,
+    futurePreload: ANDROID_FUTURE_PRELOAD,
+  });
   const [completionView, setCompletionView] = useState({
     enabled: hideCompleted,
     show: false,

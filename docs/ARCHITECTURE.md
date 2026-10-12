@@ -204,14 +204,24 @@ past-ward or vertical movement, and feeds `useGridScroll`'s `edgePull` at
 two-thirds finger speed. The columns do not move; the streak and tick match iOS,
 and release always continues by one column (tomorrow beside the old edge)
 because there is no moved distance to continue. A drag that scrolls to the edge must lift and pull again.
-On Android the reveal remounts both lists at the revealed date (like far
-navigation there): FlashList's prepend anchoring settles after its content-size
-events, and animating the settle raced each list's correction. Android also turns
-native anchoring off and omits the lists' `contentOffset` prop: the anchoring
-followed recycled column views and jumped by FlashList's render window, and
-Android kept re-applying `contentOffset`, snapping lists back to their mount
-position in a self-sustaining loop. Newer history after a far jump also remounts
-on Android, once a gesture settles near the newest loaded date.
+Android turns native anchoring off and omits the lists' `contentOffset` prop:
+the anchoring followed recycled column views and jumped by FlashList's render
+window, and Android kept re-applying `contentOffset`, snapping lists back to
+their mount position in a self-sustaining loop. Without anchoring, Android cannot
+insert columns before the visible ones in place, so it preloads as many future
+days as could fit across the screen's long side at the narrowest column (about
+23 on the test phone) beyond the unlocked boundary. `useGridScroll` holds
+ordinary scrolling at that boundary on the UI thread, as a list's own edge
+would, and pulls start there. A reveal unlocks the preload and animates to
+tomorrow with no data change or remount; arriving at Today folds the boundary
+back. A further pull at the unlocked edge remounts both lists with the next
+batch and a fresh preload. Newer history after a far jump still remounts on
+Android, once a gesture settles near the newest loaded date.
+
+FlashList positions columns it has not drawn by the average of recently
+measured widths, while scrolling assumes index × column width. Android therefore
+rounds day columns to whole physical pixels (the name column takes the
+remainder), so every column measures the same and the two agree.
 The Android app root has a `GestureHandlerRootView`; iOS keeps its tree.
 At the new future edge, another pull reveals the next batch. The month menu also
 offers future access without a gesture, including for accessibility and web.

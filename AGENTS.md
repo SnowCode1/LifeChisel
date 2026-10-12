@@ -411,13 +411,19 @@ existing discrete callbacks into useGridScroll; keep old/future entry keys
 exact, date identities shared and windows compact only at final native settling.
 Android FlashList re-applies its initial index after first layout, so far
 navigation on Android lands directly instead of animating its final columns.
-Its prepend anchoring also settles after content-size events, so Android future
-reveals remount both lists at the new date rather than animating after anchoring.
 Android disables native anchoring (it follows recycled column views and jumps by
 the render window) and never passes the lists a `contentOffset` (Android keeps
-re-applying it, snapping lists back in a loop). On Android, insert columns before
-the visible ones only by remounting: future reveals at once, newer history after
-a far jump once a gesture settles near the newest loaded date.
+re-applying it, snapping lists back in a loop). So Android never inserts columns
+before the visible ones in place: it preloads one long-side screenful of future
+days at the narrowest column (`futurePreload`/`futurePad`) beyond the unlocked
+boundary, and `useGridScroll` holds ordinary scrolling there (`lockedDays`). A
+reveal unlocks the preload and animates there with no data change; Today folds
+it back. A pull at the unlocked edge, newer history after a far jump (once a
+gesture settles near its edge) and existing remounts rebuild the lists. Keep
+index/day conversions on the loaded count, boundary rules on the unlocked
+`futureCount`. Android day columns are whole physical pixels (`gridLayout`'s
+pixel ratio): FlashList places undrawn columns by the average measured width,
+so identical widths keep its positions equal to the scroll arithmetic.
 `DateColumns.tsx` owns native FlashList 2.3.3/web FlatList adaptation and the
 frozen native initial index; list keys still reset width/range generations.
 `HabitContextMenu.tsx` owns menu measurement/placement, staying mounted when closed

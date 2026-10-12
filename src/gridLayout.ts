@@ -5,6 +5,9 @@ import {
 } from './gridSizing.ts';
 // Fill the available space with whole days while keeping names and touch
 // targets readable. Larger system text gets more space, rather than clipping.
+// With a pixel ratio, day columns are whole physical pixels wide and the name
+// column takes the remainder: every column then measures identically, so
+// FlashList's estimates for undrawn columns match the scroll arithmetic.
 export function gridLayout(
   width: number,
   fontScale: number,
@@ -13,6 +16,7 @@ export function gridLayout(
     nameFactor: 1,
     columnWidth: 'auto',
   },
+  pixelRatio?: number,
 ) {
   const scale = Math.max(1, fontScale);
   const minimumDayWidth =
@@ -26,12 +30,22 @@ export function gridLayout(
     0,
     Math.min(Math.round(preferredName), width - minimumDayWidth),
   );
-  const dateWidth = Math.max(0, width - nameWidth);
-  const visibleDays = Math.max(1, Math.floor(dateWidth / minimumDayWidth));
+  const availableWidth = Math.max(0, width - nameWidth);
+  const visibleDays = Math.max(1, Math.floor(availableWidth / minimumDayWidth));
+  if (!pixelRatio)
+    return {
+      nameWidth,
+      dateWidth: availableWidth,
+      visibleDays,
+      columnWidth: availableWidth / visibleDays,
+    };
+  const columnWidth =
+    Math.floor((availableWidth * pixelRatio) / visibleDays) / pixelRatio;
+  const dateWidth = columnWidth * visibleDays;
   return {
-    nameWidth,
+    nameWidth: width - dateWidth,
     dateWidth,
     visibleDays,
-    columnWidth: dateWidth / visibleDays,
+    columnWidth,
   };
 }
