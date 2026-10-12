@@ -85,5 +85,9 @@ Foundation, either version 3 of the License, or (at your option) any later
 version. It is distributed WITHOUT ANY WARRANTY; see [LICENSE](LICENSE) for the
 full terms.
 
+The licence covers the code, not the project's name or app icon. Forks must use
+a different name and icon. Contributions are accepted under the
+[contributor licence agreement](CLA.md).
+
 Third-party notices, including the Expo template's MIT notice, are kept in
 [docs/licenses](docs/licenses/README.md).

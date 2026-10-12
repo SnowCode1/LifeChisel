@@ -11,12 +11,21 @@ phone test results and suggestions are welcome as GitHub issues.
   accounts or a backend need a clear requirement first.
 - Open an issue to discuss any change that expands product scope before you
   build it.
-- **Code contributions need a contributor agreement.** The founder is the sole
-  copyright holder, which keeps App Store publication with the founder
-  alongside the GPL release. Outside code can therefore only be merged under an agreement
-  that preserves this, such as a contributor licence agreement. That agreement
-  has not been published yet, so ask in an issue before opening a substantial
+- **Sign the contributor licence agreement.** Before your first pull request
+  can be merged, sign the [CLA](CLA.md). The CLA Assistant bot comments on your
+  pull request with a link; signing takes a minute with your GitHub account and
+  covers your future contributions too. If the bot hasn't commented, ask in the
   pull request.
+
+## Why there is a CLA
+
+The founder is the sole copyright holder of OnPurpose. That keeps the project
+open source under the GPL while letting the founder publish the app through app
+stores, whose terms are not compatible with the GPL. The CLA preserves this.
+You keep the copyright in your contribution and grant the founder a broad
+licence to use it, including outside the GPL. In return, the founder commits to
+keeping every accepted contribution available under GPLv3 or later. Read the
+[agreement](CLA.md) for the exact terms.
 
 ## Making a change
 

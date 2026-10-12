@@ -1735,3 +1735,21 @@ signing and device enrolment are still prerequisites, not completed deployment.
 - Unchanged: both platforms are tested on real phones, and screens adapted for
   Android keep iOS behaviour unchanged. RELEASING.md covers the App Store path;
   the Google Play path is not yet documented.
+
+## 12 October 2026 — Contributor licence agreement
+
+- Founder decision: outside pull requests are signed off with a contributor
+  licence agreement through CLA Assistant, so the founder stays sole copyright
+  holder (see the 10 October 2026 pricing and licence entry).
+- Assistant choices: use the hosted cla-assistant.io service. The CLA Assistant
+  GitHub Action was archived in March 2026 and no maintained successor stood
+  out. The agreement ([CLA.md](../CLA.md)) lets contributors keep their
+  copyright and grant the founder a broad copyright and patent licence,
+  including the right to license contributions outside the GPL (for example,
+  app store terms). In return, the founder commits to keeping accepted
+  contributions available under GPLv3 or later, and may transfer the agreement
+  to a successor such as a company the founder controls.
+- Founder decision: the README states that the GPL covers the code, not the
+  name or app icon, so forks must use their own.
+- Status: drafted by the assistant and not yet reviewed by a lawyer. Connect
+  cla-assistant.io before merging the first outside pull request.
