@@ -165,6 +165,12 @@ test('date controller preserves the actual native anchor on rotation and rejects
 test('future pull waits for both expanded lists, retains date identities and collapses only after Today arrives', async (t) => {
   const f = await datesFixture(t);
   await f.ready();
+  assert.equal(
+    f.view().shared.maintainVisibleContentPosition.disabled,
+    false,
+    'iOS keeps native anchoring for inserted columns',
+  );
+  assert.equal(typeof f.view().shared.onStartReached, 'function');
   const before = f.view().days;
   await act(() => f.view().revealFuture(-100));
   assert.equal(f.view().days.length, 120);
@@ -219,6 +225,32 @@ test('Android future reveals remount both lists at the new date instead of settl
   assert.equal(f.view().layoutBusy, false);
   assert.equal(f.offset.value, 28 * 55);
   assert.equal(f.haptics.length, 0);
+});
+
+test('Android never anchors inserted columns; newer history remounts once a gesture settles near its edge', async (t) => {
+  const f = await datesFixture(t, 'android');
+  await f.ready();
+  assert.equal(
+    f.view().shared.maintainVisibleContentPosition.disabled,
+    true,
+    'native anchoring follows recycled views and jumps on Android',
+  );
+  assert.equal(f.view().shared.onStartReached, undefined);
+  await act(() => f.view().navigateToDate(10000));
+  await f.ready();
+  assert.equal(f.view().rightmostDay, 10000);
+  const reset = f.view().rangeReset;
+  await act(() => f.options().onSettle(9975, false));
+  await act(() => f.options().onSettle(9990, true));
+  assert.equal(f.view().rangeReset, reset, 'far from the newest date');
+  await act(() => f.options().onSettle(9971, true));
+  assert.equal(f.view().rangeReset, reset + 1);
+  assert.equal(f.view().rightmostDay, 9971);
+  assert.equal(f.view().days.length, 210);
+  assert.equal(f.view().days[f.view().frame.index].daysAgo, 9971);
+  assert.equal(f.view().layoutBusy, true);
+  await f.ready();
+  assert.equal(f.offset.value, f.view().frame.offset.x);
 });
 
 test('history expands once per rendered boundary and compacts only after settling; distant navigation stays bounded', async (t) => {

@@ -185,6 +185,17 @@ export function useGridDates({
 
   function settleDate(day: number, finished: boolean) {
     setRightmostDay(day);
+    // Android loads newer history only once a gesture settles near the newest
+    // loaded date: without native anchoring, inserting it needs a remount.
+    if (
+      Platform.OS === 'android' &&
+      finished &&
+      origin > 0 &&
+      day - (origin - futureCount) < visibleDays * 2
+    ) {
+      loadNewerHistory(day);
+      return;
+    }
     if (
       !finished ||
       dayCount + futureCount <= 360 ||
@@ -226,10 +237,21 @@ export function useGridDates({
     setRangeReset((value) => value + 1);
   }
 
-  function loadNewerHistory() {
+  function loadNewerHistory(settled?: number) {
     if (origin <= 0 || pendingReveal.current || layoutReady.current) return;
     const added = Math.min(90, origin);
-    const day = origin + Math.round(offset.value / columnWidth) - futureCount;
+    const day =
+      settled ?? origin + Math.round(offset.value / columnWidth) - futureCount;
+    if (Platform.OS === 'android') {
+      // Native anchoring is off on Android (see `shared`), so inserted newer
+      // days would shift the visible columns. Remount at this date instead.
+      stopSync();
+      setOrigin(origin - added);
+      setDayCount(dayCount + added);
+      setRightmostDay(day);
+      setRangeReset((value) => value + 1);
+      return;
+    }
     pendingReveal.current = {
       origin: origin - added,
       futureCount,
@@ -339,11 +361,16 @@ export function useGridDates({
     drawDistance: dateWidth,
     columnWidth,
     keyExtractor: (day: GridDay) => day.key,
-    maintainVisibleContentPosition: { disabled: false },
+    // Android's native anchoring follows one recycled column view; when
+    // FlashList moves that view, Android scrolls by the same distance and the
+    // dates jump. Android remounts instead of inserting columns before the
+    // visible ones, so it never needs anchoring.
+    maintainVisibleContentPosition: { disabled: Platform.OS === 'android' },
     // Both lists may request the same expansion; use this rendered boundary once.
     onEndReached: () => setDayCount((count) => Math.max(count, dayCount + 90)),
     onEndReachedThreshold: 2,
-    onStartReached: loadNewerHistory,
+    onStartReached:
+      Platform.OS === 'android' ? undefined : () => loadNewerHistory(),
     onStartReachedThreshold: 2,
   };
 

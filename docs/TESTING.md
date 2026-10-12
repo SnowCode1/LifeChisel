@@ -345,6 +345,8 @@ See [GOALS.md](GOALS.md).
 - Far jumps and Today from far away land directly; near ones animate.
 - Future pull: release past the tick lands on tomorrow; scroll both ways, Today,
   and pull again at the new edge.
+- In the future region, and after a far jump into the past, fling both ways:
+  no jumps, and nothing moves on its own after the finger lifts.
 - Auto sizes on the S21: four days, 130-point names, 48-point rows. Landscape
   clears the camera cutout and navigation bar.
 - Still unchecked: the description editor and toolbar above the keyboard; other

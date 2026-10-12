@@ -1779,3 +1779,26 @@ signing and device enrolment are still prerequisites, not completed deployment.
 - Assistant guardrail: write the Loop importer against the export formats and
   never copy or port Loop's GPL code. The founder can only publish code on the
   App Store under non-GPL terms if the founder holds its copyright.
+
+## 12 October 2026 — Android date-list jumps
+
+- Founder report: on Android, columns flickered and teleported while scrolling in
+  the future region, and once settled into a loop alternating between two date
+  ranges about twice a second. Scrolling into the past was fine.
+- Diagnosis (adb logs on the Galaxy S21): after a future reveal both lists
+  remount at a non-zero index. Android kept re-applying their starting
+  `contentOffset` during later updates, snapping them back to the mount
+  position. Android's native anchoring (`maintainVisibleContentPosition`, which
+  FlashList enables) then compensated for whichever recycled column view had
+  moved, throwing the list elsewhere, and each jump re-triggered both. With the
+  loop gone, the anchoring alone still jumped about 13 columns (FlashList's
+  render window) when scrolling toward newer dates, the only direction with
+  columns before the visible ones.
+- Assistant change, iOS unchanged: Android lists get no `contentOffset` (the
+  initial index and UI-thread alignment position them) and no native anchoring.
+  Android already remounts instead of inserting columns before the visible ones
+  for future reveals; newer history after a far jump now does the same, once a
+  gesture settles near the newest loaded date.
+- Founder confirmed on the phone the same day: the loop and teleports are gone.
+  The blank-and-redraw at a future reveal remains (it is that remount); the
+  founder asked to remove it by loading future dates up front.

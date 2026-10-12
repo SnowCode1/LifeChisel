@@ -206,7 +206,12 @@ and release always continues by one column (tomorrow beside the old edge)
 because there is no moved distance to continue. A drag that scrolls to the edge must lift and pull again.
 On Android the reveal remounts both lists at the revealed date (like far
 navigation there): FlashList's prepend anchoring settles after its content-size
-events, and animating the settle raced each list's correction.
+events, and animating the settle raced each list's correction. Android also turns
+native anchoring off and omits the lists' `contentOffset` prop: the anchoring
+followed recycled column views and jumped by FlashList's render window, and
+Android kept re-applying `contentOffset`, snapping lists back to their mount
+position in a self-sustaining loop. Newer history after a far jump also remounts
+on Android, once a gesture settles near the newest loaded date.
 The Android app root has a `GestureHandlerRootView`; iOS keeps its tree.
 At the new future edge, another pull reveals the next batch. The month menu also
 offers future access without a gesture, including for accessibility and web.

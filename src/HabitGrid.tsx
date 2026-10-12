@@ -23,6 +23,7 @@ import {
 } from 'react';
 import {
   type TextProps,
+  Platform,
   Pressable,
   type PressableProps,
   ScrollView,
@@ -352,6 +353,11 @@ export const HabitGrid = memo(function HabitGrid({
   }
   // Android only: matches when the date lists themselves can be dragged.
   const futurePullEnabled = !layoutBusy && !habitMenu && !dragId;
+  // Android's scroll view keeps re-applying a contentOffset prop on later
+  // layout passes, snapping a scrolled list back to its mount position and
+  // feeding a correction loop. There the initial index and alignGeometry
+  // position each new list generation instead.
+  const listStartOffset = Platform.OS === 'android' ? undefined : frame.offset;
   const streakDistance = useSharedValue(0);
   const streakOpacity = useSharedValue(0);
   useAnimatedReaction(
@@ -552,7 +558,7 @@ export const HabitGrid = memo(function HabitGrid({
                   ref={header}
                   key={`header-${columnWidth}-${rangeReset}`}
                   initialScrollIndex={frame.index}
-                  contentOffset={frame.offset}
+                  contentOffset={listStartOffset}
                   style={[{ width: dateWidth, flex: 1 }, columnReadiness]}
                   onScroll={headerScroll}
                   onLoad={({ elapsedTimeInMs }) => {
@@ -679,7 +685,7 @@ export const HabitGrid = memo(function HabitGrid({
                       ref={body}
                       key={`body-${columnWidth}-${rangeReset}`}
                       initialScrollIndex={frame.index}
-                      contentOffset={frame.offset}
+                      contentOffset={listStartOffset}
                       style={[
                         { width: dateWidth, height: gridHeight, flexGrow: 0 },
                         columnReadiness,
