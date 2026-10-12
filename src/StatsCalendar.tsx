@@ -7,6 +7,7 @@ import { entryDay, type EntryDay } from './calendar';
 import { checkmarkColor } from './colors';
 import { weekDayOrder, type WeekStart } from './displayPreferences';
 import { cellEntryLabel, entryLabel } from './entries';
+import { checkboxChecked } from './habitGoals';
 import { habitType, type Habit } from './habits';
 import { MISSED_OPACITY } from './outcomeColours';
 import { dateKey, dayNumber } from './statistics';
@@ -54,7 +55,7 @@ function dayFill(
     case 'met':
       return plain ? theme.mix(colour, 0.42) : colour;
     // A missed day keeps a faint tint ("expected, not done"); a day off
-    // stays black, and today stays neutral until it is done.
+    // shows the background, and today stays neutral until it is done.
     case 'missed':
       return theme.mix(colour, recorded ? MISSED_OPACITY * 0.7 : 0.13);
     case 'open':
@@ -84,7 +85,7 @@ function describe(habit: Habit, cell: Cell, unit: string) {
   const value = cell.item?.value;
   const recorded =
     habitType(habit) === 'checkbox'
-      ? value === 1
+      ? checkboxChecked(habit, value, cell.date)
         ? 'checked'
         : value === 0
           ? 'unchecked'
@@ -231,7 +232,9 @@ function WeekRows({
                   }
                   accessibilityState={{
                     disabled: !tappable,
-                    ...(type === 'checkbox' ? { checked: value === 1 } : {}),
+                    ...(type === 'checkbox'
+                      ? { checked: checkboxChecked(habit, value, cell.date) }
+                      : {}),
                   }}
                   accessibilityLabel={`${habit.name}, ${entryDay(cell.date).fullLabel}${cell.date === today ? ', today' : ''}, ${describe(habit, cell, unit)}`}
                   accessibilityHint={
