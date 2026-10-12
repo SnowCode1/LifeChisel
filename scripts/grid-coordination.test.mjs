@@ -58,7 +58,7 @@ async function mount(t) {
   });
   return (element) => act(() => root.render(element));
 }
-async function datesFixture(t) {
+async function datesFixture(t, os = 'ios') {
   const render = await mount(t);
   let view, options;
   const calls = [],
@@ -96,7 +96,7 @@ async function datesFixture(t) {
   };
   const { useGridDates } = load('useGridDates.ts', {
     ...common,
-    'react-native': { Platform: { OS: 'ios' } },
+    'react-native': { Platform: { OS: os } },
     'react-native-reanimated': { useAnimatedStyle: (fn) => fn },
     './calendar': calendar,
     './gridNavigation': navigation,
@@ -196,6 +196,29 @@ test('future pull waits for both expanded lists, retains date identities and col
   assert.equal(f.view().days[0], before[0]);
   assert.equal(f.view().rangeReset, 1);
   assert.equal(f.view().atTodayBoundary, true);
+});
+
+test('Android future reveals remount both lists at the new date instead of settling after anchoring', async (t) => {
+  const f = await datesFixture(t, 'android');
+  await f.ready();
+  const before = f.view().days;
+  await act(() => f.view().revealFuture(-100));
+  assert.equal(f.view().days.length, 120);
+  assert.equal(f.view().days[30], before[0]);
+  assert.equal(f.view().rightmostDay, -2);
+  assert.equal(f.view().rangeReset, 1);
+  assert.equal(f.view().frame.offset.x, 28 * 55);
+  assert.equal(f.view().layoutBusy, true);
+  await act(() => f.view().listSized('header', 120 * 55));
+  await act(() => f.view().listSized('body', 120 * 55));
+  assert.equal(
+    f.calls.some((call) => call.kind === 'reveal'),
+    false,
+  );
+  await f.ready();
+  assert.equal(f.view().layoutBusy, false);
+  assert.equal(f.offset.value, 28 * 55);
+  assert.equal(f.haptics.length, 0);
 });
 
 test('history expands once per rendered boundary and compacts only after settling; distant navigation stays bounded', async (t) => {

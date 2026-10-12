@@ -121,6 +121,9 @@ export function AppPanel({
   if (navigation.context !== context) setNavigation({ context, page: 'index' });
   const settingsPage =
     navigation.context === context ? navigation.page : 'index';
+  // History's jump calendar; like navigation, it resets with each presentation.
+  const [calendar, setCalendar] = useState({ context, open: false });
+  const calendarOpen = calendar.context === context && calendar.open;
   const setSettingsPage = (next: SettingsPage) =>
     setNavigation({ context, page: next });
   const parentPage = settingsParents[settingsPage] ?? 'index';
@@ -156,6 +159,21 @@ export function AppPanel({
                     ? 'Archived habits'
                     : settingsTitles[settingsPage]}
               </HeadingComponent>
+              {page === 'history' && (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Jump to a date"
+                  accessibilityState={{ expanded: calendarOpen }}
+                  onPress={() => setCalendar({ context, open: !calendarOpen })}
+                  style={({ pressed }) => [
+                    styles.close,
+                    calendarOpen && styles.active,
+                    { opacity: pressed ? 0.55 : 1 },
+                  ]}
+                >
+                  <Icon name="calendar" size={18} />
+                </Pressable>
+              )}
               <Pressable
                 accessibilityRole="button"
                 accessibilityLabel={`Close ${page}`}
@@ -179,6 +197,9 @@ export function AppPanel({
                   sampleData={sampleData}
                   snapshot={snapshot}
                   backupBusy={backupBusy}
+                  weekStart={weekStart}
+                  calendarOpen={calendarOpen}
+                  onCalendarClose={() => setCalendar({ context, open: false })}
                   onRestoreDescription={onRestoreDescription}
                   onUndo={onUndo}
                   onRedo={onRedo}
@@ -262,4 +283,5 @@ const useStyles = themedStyles((t) => ({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  active: { backgroundColor: t.ink(0x2c) },
 }));

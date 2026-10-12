@@ -21,7 +21,8 @@ export type IconName =
   | 'reorder'
   | 'archive'
   | 'info'
-  | 'plus';
+  | 'plus'
+  | 'calendar';
 
 // Small, consistent outline icons; no icon font or loading state.
 const gear = Array.from({ length: 40 }, (_, index) => {
@@ -67,6 +68,12 @@ export function Icon({
         </>
       )}
       {name === 'tick' && <Path d="m4 12 5 5L20 6" />}
+      {name === 'calendar' && (
+        <>
+          <Rect x={3.5} y={5} width={17} height={15.5} rx={3} />
+          <Path d="M3.5 10h17M8 3v4M16 3v4" />
+        </>
+      )}
       {name === 'close' && <Path d="m6 6 12 12M18 6 6 18" />}
       {name === 'chevron' && <Path d="m7 9 5 5 5-5" />}
       {(name === 'checked' || name === 'unchecked') && (

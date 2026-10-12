@@ -8,6 +8,28 @@ export function shouldRevealFuture(offset: number): boolean {
   return offset <= -FUTURE_PULL_DISTANCE;
 }
 
+// Android lists stop at their newest date instead of rubber-banding, so a pull
+// there is recognised separately. It decides within a few points, before the
+// list's own touch slop, and follows the finger at two-thirds speed: about 96
+// points of travel reach the threshold.
+export const EDGE_PULL_SLOP = 6;
+
+export function edgePullDistance(travel: number): number {
+  'worklet';
+  return (Math.max(0, travel) * 2) / 3;
+}
+
+export function edgePullDecision(
+  dx: number,
+  dy: number,
+): 'activate' | 'fail' | 'wait' {
+  'worklet';
+  const vertical = Math.abs(dy);
+  if (dx > EDGE_PULL_SLOP || (vertical > EDGE_PULL_SLOP && vertical > -dx))
+    return 'fail';
+  return -dx >= EDGE_PULL_SLOP && -dx > vertical * 1.5 ? 'activate' : 'wait';
+}
+
 // Continue the released pull by its own distance, not by the viewport width.
 // The old newest date stays nearby even when landscape shows many columns.
 export function futureRevealDay(

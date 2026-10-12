@@ -6,32 +6,261 @@ import { habitType, isNumericHabit } from './habits.ts';
 import type { HistoryAction, StoredState } from './storage/model.ts';
 import type { IconName } from './Icon.tsx';
 
-export type HistorySection = {
+// Exclusive kinds for the History filter and day summaries. Notes are rows that
+// read "Description edited/cleared" and open Before/After.
+export type HistoryKind = 'entries' | 'edits' | 'notes';
+export type HistoryFilter = {
+  kind: HistoryKind | 'all';
+  habitId: string | null;
+};
+export const allHistory: HistoryFilter = { kind: 'all', habitId: null };
+export type HistoryCounts = Record<HistoryKind, number>;
+
+// One contiguous run of actions recorded on the same local day, newest first.
+export type HistoryDay = {
+  // The oldest action keeps the key stable while newer actions arrive.
   key: string;
   date: string;
-  data: HistoryAction[];
+  actions: HistoryAction[];
+  counts: HistoryCounts;
 };
 
-// Keep the log's newest-first sequence, including when the device clock changes.
-// A date may have another section if it recurs after a clock/time-zone adjustment.
-export function historySections(
-  actions: HistoryAction[],
-  limit: number,
-): HistorySection[] {
-  const sections: HistorySection[] = [];
-  let count = 0;
-  for (let index = actions.length - 1; index >= 0 && count < limit; index--) {
-    const event = actions[index];
-    const date = localDateKey(new Date(event.recordedAt));
-    let section = sections.at(-1);
-    if (!section || section.date !== date) {
-      section = { key: `${date}:${event.id}`, date, data: [] };
-      sections.push(section);
-    }
-    section.data.push(event);
-    count++;
+type DefinitionChange = Extract<HistoryAction['change'], { kind: 'habit' }>;
+
+function isDescriptionEdit(change: DefinitionChange): boolean {
+  return (
+    !!change.before &&
+    !!change.after &&
+    change.before.description !== change.after.description &&
+    sameValue(change.before.goals, change.after.goals)
+  );
+}
+
+// Replay copies the stack but keeps earlier action objects, so each action's
+// kind and local day are worked out once. Days reset when the zone changes.
+const kinds = new WeakMap<HistoryAction, HistoryKind>();
+let days = new WeakMap<HistoryAction, string>();
+// Zone offsets change only on quarter hours, so each quarter hour's offset and
+// each local day's key are computed once rather than per action.
+let offsets = new Map<number, number>();
+let dayKeys = new Map<number, string>();
+let zone = '';
+const quarterHour = 15 * 60 * 1000;
+const dayLength = 24 * 60 * 60 * 1000;
+
+// Equivalent to localDateKey(new Date(recordedAt)) for the current zone.
+function localDay(recordedAt: string): string {
+  const time = Date.parse(recordedAt);
+  const quarter = Math.floor(time / quarterHour);
+  let offset = offsets.get(quarter);
+  if (offset === undefined) {
+    if (offsets.size > 100_000) offsets = new Map();
+    offset = new Date(time).getTimezoneOffset();
+    offsets.set(quarter, offset);
   }
-  return sections;
+  const day = Math.floor((time - offset * 60_000) / dayLength);
+  let key = dayKeys.get(day);
+  if (key === undefined) {
+    key = localDateKey(new Date(time));
+    dayKeys.set(day, key);
+  }
+  return key;
+}
+
+export function historyKind(action: HistoryAction): HistoryKind {
+  let kind = kinds.get(action);
+  if (kind === undefined) {
+    const change = action.change;
+    kind =
+      change.kind === 'entry'
+        ? 'entries'
+        : change.kind === 'habit' && isDescriptionEdit(change)
+          ? 'notes'
+          : 'edits';
+    kinds.set(action, kind);
+  }
+  return kind;
+}
+
+function historyDate(action: HistoryAction): string {
+  let date = days.get(action);
+  if (date === undefined) {
+    date = localDay(action.recordedAt);
+    days.set(action, date);
+  }
+  return date;
+}
+
+export function historyMatches(
+  action: HistoryAction,
+  filter: HistoryFilter,
+): boolean {
+  if (filter.kind !== 'all' && historyKind(action) !== filter.kind)
+    return false;
+  if (filter.habitId === null) return true;
+  return (
+    action.change.kind !== 'order' && action.change.habitId === filter.habitId
+  );
+}
+
+// Keep the log's newest-first sequence, including when the device clock changes.
+// A date may have another run if it recurs after a clock/time-zone adjustment.
+// Paging stops between days, so every returned day is complete.
+export function historyDays(
+  actions: HistoryAction[],
+  filter: HistoryFilter = allHistory,
+  dayLimit = Infinity,
+): { days: HistoryDay[]; more: boolean } {
+  const current = `${Intl.DateTimeFormat().resolvedOptions().timeZone}|${new Date().getTimezoneOffset()}`;
+  if (current !== zone) {
+    zone = current;
+    days = new WeakMap();
+    offsets = new Map();
+    dayKeys = new Map();
+  }
+  const result: HistoryDay[] = [];
+  let day: HistoryDay | undefined;
+  for (let index = actions.length - 1; index >= 0; index--) {
+    const action = actions[index];
+    if (!historyMatches(action, filter)) continue;
+    const date = historyDate(action);
+    if (!day || day.date !== date) {
+      if (result.length >= dayLimit) return { days: keyed(result), more: true };
+      day = {
+        key: '',
+        date,
+        actions: [],
+        counts: { entries: 0, edits: 0, notes: 0 },
+      };
+      result.push(day);
+    }
+    day.actions.push(action);
+    day.counts[historyKind(action)]++;
+  }
+  return { days: keyed(result), more: false };
+}
+
+function keyed(result: HistoryDay[]): HistoryDay[] {
+  for (const day of result) day.key = `${day.date}:${day.actions.at(-1)!.id}`;
+  return result;
+}
+
+// The newest day on or before `date`, else the oldest day (for jumping).
+export function historyDayIndex(days: HistoryDay[], date: string): number {
+  const index = days.findIndex((day) => day.date <= date);
+  return index < 0 ? days.length - 1 : index;
+}
+
+export function historyCountLabel(counts: HistoryCounts): string {
+  const part = (count: number, one: string, many: string) =>
+    count ? [`${count} ${count === 1 ? one : many}`] : [];
+  return [
+    ...part(counts.entries, 'entry', 'entries'),
+    ...part(counts.edits, 'edit', 'edits'),
+    ...part(counts.notes, 'note', 'notes'),
+  ].join(' · ');
+}
+
+// Entries for the same date recorded close together read as one check-in.
+export const burstGapMs = 5 * 60 * 1000;
+
+export type HistoryRowItem =
+  | {
+      type: 'action';
+      key: string;
+      action: HistoryAction;
+      // Position inside an expanded burst's card.
+      nested?: 'middle' | 'last';
+    }
+  | {
+      type: 'burst';
+      // The oldest member stays fixed while newer entries join or are undone.
+      key: string;
+      actions: HistoryAction[];
+      expanded: boolean;
+    };
+
+function joinsBurst(newer: HistoryAction, older: HistoryAction): boolean {
+  return (
+    newer.change.kind === 'entry' &&
+    older.change.kind === 'entry' &&
+    newer.change.date === older.change.date &&
+    Math.abs(Date.parse(newer.recordedAt) - Date.parse(older.recordedAt)) <=
+      burstGapMs
+  );
+}
+
+// Merge only neighbouring actions, so bursts never reorder the log.
+export function historyRows(
+  actions: HistoryAction[],
+  expanded: ReadonlySet<string>,
+): HistoryRowItem[] {
+  const rows: HistoryRowItem[] = [];
+  let start = 0;
+  while (start < actions.length) {
+    let end = start + 1;
+    while (end < actions.length && joinsBurst(actions[end - 1], actions[end]))
+      end++;
+    if (end - start === 1) {
+      rows.push({
+        type: 'action',
+        key: actions[start].id,
+        action: actions[start],
+      });
+    } else {
+      const members = actions.slice(start, end);
+      const key = `burst:${members.at(-1)!.id}`;
+      const open = expanded.has(key);
+      rows.push({ type: 'burst', key, actions: members, expanded: open });
+      if (open)
+        members.forEach((action, index) =>
+          rows.push({
+            type: 'action',
+            key: action.id,
+            action,
+            nested: index === members.length - 1 ? 'last' : 'middle',
+          }),
+        );
+    }
+    start = end;
+  }
+  return rows;
+}
+
+// A compact name/value for one entry inside a collapsed burst.
+export function burstMemberLabel(event: HistoryAction, state: StoredState) {
+  const change = event.change;
+  const row = historyPresentation(event, state);
+  const habit =
+    change.kind === 'entry'
+      ? state.habits.find((habit) => habit.id === change.habitId)
+      : undefined;
+  const value =
+    change.kind === 'entry' &&
+    change.after !== null &&
+    habit &&
+    isNumericHabit(habit)
+      ? `${change.after}${habit.unit ? ` ${habit.unit}` : ''}`
+      : null;
+  return {
+    name: row.title,
+    value,
+    color: row.color,
+    // Unchecked and cleared entries read as struck through.
+    removed: row.icon === 'unchecked' || row.icon === 'erase',
+    spoken: `${row.title} ${value ?? row.summary}`,
+  };
+}
+
+// Habits that appear in active History, in current order then deleted ones.
+export function historyHabits(
+  state: StoredState,
+  actions: HistoryAction[],
+): StoredState['habits'] {
+  const ids = new Set<string>();
+  for (const action of actions)
+    if (action.change.kind !== 'order') ids.add(action.change.habitId);
+  return state.habits.filter((habit) => ids.has(habit.id));
 }
 
 export function historyDayLabel(date: string, today: string): string {
@@ -96,17 +325,13 @@ export function historyPresentation(event: HistoryAction, state: StoredState) {
   }
   if (change.kind === 'habit') {
     const habit = change.after ?? change.before!;
-    const descriptionChanged =
-      change.before &&
-      change.after &&
-      change.before.description !== change.after.description;
     const goalChanged =
       change.before &&
       change.after &&
       !sameValue(change.before.goals, change.after.goals);
     const summary = goalChanged
       ? 'Goals edited'
-      : descriptionChanged
+      : isDescriptionEdit(change)
         ? change.after?.description
           ? 'Description edited'
           : 'Description cleared'

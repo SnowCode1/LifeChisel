@@ -29,6 +29,8 @@ export function DateCalendar({
   onChange,
   accent,
   weekStart = 'monday',
+  marked,
+  markedLabel = 'marked',
 }: {
   value: string;
   today: string;
@@ -36,6 +38,10 @@ export function DateCalendar({
   /** Selected-day fill, already readable on the background (theme.colour). */
   accent?: string;
   weekStart?: WeekStart;
+  /** Days that get a dot; the other days are dimmed. */
+  marked?: ReadonlySet<string>;
+  /** Spoken after a marked day, e.g. "has changes". */
+  markedLabel?: string;
 }) {
   const styles = useStyles();
   const theme = useTheme();
@@ -155,11 +161,12 @@ export function DateCalendar({
           ))}
           {calendar.days.map((day) => {
             const selected = day === value;
+            const dot = marked?.has(day);
             return (
               <Pressable
                 key={day}
                 accessibilityRole="button"
-                accessibilityLabel={`${entryDay(day).fullLabel}${day === today ? ', today' : ''}`}
+                accessibilityLabel={`${entryDay(day).fullLabel}${day === today ? ', today' : ''}${dot ? `, ${markedLabel}` : ''}`}
                 accessibilityState={{ selected }}
                 onPress={() => onChange(day)}
                 style={({ pressed }) => [
@@ -180,7 +187,7 @@ export function DateCalendar({
                     style={{
                       color: selected
                         ? theme.background
-                        : day > today
+                        : day > today || (marked && !dot)
                           ? theme.ink(0x70)
                           : theme.ink(0xc8),
                       fontSize: 15,
@@ -189,6 +196,18 @@ export function DateCalendar({
                   >
                     {Number(day.slice(8))}
                   </Text>
+                  {dot && (
+                    <View
+                      style={[
+                        styles.dot,
+                        {
+                          backgroundColor: selected
+                            ? theme.background
+                            : (accent ?? theme.ink(0xc8)),
+                        },
+                      ]}
+                    />
+                  )}
                 </View>
               </Pressable>
             );
@@ -246,4 +265,11 @@ const useStyles = themedStyles((t) => ({
     paddingVertical: 8,
   },
   today: { borderWidth: 1, borderColor: t.ink(0x55) },
+  dot: {
+    position: 'absolute',
+    bottom: 4,
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+  },
 }));

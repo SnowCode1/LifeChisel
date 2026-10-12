@@ -34,12 +34,14 @@ import {
   ActivityIndicator,
   Alert,
   Appearance,
+  Platform,
   Pressable,
   type PressableProps,
   type TextProps,
   useColorScheme,
   View,
 } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { PerformanceBoundary } from './src/PerformanceBoundary';
 import { developmentToolsEnabled } from './src/developmentFeatures';
@@ -106,12 +108,19 @@ const SampleDataMode:
     : null;
 
 export default function App() {
-  return (
+  const app = (
     <>
       {PreviewCapture && <PreviewCapture />}
       {PerformanceLifecycle && <PerformanceLifecycle />}
       <StoreApp />
     </>
+  );
+  // The grid's Android future pull is a gesture-handler pan, which needs this
+  // root. iOS keeps its original tree; its sheets bring their own root.
+  return Platform.OS === 'android' ? (
+    <GestureHandlerRootView style={{ flex: 1 }}>{app}</GestureHandlerRootView>
+  ) : (
+    app
   );
 }
 function StoreApp() {

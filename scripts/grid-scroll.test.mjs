@@ -144,3 +144,45 @@ test('newer historical dates load without future resistance/haptics; deliberate 
   assert.deepEqual(future.reveals, [-70]);
   assert.deepEqual(future.haptics, ['boundary']);
 });
+test('Android edge pulls decide before the list slop and fail for past-ward or vertical movement', () => {
+  const { hook } = fixture({ origin: -5000 });
+  assert.equal(hook.edgePull.begin(300, 400), true);
+  assert.equal(hook.edgePull.move(297, 400), 'wait');
+  assert.equal(hook.edgePull.move(294, 401), 'activate');
+  assert.equal(hook.edgePull.move(310, 400), 'fail');
+  assert.equal(hook.edgePull.move(298, 410), 'fail');
+  hook.alignGeometry(550, true);
+  assert.equal(hook.edgePull.begin(300, 400), false);
+});
+test('Android edge pulls share the threshold tick, streak and release reveal', () => {
+  const short = fixture({ origin: -5000 });
+  short.hook.edgePull.start();
+  short.hook.edgePull.update(-60);
+  assert.equal(short.hook.pull.value, 40);
+  short.hook.edgePull.end(true);
+  assert.deepEqual(short.reveals, []);
+  assert.equal(short.hook.pull.value, 0);
+  assert.equal(short.haptics.length, 0);
+  const future = fixture({ origin: -5000 });
+  future.hook.edgePull.start();
+  future.hook.edgePull.update(-96);
+  future.hook.edgePull.update(-600);
+  assert.deepEqual(future.haptics, ['boundary']);
+  future.hook.edgePull.end(true);
+  // However long the pull, the unmoved columns continue by one: tomorrow.
+  assert.deepEqual(future.reveals, [-55]);
+  assert.equal(navigation.futureRevealDay(-55, 55, 0), -1);
+  assert.equal(future.hook.pull.value, 0);
+  const cancelled = fixture({ origin: -5000 });
+  cancelled.hook.edgePull.start();
+  cancelled.hook.edgePull.update(-120);
+  cancelled.hook.edgePull.end(false);
+  assert.deepEqual(cancelled.reveals, []);
+  const past = fixture();
+  past.hook.edgePull.start();
+  past.hook.edgePull.update(-15);
+  assert.equal(past.hook.pull.value, 0);
+  past.hook.edgePull.end(true);
+  assert.deepEqual(past.reveals, [-55]);
+  assert.equal(past.haptics.length, 0);
+});

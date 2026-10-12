@@ -51,6 +51,7 @@ import Animated, {
 import { LinearGradient } from 'expo-linear-gradient';
 import { useGridDates } from './useGridDates';
 import { DateColumns } from './DateColumns';
+import { FuturePullZone } from './FuturePullZone';
 import { FUTURE_PULL_DISTANCE } from './gridNavigation';
 import { feedback } from './haptics';
 import { Icon } from './Icon';
@@ -145,6 +146,7 @@ export const HabitGrid = memo(function HabitGrid({
     body,
     headerScroll,
     bodyScroll,
+    edgePull,
     pull,
     offset,
     shared,
@@ -348,6 +350,8 @@ export const HabitGrid = memo(function HabitGrid({
         feedback('selection');
     } else onHabitAction(habit, action);
   }
+  // Android only: matches when the date lists themselves can be dragged.
+  const futurePullEnabled = !layoutBusy && !habitMenu && !dragId;
   const streakDistance = useSharedValue(0);
   const streakOpacity = useSharedValue(0);
   useAnimatedReaction(
@@ -526,43 +530,45 @@ export const HabitGrid = memo(function HabitGrid({
               </DateButtonComponent>
               <HabitNameDivider />
             </View>
-            <View
-              pointerEvents={layoutBusy ? 'none' : 'auto'}
-              accessibilityElementsHidden={layoutBusy}
-              importantForAccessibility={
-                layoutBusy ? 'no-hide-descendants' : 'auto'
-              }
-              style={{ width: dateWidth, minHeight: 56, overflow: 'hidden' }}
-            >
-              <GridDateBackdrop
-                weekDividers={weekDividers}
-                weekStart={weekStart}
-                dateFading={dateFading}
-                days={days}
-                width={columnWidth}
-                offset={offset}
-              />
-              <DateColumns
-                {...shared}
-                ref={header}
-                key={`header-${columnWidth}-${rangeReset}`}
-                initialScrollIndex={frame.index}
-                contentOffset={frame.offset}
-                style={[{ width: dateWidth, flex: 1 }, columnReadiness]}
-                onScroll={headerScroll}
-                onLoad={({ elapsedTimeInMs }) => {
-                  recordPerformance('grid.header.load', elapsedTimeInMs);
-                  listLoaded('header');
-                }}
-                onLayout={(event) =>
-                  listLaidOut('header', event.nativeEvent.layout.width)
+            <FuturePullZone pull={edgePull} enabled={futurePullEnabled}>
+              <View
+                pointerEvents={layoutBusy ? 'none' : 'auto'}
+                accessibilityElementsHidden={layoutBusy}
+                importantForAccessibility={
+                  layoutBusy ? 'no-hide-descendants' : 'auto'
                 }
-                onContentSizeChange={(contentWidth) =>
-                  listSized('header', contentWidth)
-                }
-                renderItem={renderHeading}
-              />
-            </View>
+                style={{ width: dateWidth, minHeight: 56, overflow: 'hidden' }}
+              >
+                <GridDateBackdrop
+                  weekDividers={weekDividers}
+                  weekStart={weekStart}
+                  dateFading={dateFading}
+                  days={days}
+                  width={columnWidth}
+                  offset={offset}
+                />
+                <DateColumns
+                  {...shared}
+                  ref={header}
+                  key={`header-${columnWidth}-${rangeReset}`}
+                  initialScrollIndex={frame.index}
+                  contentOffset={frame.offset}
+                  style={[{ width: dateWidth, flex: 1 }, columnReadiness]}
+                  onScroll={headerScroll}
+                  onLoad={({ elapsedTimeInMs }) => {
+                    recordPerformance('grid.header.load', elapsedTimeInMs);
+                    listLoaded('header');
+                  }}
+                  onLayout={(event) =>
+                    listLaidOut('header', event.nativeEvent.layout.width)
+                  }
+                  onContentSizeChange={(contentWidth) =>
+                    listSized('header', contentWidth)
+                  }
+                  renderItem={renderHeading}
+                />
+              </View>
+            </FuturePullZone>
           </View>
           <View
             accessibilityElementsHidden={!!habitMenu}
@@ -642,55 +648,57 @@ export const HabitGrid = memo(function HabitGrid({
                   ))}
                   <HabitNameDivider />
                 </View>
-                <View
-                  pointerEvents={layoutBusy ? 'none' : 'auto'}
-                  accessibilityElementsHidden={layoutBusy}
-                  importantForAccessibility={
-                    layoutBusy ? 'no-hide-descendants' : 'auto'
-                  }
-                  style={{
-                    width: dateWidth,
-                    height: gridHeight,
-                    overflow: 'hidden',
-                  }}
-                >
-                  <GridLoadingBackdrop
-                    habits={habits}
-                    motions={rowMotion}
-                    heights={rowHeights}
-                    baseHeight={baseRowHeight}
-                    columnWidth={columnWidth}
-                    viewportWidth={dateWidth}
-                    maximumOffset={Math.max(
-                      0,
-                      days.length * columnWidth - dateWidth,
-                    )}
-                    offset={offset}
-                  />
-                  <DateColumns
-                    {...shared}
-                    ref={body}
-                    key={`body-${columnWidth}-${rangeReset}`}
-                    initialScrollIndex={frame.index}
-                    contentOffset={frame.offset}
-                    style={[
-                      { width: dateWidth, height: gridHeight, flexGrow: 0 },
-                      columnReadiness,
-                    ]}
-                    onScroll={bodyScroll}
-                    onLoad={({ elapsedTimeInMs }) => {
-                      recordPerformance('grid.body.load', elapsedTimeInMs);
-                      listLoaded('body');
+                <FuturePullZone pull={edgePull} enabled={futurePullEnabled}>
+                  <View
+                    pointerEvents={layoutBusy ? 'none' : 'auto'}
+                    accessibilityElementsHidden={layoutBusy}
+                    importantForAccessibility={
+                      layoutBusy ? 'no-hide-descendants' : 'auto'
+                    }
+                    style={{
+                      width: dateWidth,
+                      height: gridHeight,
+                      overflow: 'hidden',
                     }}
-                    onLayout={(event) =>
-                      listLaidOut('body', event.nativeEvent.layout.width)
-                    }
-                    onContentSizeChange={(contentWidth) =>
-                      listSized('body', contentWidth)
-                    }
-                    renderItem={renderColumn}
-                  />
-                </View>
+                  >
+                    <GridLoadingBackdrop
+                      habits={habits}
+                      motions={rowMotion}
+                      heights={rowHeights}
+                      baseHeight={baseRowHeight}
+                      columnWidth={columnWidth}
+                      viewportWidth={dateWidth}
+                      maximumOffset={Math.max(
+                        0,
+                        days.length * columnWidth - dateWidth,
+                      )}
+                      offset={offset}
+                    />
+                    <DateColumns
+                      {...shared}
+                      ref={body}
+                      key={`body-${columnWidth}-${rangeReset}`}
+                      initialScrollIndex={frame.index}
+                      contentOffset={frame.offset}
+                      style={[
+                        { width: dateWidth, height: gridHeight, flexGrow: 0 },
+                        columnReadiness,
+                      ]}
+                      onScroll={bodyScroll}
+                      onLoad={({ elapsedTimeInMs }) => {
+                        recordPerformance('grid.body.load', elapsedTimeInMs);
+                        listLoaded('body');
+                      }}
+                      onLayout={(event) =>
+                        listLaidOut('body', event.nativeEvent.layout.width)
+                      }
+                      onContentSizeChange={(contentWidth) =>
+                        listSized('body', contentWidth)
+                      }
+                      renderItem={renderColumn}
+                    />
+                  </View>
+                </FuturePullZone>
               </View>
               {hideCompleted && completedCount > 0 && rightmostDay === 0 && (
                 <Pressable

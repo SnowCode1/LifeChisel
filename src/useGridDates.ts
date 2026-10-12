@@ -93,19 +93,29 @@ export function useGridDates({
     }
     if (pendingReveal.current) return;
     stopSync();
+    const day =
+      origin +
+      futureRevealDay(offset ?? -columnWidth, columnWidth, futureCount);
+    // The pull already ticks at its threshold. Explicit menu access gets a tick.
+    if (offset === undefined) feedback('selection');
+    if (Platform.OS === 'android') {
+      // Android FlashList corrects for prepended columns after its content-size
+      // events, so settling the reveal then raced each list's correction and
+      // left them drifting. Remount both at the new date, as far navigation does.
+      setFutureCount(futureCount + FUTURE_BATCH);
+      setRightmostDay(day);
+      setRangeReset((value) => value + 1);
+      return;
+    }
     pendingReveal.current = {
       futureCount: futureCount + FUTURE_BATCH,
       dayCount,
       origin,
-      day:
-        origin +
-        futureRevealDay(offset ?? -columnWidth, columnWidth, futureCount),
+      day,
       headerReady: false,
       bodyReady: false,
     };
     setFutureCount(futureCount + FUTURE_BATCH);
-    // The pull already ticks at its threshold. Explicit menu access gets a tick.
-    if (offset === undefined) feedback('selection');
   }
 
   const {
@@ -120,6 +130,7 @@ export function useGridDates({
     geometryReady,
     headerScroll,
     bodyScroll,
+    edgePull,
   } = useGridScroll({
     columnWidth,
     visibleDays,
@@ -368,6 +379,7 @@ export function useGridDates({
     body,
     headerScroll,
     bodyScroll,
+    edgePull,
     pull,
     offset,
     shared,

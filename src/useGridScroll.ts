@@ -14,7 +14,12 @@ import {
   withTiming,
 } from 'react-native-reanimated';
 import type { GridDay } from './calendar';
-import { shouldRevealFuture, settledDay } from './gridNavigation';
+import {
+  edgePullDecision,
+  edgePullDistance,
+  shouldRevealFuture,
+  settledDay,
+} from './gridNavigation';
 import { feedback } from './haptics';
 
 // Exactly one native list drives the other. Synchronization and visual pull
@@ -45,6 +50,9 @@ export function useGridScroll({
   const thresholdTicked = useSharedValue(false);
   const offset = useSharedValue(0);
   const navigationOffset = useSharedValue(0);
+  const edgeStartX = useSharedValue(0);
+  const edgeStartY = useSharedValue(0);
+  const edgeDistance = useSharedValue(0);
 
   useAnimatedReaction(
     () => (driver.value === 3 ? navigationOffset.value : null),
@@ -230,6 +238,56 @@ export function useGridScroll({
       scrollTo(body, position, 0, false);
     })(target, ready);
   }
+  // Android's stand-in for the iOS overscroll pull (see FuturePullZone). The
+  // list itself stays at its edge; the streak, threshold tick and release
+  // reveal are the same as for a native pull.
+  const edgePull = {
+    begin(x: number, y: number) {
+      'worklet';
+      edgeStartX.set(x);
+      edgeStartY.set(y);
+      edgeDistance.set(0);
+      // Only a list resting on its newest loaded date, not navigating or
+      // resetting geometry, can be pulled.
+      return (
+        driver.value !== 3 &&
+        driver.value !== 4 &&
+        geometryReady.value &&
+        offset.value <= 1
+      );
+    },
+    move(x: number, y: number) {
+      'worklet';
+      return edgePullDecision(x - edgeStartX.value, y - edgeStartY.value);
+    },
+    start() {
+      'worklet';
+      cancelAnimation(navigationOffset);
+      dragging.set(true);
+      thresholdTicked.set(false);
+    },
+    update(translationX: number) {
+      'worklet';
+      const distance = edgePullDistance(-translationX);
+      edgeDistance.set(distance);
+      pull.set(origin > 0 ? 0 : distance);
+      tickAtThreshold(-distance);
+    },
+    end(success: boolean) {
+      'worklet';
+      const distance = edgeDistance.value;
+      edgeDistance.set(0);
+      dragging.set(false);
+      pull.set(0);
+      // The columns never moved, so unlike a native pull there is no released
+      // distance to continue: reveal one column, putting tomorrow at the edge.
+      if (
+        success &&
+        (shouldRevealFuture(-distance) || (origin > 0 && distance > 0))
+      )
+        runOnJS(onReveal)(-columnWidth);
+    },
+  };
   function continueReveal(offset: number) {
     runOnUI((target: number) => {
       'worklet';
@@ -251,5 +309,8 @@ export function useGridScroll({
     geometryReady,
     headerScroll,
     bodyScroll,
+    edgePull,
   };
 }
+
+export type EdgePull = ReturnType<typeof useGridScroll>['edgePull'];
