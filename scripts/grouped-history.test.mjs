@@ -308,7 +308,7 @@ test('current backup round-trip preserves raw edits, cancelled groups, active hi
     '2026-10-04T06:00:00.000Z',
     digest,
   );
-  assert.equal(JSON.parse(text).version, 19);
+  assert.equal(JSON.parse(text).version, 20);
   const decoded = await decodeArchive(text, digest);
   assert.deepEqual(decoded.replay, store.getSnapshot().replay);
   await store.exclusive(() => store.replace(decoded.events));
@@ -477,7 +477,7 @@ test('a v1 manifest cannot disguise v2 events and future versions stay protected
   await assert.rejects(decodeArchive(JSON.stringify(archive), digest));
   archive.version = 2;
   await assert.rejects(decodeArchive(JSON.stringify(archive), digest));
-  archive.version = 20;
+  archive.version = 21;
   await assert.rejects(decodeArchive(JSON.stringify(archive), digest));
   assert.throws(() =>
     replayEvents([
@@ -787,10 +787,10 @@ for (const packedIcon of ['phosphor:acorn', 'tabler:yoga'])
       '2026-10-04T06:00:00.000Z',
       digest,
     );
-    assert.equal(JSON.parse(backup).version, 19);
+    assert.equal(JSON.parse(backup).version, 20);
     const decoded = await decodeArchive(backup, digest);
     assert.deepEqual(decoded.replay, reopened.getSnapshot().replay);
-    assert.equal(decoded.events.at(-1).version, 19);
+    assert.equal(decoded.events.at(-1).version, 20);
     const disguised = JSON.parse(backup);
     disguised.version = 3;
     await assert.rejects(decodeArchive(JSON.stringify(disguised), digest));

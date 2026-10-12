@@ -11,6 +11,7 @@ import { validDescription } from '../description.ts';
 import {
   isCheckboxStyle,
   isColumnSpacing,
+  isConnectorThickness,
   isNameColumnWidth,
   isWeekStart,
 } from '../displayPreferences.ts';
@@ -206,7 +207,7 @@ function dailyValue(value: unknown, version: number) {
 export function entryFits(
   habit: Habit,
   value: EntryValue | null,
-  version = 19,
+  version = 20,
 ) {
   if (value === null) return true;
   switch (habitType(habit)) {
@@ -227,7 +228,7 @@ export function entryFits(
 }
 export function validateChange(
   value: unknown,
-  version = 19,
+  version = 20,
 ): asserts value is Change {
   object(value);
   if (value.kind === 'entry') {
@@ -362,6 +363,28 @@ export function validateChange(
       (value.before === null || hex(value.before)) && hex(value.after),
       'Invalid background colour.',
     );
+  } else if (
+    value.kind === 'todayOutlines' ||
+    value.kind === 'missedDays' ||
+    value.kind === 'joinedCheckboxes' ||
+    value.kind === 'streakNumbers' ||
+    value.kind === 'roundCheckboxes'
+  ) {
+    keys(value, ['kind', 'before', 'after']);
+    insist(version >= 20, 'Cell look preferences require version 20.');
+    insist(
+      (value.before === null || typeof value.before === 'boolean') &&
+        typeof value.after === 'boolean',
+      'Invalid cell look preference.',
+    );
+  } else if (value.kind === 'connectorThickness') {
+    keys(value, ['kind', 'before', 'after']);
+    insist(version >= 20, 'Cell look preferences require version 20.');
+    insist(
+      (value.before === null || isConnectorThickness(value.before)) &&
+        isConnectorThickness(value.after),
+      'Invalid connector thickness.',
+    );
   } else if (value.kind === 'weekDividers' || value.kind === 'tapAnimations') {
     keys(value, ['kind', 'before', 'after']);
     insist(version >= 16, 'Grid appearance toggles require version 16.');
@@ -439,7 +462,8 @@ export function validateEvent(value: unknown): asserts value is StoredEvent {
       value.version === 16 ||
       value.version === 17 ||
       value.version === 18 ||
-      value.version === 19,
+      value.version === 19 ||
+      value.version === 20,
     'Unsupported event version.',
   );
   id(value.id);

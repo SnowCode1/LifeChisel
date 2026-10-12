@@ -192,10 +192,16 @@ docs hold the design behind each check.
   values stay on their dates.
 - Flings slow straight into a column with no correction at the end; a slow
   release eases onto the nearest column; a drag picks up without a jump.
-- A fling into Today overshoots briefly and springs back without revealing
-  future dates.
+- A hard fling toward Today slows quickly but smoothly and stops exactly at
+  Today without bouncing past it.
 - Tap a box while a fling is still moving fast: the scroll stops and nothing is
   checked. Taps while it gently settles work normally.
+- Settings → Appearance → Cells: each switch changes the grid when Settings
+  closes and survives a restart. Missed days crosses only past scheduled days
+  (try a 5-on/2-off habit); Streak numbers count back across scrolled-off
+  days and renumber after checking a gap; Joined checkboxes grow or retract
+  their bar with a bump on contact. The Checkboxes-only rows hide for Ticks &
+  crosses.
 - Closing History, Settings or Statistics (button or swipe) keeps the grid's
   dates and vertical position.
 

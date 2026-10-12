@@ -67,17 +67,25 @@ test('a fling keeps the release velocity and lands near its natural projection',
   }
 });
 
-test('flings into an edge bounce back onto it; slow releases settle cleanly', () => {
-  const into = planFling(minimum + 110, -6000, column, minimum, maximum);
-  const bounced = run(into);
-  assert.equal(bounced.end, minimum);
-  const overshoot = minimum - Math.min(...bounced.positions);
-  assert.ok(overshoot > 5 && overshoot <= 80, `overshoot ${overshoot}`);
+test('flings into an edge stop exactly at it; slow releases settle cleanly', () => {
+  for (const velocity of [-1500, -6000, -10000]) {
+    const into = planFling(minimum + 110, velocity, column, minimum, maximum);
+    const stopped = run(into);
+    assert.equal(stopped.end, minimum);
+    assert.ok(
+      Math.min(...stopped.positions) >= minimum,
+      'momentum never passes the edge',
+    );
+    for (let i = 1; i < stopped.positions.length; i++)
+      assert.ok(stopped.positions[i] <= stopped.positions[i - 1] + 1e-9);
+    // Eases out: still moving after the first frame, not a wall.
+    assert.ok(stopped.positions[1] > minimum);
+  }
 
-  // At Today with nothing unlocked, a future fling bounces in place.
+  // At Today with nothing unlocked, a future fling stays put.
   const atToday = run(planFling(0, -3000, column, 0, maximum));
   assert.equal(atToday.end, 0);
-  assert.ok(Math.min(...atToday.positions) < 0);
+  assert.ok(Math.min(...atToday.positions) >= 0);
 
   // A stopped scroll between columns settles on the nearest without overshoot.
   for (const start of [20, 30]) {

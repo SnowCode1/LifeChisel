@@ -472,7 +472,7 @@ test('goal timelines survive actual SQLite serialization, reload, Undo/Redo and 
     '2026-10-06T11:00:00.000Z',
     digest,
   );
-  assert.equal(JSON.parse(archive).version, 19);
+  assert.equal(JSON.parse(archive).version, 20);
   const decoded = await decodeArchive(archive, digest);
   assert.equal(
     sameValue(decoded.replay.state.habits[0].goals, after.goals),

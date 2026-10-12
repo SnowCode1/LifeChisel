@@ -2,6 +2,7 @@
 // is exact at any refresh rate. A release decides where it will stop before it
 // moves: the natural iOS deceleration is projected, rounded to a column, and
 // the curve is retuned to arrive there, so flings never land between columns
+// or bounce off the Today edge
 // and correct themselves afterwards. Offsets and positions are in points;
 // velocities in points per millisecond; times in milliseconds.
 
@@ -17,8 +18,8 @@ const REST = 0.1;
 const SETTLED = 2;
 /** Fastest release honoured, so one flick cannot cross months at once. */
 const MAX_SPEED = 10;
-/** Furthest a fling may overshoot an edge before springing back. */
-const BOUNCE_LIMIT = 80;
+/** Shortest time constant (ms) for a fling stopping at an edge. */
+const EDGE_STOP = 45;
 // A retuned deceleration stays within this factor of the natural one.
 const RETUNE = 2;
 
@@ -88,22 +89,23 @@ export function planFling(
   const tau = timeConstant(deceleration ?? DECELERATION);
   const projected = start + v0 * tau;
 
-  // Heading past an edge: decelerate naturally until it, then bounce.
+  // Heading past an edge: momentum alone never crosses it (only a finger
+  // can pull past). Decelerate harder so the slowdown ends exactly there,
+  // never quicker than EDGE_STOP so a hard fling still eases to a stop.
   const edge =
     projected < minimum ? minimum : projected > maximum ? maximum : null;
   if (edge !== null) {
-    const travelled = edge - start;
-    const hitAt = -tau * Math.log(1 - travelled / (v0 * tau));
-    const limit = BOUNCE_LIMIT * SPRING * Math.E;
-    const hitVelocity = Math.max(-limit, Math.min(limit, v0 - travelled / tau));
+    const distance = edge - start;
+    if (Math.abs(distance) <= REST) return spring(start, edge, 0, false);
+    const stopTau = Math.max(EDGE_STOP, distance / v0);
     return {
       start,
-      approach: projected,
-      tau,
-      springAt: hitAt,
+      approach: edge,
+      tau: stopTau,
+      springAt: Infinity,
       rest: edge,
       springFrom: 0,
-      springVelocity: hitVelocity,
+      springVelocity: 0,
     };
   }
 

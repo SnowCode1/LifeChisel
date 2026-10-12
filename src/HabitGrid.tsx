@@ -5,7 +5,7 @@ import { DateNavigationSheet } from './DateNavigationSheet';
 import { ordinal, timingDate } from './goalTiming';
 import { useDelayedCompletionMask } from './useDelayedCompletionMask';
 import { HabitNameDivider } from './HabitNameDivider';
-import type { CheckboxStyle, WeekStart } from './displayPreferences';
+import type { CheckboxStyle, WeekStart, CellLook } from './displayPreferences';
 import type { GridSize } from './gridSizing';
 import { Text, useAppWindowDimensions } from './Typography';
 import { completedHabitsSelection } from './storage/selection';
@@ -54,6 +54,7 @@ type Props = {
   columnWidth: GridSize;
   rowHeight: GridSize;
   checkboxStyle: CheckboxStyle;
+  cellLook: CellLook;
   weekDividers: boolean;
   tapAnimations: boolean;
   weekStart: WeekStart;
@@ -83,6 +84,7 @@ export const HabitGrid = memo(function HabitGrid({
   columnWidth: columnWidthSize,
   rowHeight: rowHeightSize,
   checkboxStyle,
+  cellLook,
   weekDividers,
   tapAnimations,
   weekStart,
@@ -279,6 +281,7 @@ export const HabitGrid = memo(function HabitGrid({
     rightmostDay,
     unlockedFuture,
     checkboxStyle,
+    cellLook,
     weekDividers,
     weekStart,
     tapAnimations,

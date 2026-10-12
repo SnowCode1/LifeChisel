@@ -21,14 +21,22 @@ import {
 import type { GridPalette } from '../gridAppearance';
 import type { Habit } from '../habits';
 import type { ChangeStore } from '../storage/store';
-import { cellState } from './cellAccessibility';
+import { cellState, checkedStreak } from './cellAccessibility';
+import { checkboxGeometry } from './gridGeometry';
 
-/** One drawn cell on the UI thread: kind, checked, met, prepared text. */
+/**
+ * One drawn cell on the UI thread: kind, checked, met, recorded, schedule
+ * (0 none, 1 due, 2 off; see `CellState.schedule`), prepared text, and the
+ * streak position drawn in place of the tick (every checked day, from 1).
+ */
 export type CanvasCell = {
   k: 0 | 1 | 2;
   c: boolean;
   m: boolean;
+  r: boolean;
+  s: 0 | 1 | 2;
   p: SkParagraph | null;
+  q: SkParagraph | null;
 };
 export type CanvasDays = Record<string, Record<string, CanvasCell>>;
 
@@ -45,6 +53,8 @@ type Context = {
   heights: Record<string, number>;
   baseHeight: number;
   paragraphs: Map<string, SkParagraph>;
+  /** Number checked boxes by streak position (development look). */
+  streaks: boolean;
 };
 
 function paragraph(
@@ -90,15 +100,56 @@ function numberParagraph(context: Context, text: string, colour: string) {
   return paragraph(context, text, colour, fitted, 1);
 }
 
+// A streak position inside a checked box: bold, centred and shrunk to fit.
+function streakParagraph(context: Context, habit: Habit, streak: number) {
+  const height = context.heights[habit.id] ?? context.baseHeight;
+  const { box } = checkboxGeometry(context.fontScale, height, context.column);
+  const colour = context.palettes[habit.id].checkmark;
+  const text = String(streak);
+  const size = box * (text.length > 2 ? 0.48 : 0.6);
+  const key = `streak|${colour}|${box}|${text}`;
+  let result = context.paragraphs.get(key);
+  if (!result) {
+    const builder = Skia.ParagraphBuilder.Make({
+      maxLines: 1,
+      textAlign: TextAlign.Center,
+    });
+    builder.pushStyle({
+      color: Skia.Color(colour),
+      fontSize: size,
+      fontStyle: { weight: FontWeight.Bold },
+    });
+    builder.addText(text);
+    result = builder.build();
+    result.layout(Math.max(1, box));
+    context.paragraphs.set(key, result);
+  }
+  return result;
+}
+
 function buildCell(
   context: Context,
   habit: Habit,
   value: EntryValue | undefined,
   date: string,
+  streak: number,
 ): CanvasCell {
   const state = cellState(habit, value, date);
+  const r = state.recorded;
+  const s = state.schedule === 'due' ? 1 : state.schedule === 'off' ? 2 : 0;
   if (state.kind === 'checkbox')
-    return { k: 0, c: state.checked, m: state.met, p: null };
+    return {
+      k: 0,
+      c: state.checked,
+      m: state.met,
+      r,
+      s,
+      p: null,
+      q:
+        context.streaks && state.checked && streak > 0
+          ? streakParagraph(context, habit, streak)
+          : null,
+    };
   const palette = context.palettes[habit.id];
   const colour = state.recorded ? palette.colour : palette.number;
   if (state.kind === 'number')
@@ -106,12 +157,17 @@ function buildCell(
       k: 1,
       c: false,
       m: state.met,
+      r,
+      s,
       p: numberParagraph(context, state.label, colour),
+      q: null,
     };
   return {
     k: 2,
     c: false,
     m: state.met,
+    r,
+    s,
     p: paragraph(
       context,
       state.label,
@@ -123,6 +179,7 @@ function buildCell(
       ),
       GRID_ENTRY_LINE_HEIGHT * context.fontScale,
     ),
+    q: null,
   };
 }
 
@@ -136,6 +193,7 @@ export function useGridModel({
   heights,
   baseHeight,
   offset,
+  streaks,
 }: {
   store: ChangeStore;
   habits: Habit[];
@@ -146,6 +204,7 @@ export function useGridModel({
   heights: Record<string, number>;
   baseHeight: number;
   offset: SharedValue<number>;
+  streaks: boolean;
 }): SharedValue<CanvasDays> {
   const days = useSharedValue<CanvasDays>({});
   const state = useRef({
@@ -177,11 +236,34 @@ export function useGridModel({
     state.current.values = values;
     const updates: CanvasDays = {};
     const todayOrdinal = ordinal(day0);
-    for (const day of days_) {
+    // An edit can lengthen or break the streak of every newer prepared day,
+    // so with streak numbers those days are rebuilt too.
+    const requested = new Set(days_);
+    const forced = new Set<number>();
+    if (context.streaks && !rebuild) {
+      let oldestChange = -Infinity;
+      for (const day of days_) {
+        const previous = state.current.built.get(day);
+        if (!previous) continue;
+        const date = timingDate(todayOrdinal - day);
+        for (const habit of rows)
+          if (previous[habit.id] !== values[`${habit.id}:${date}`])
+            oldestChange = Math.max(oldestChange, day);
+      }
+      if (oldestChange > -Infinity)
+        for (const day of state.current.built.keys())
+          if (day < oldestChange) {
+            requested.add(day);
+            forced.add(day);
+          }
+    }
+    const memo = new Map<string, number>();
+    // Oldest first, so each day's streak builds on the one before it.
+    for (const day of [...requested].sort((a, b) => b - a)) {
       const date = timingDate(todayOrdinal - day);
       const previous = state.current.built.get(day);
       const seen: Record<string, EntryValue | undefined> = {};
-      let changed = rebuild || !previous;
+      let changed = rebuild || !previous || forced.has(day);
       for (const habit of rows) {
         const value = values[`${habit.id}:${date}`];
         seen[habit.id] = value;
@@ -191,7 +273,15 @@ export function useGridModel({
       if (!changed) continue;
       const cells: Record<string, CanvasCell> = {};
       for (const habit of rows)
-        cells[habit.id] = buildCell(context, habit, seen[habit.id], date);
+        cells[habit.id] = buildCell(
+          context,
+          habit,
+          seen[habit.id],
+          date,
+          context.streaks
+            ? checkedStreak(habit, day, values, todayOrdinal, memo)
+            : 0,
+        );
       updates[day] = cells;
     }
     const removed: number[] = [];
@@ -238,6 +328,7 @@ export function useGridModel({
       heights,
       baseHeight,
       paragraphs: new Map(),
+      streaks,
     };
     const prepared = [...state.current.built.keys()];
     state.current.built.clear();
@@ -248,7 +339,16 @@ export function useGridModel({
     );
     // prepare/windowDays read refs only.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [habits, palettes, fontScale, column, heights, baseHeight, today]);
+  }, [
+    habits,
+    palettes,
+    fontScale,
+    column,
+    heights,
+    baseHeight,
+    today,
+    streaks,
+  ]);
 
   // Entry edits, Undo/Redo and restores: re-check prepared days whose saved
   // values changed. Save acknowledgements keep the same values object.

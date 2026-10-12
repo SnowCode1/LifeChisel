@@ -4,8 +4,12 @@ import { Text, useAppWindowDimensions } from './Typography';
 import { TextSizeSetting } from './TextSizeSetting';
 import { Icon, type IconName } from './Icon';
 import { InfoNote } from './InfoNote';
+import Slider from '@react-native-community/slider';
+import { useState } from 'react';
 import {
   checkboxStyleOptions,
+  type CellLook,
+  type CellLookKind,
   type CheckboxStyle,
   weekStartOptions,
   type WeekStart,
@@ -58,6 +62,11 @@ type Props = {
   onTapAnimationsChange: (value: boolean) => void;
   checkboxStyle: CheckboxStyle;
   onCheckboxStyleChange: (value: CheckboxStyle) => void;
+  cellLook: CellLook;
+  onCellLookChange: <K extends CellLookKind>(
+    kind: K,
+    value: CellLook[K],
+  ) => void;
   hideCompleted: boolean;
   onHideCompletedChange: (value: boolean) => void;
   hapticsEnabled: boolean;
@@ -149,6 +158,43 @@ function Toggle({
         trackColor={{ false: theme.ink(0x30), true: theme.accent }}
         thumbColor="#FFFFFF"
         ios_backgroundColor={theme.ink(0x30)}
+      />
+    </View>
+  );
+}
+// Saved on release, like the grid size sliders.
+function ConnectorThickness({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: number;
+  onChange: (value: number) => void;
+  disabled: boolean;
+}) {
+  const theme = useTheme();
+  const styles = useStyles();
+  const [draft, setDraft] = useState(value);
+  return (
+    <View style={styles.control}>
+      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <Text style={[styles.label, { flex: 1 }]}>Connector thickness</Text>
+        <Text style={styles.value}>{draft}%</Text>
+      </View>
+      <Slider
+        style={{ minHeight: 44 }}
+        minimumValue={20}
+        maximumValue={100}
+        step={5}
+        value={value}
+        disabled={disabled}
+        minimumTrackTintColor={theme.accent}
+        maximumTrackTintColor={theme.ink(0x30)}
+        thumbTintColor={theme.ink(0xee)}
+        accessibilityLabel="Connector thickness"
+        accessibilityValue={{ text: `${draft} percent of the checkbox` }}
+        onValueChange={(next) => setDraft(Math.round(next / 5) * 5)}
+        onSlidingComplete={(next) => onChange(Math.round(next / 5) * 5)}
       />
     </View>
   );
@@ -349,9 +395,61 @@ export function SettingsScreen(p: Props) {
               disabled={disabled}
             />
           </Group>
+          <Group title="Cells">
+            <Toggle
+              label="Outlines only on Today"
+              value={p.cellLook.todayOutlines}
+              onChange={(value) => p.onCellLookChange('todayOutlines', value)}
+              disabled={disabled}
+            />
+            <Toggle
+              label="Missed days"
+              value={p.cellLook.missedDays}
+              onChange={(value) => p.onCellLookChange('missedDays', value)}
+              disabled={disabled}
+            />
+            {p.checkboxStyle === 'boxes' && (
+              <>
+                <Toggle
+                  label="Round checkboxes"
+                  value={p.cellLook.roundCheckboxes}
+                  onChange={(value) =>
+                    p.onCellLookChange('roundCheckboxes', value)
+                  }
+                  disabled={disabled}
+                />
+                <Toggle
+                  label="Streak numbers"
+                  value={p.cellLook.streakNumbers}
+                  onChange={(value) =>
+                    p.onCellLookChange('streakNumbers', value)
+                  }
+                  disabled={disabled}
+                />
+                <Toggle
+                  label="Joined checkboxes"
+                  value={p.cellLook.joinedCheckboxes}
+                  onChange={(value) =>
+                    p.onCellLookChange('joinedCheckboxes', value)
+                  }
+                  disabled={disabled}
+                />
+                {p.cellLook.joinedCheckboxes && (
+                  <ConnectorThickness
+                    key={p.cellLook.connectorThickness}
+                    value={p.cellLook.connectorThickness}
+                    onChange={(value) =>
+                      p.onCellLookChange('connectorThickness', value)
+                    }
+                    disabled={disabled}
+                  />
+                )}
+              </>
+            )}
+          </Group>
           <InfoNote
             label="About appearance"
-            text="System follows your phone’s light or dark mode. Text, controls and habit colours adjust to each background; your saved habit colours never change. Automatic sizes adapt to this screen; moving a slider sets an exact size, and Reset returns to automatic. Text size applies everywhere and follows your phone’s text size too. Recorded entries stay bright when dates fade."
+            text="System follows your phone’s light or dark mode. Text, controls and habit colours adjust to each background; your saved habit colours never change. Automatic sizes adapt to this screen; moving a slider sets an exact size, and Reset returns to automatic. Text size applies everywhere and follows your phone’s text size too. Outlines only on Today leaves other empty days blank but tappable. Missed days marks past scheduled days that missed their goal with a quiet cross and leaves unscheduled days blank. Streak numbers count each checked day’s place in its streak, and Joined checkboxes connect checked neighbours."
           />
         </>
       )}

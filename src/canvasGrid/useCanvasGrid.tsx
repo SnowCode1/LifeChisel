@@ -25,12 +25,13 @@ import {
   useDerivedValue,
   useReducedMotion,
   useSharedValue,
+  withDelay,
   withSequence,
   withTiming,
   type SharedValue,
 } from 'react-native-reanimated';
 import { entryDay, type EntryDay } from '../calendar';
-import type { CheckboxStyle, WeekStart } from '../displayPreferences';
+import type { CellLook, CheckboxStyle, WeekStart } from '../displayPreferences';
 import { ordinal, timingDate } from '../goalTiming';
 import type { GridPalette } from '../gridAppearance';
 import { FUTURE_PULL_DISTANCE } from '../gridNavigation';
@@ -49,11 +50,21 @@ import {
   GridAccessibilityLayer,
   HeadingAccessibility,
 } from './GridAccessibilityLayer';
-import { useGridModel } from './useGridModel';
+import { useGridModel, type CanvasCell } from './useGridModel';
 
 const tick = Skia.Path.MakeFromSVGString('M4 12 L9 17 L20 6')!;
 const cross = Skia.Path.MakeFromSVGString('M6 6 L18 18 M18 6 L6 18')!;
-const hairline = 1 / PixelRatio.get();
+const pixelRatio = PixelRatio.get();
+const hairline = 1 / pixelRatio;
+/**
+ * The offset rounded to a physical pixel. Columns are whole pixels, so every
+ * cell edge then lands on a pixel boundary; at fractional offsets neighbouring
+ * cells each anti-alias the shared pixel and leave a faint seam while scrolling.
+ */
+function pixelOffset(offset: number) {
+  'worklet';
+  return Math.round(offset * pixelRatio) / pixelRatio;
+}
 
 function fill(colour: string) {
   const paint = Skia.Paint();
@@ -93,6 +104,21 @@ function heading(
 
 type Row = { id: string; top: number; height: number };
 type Pointer = { id: string; day: number } | null;
+/**
+ * A tap that made or broke joins between checked boxes: the tapped day and
+ * which neighbours (left is older) it joins. The animation draws those joints
+ * itself, so a breaking join can retract after the cell data has changed.
+ */
+type Joint = {
+  id: string;
+  day: number;
+  left: boolean;
+  right: boolean;
+  joining: boolean;
+} | null;
+const JOINT_DURATION = 220;
+/** Boxes a finished join reaches: the tapped one, or neighbours on a break. */
+type Bump = { id: string; days: number[] } | null;
 
 export type CanvasGridProps = {
   store: ChangeStore;
@@ -115,6 +141,7 @@ export type CanvasGridProps = {
   rightmostDay: number;
   unlockedFuture: number;
   checkboxStyle: CheckboxStyle;
+  cellLook: CellLook;
   weekDividers: boolean;
   weekStart: WeekStart;
   tapAnimations: boolean;
@@ -155,6 +182,7 @@ export function useCanvasGrid(props: CanvasGridProps): {
     column,
     width,
     checkboxStyle,
+    cellLook,
     weekDividers,
     weekStart,
     tapAnimations,
@@ -172,6 +200,13 @@ export function useCanvasGrid(props: CanvasGridProps): {
   } = props;
   const reducedMotion = useReducedMotion();
   const todayOrdinal = ordinal(today);
+  // Cell look preferences; primitives so the worklets capture them.
+  const boxes = checkboxStyle === 'boxes';
+  const todayOutlines = cellLook.todayOutlines;
+  const missedMarks = cellLook.missedDays;
+  const joinedRuns = boxes && cellLook.joinedCheckboxes;
+  const roundBoxes = boxes && cellLook.roundCheckboxes;
+  const connectorThickness = cellLook.connectorThickness / 100;
   const model = useGridModel({
     store,
     habits,
@@ -182,6 +217,7 @@ export function useCanvasGrid(props: CanvasGridProps): {
     heights,
     baseHeight,
     offset,
+    streaks: boxes && cellLook.streakNumbers,
   });
 
   const rows = useMemo<Row[]>(
@@ -207,6 +243,8 @@ export function useCanvasGrid(props: CanvasGridProps): {
     > = {};
     for (const row of rows) {
       const g = checkboxGeometry(fontScale, row.height, column);
+      // Round boxes (development look) are full circles.
+      if (roundBoxes) g.radius = g.box / 2;
       result[row.id] = {
         fill: Skia.RRectXY(
           Skia.XYWHRect(-g.box / 2, -g.box / 2, g.box, g.box),
@@ -229,7 +267,7 @@ export function useCanvasGrid(props: CanvasGridProps): {
       };
     }
     return result;
-  }, [rows, fontScale, column]);
+  }, [rows, fontScale, column, roundBoxes]);
   const paints = useMemo(() => {
     const habitPaints: Record<
       string,
@@ -246,6 +284,7 @@ export function useCanvasGrid(props: CanvasGridProps): {
         pressed: fill(p.pressed),
         rule: stroke(p.rule, hairline),
         dash: stroke(`${p.colour}40`, 2),
+        missed: stroke(`${p.colour}66`, 1.8),
       };
     return {
       habit: habitPaints,
@@ -320,7 +359,7 @@ export function useCanvasGrid(props: CanvasGridProps): {
           Skia.XYWHRect(0, 0, width, headerHeight),
           paints.background,
         );
-        const shift = offset.value;
+        const shift = pixelOffset(offset.value);
         const [first, last] = visibleDayRange(width, shift, column);
         for (let day = first; day <= last; day++) {
           const x = columnX(day, width, shift, column);
@@ -372,6 +411,10 @@ export function useCanvasGrid(props: CanvasGridProps): {
   const pressed = useSharedValue<Pointer>(null);
   const pulse = useSharedValue<Pointer>(null);
   const pulseScale = useSharedValue(1);
+  const joint = useSharedValue<Joint>(null);
+  const jointProgress = useSharedValue(1);
+  const bump = useSharedValue<Bump>(null);
+  const bumpScale = useSharedValue(1);
   const bodyPicture = useDerivedValue(() =>
     createPicture(
       (canvas) => {
@@ -380,12 +423,15 @@ export function useCanvasGrid(props: CanvasGridProps): {
           Skia.XYWHRect(0, 0, width, gridHeight),
           paints.background,
         );
-        const shift = offset.value;
+        const shift = pixelOffset(offset.value);
         const [first, last] = visibleDayRange(width, shift, column);
         const cells = model.value;
         const animated = rowTops.value;
         const press = pressed.value;
         const hit = pulse.value;
+        const j = joint.value;
+        const jt = jointProgress.value;
+        const knock = bump.value;
         for (let pass = 0; pass < 2; pass++)
           for (const row of rows) {
             // The dragged row is drawn last, above its neighbours.
@@ -426,6 +472,64 @@ export function useCanvasGrid(props: CanvasGridProps): {
                 p.rule,
               );
               const middleX = x + column / 2;
+              if (joinedRuns && checkboxStyle === 'boxes') {
+                // Consecutive checked boxes are joined by a bar thinner than
+                // the boxes. Each cell draws only the part inside itself, so
+                // neighbouring backgrounds never cover it; older days sit to
+                // the left.
+                const bar = shape.box * connectorThickness;
+                const barTop = middleY - bar / 2;
+                const barFill = (target: CanvasCell | undefined) =>
+                  target?.m ? p.colour : p.boxFill;
+                const moving = j !== null && j.id === row.id;
+                // Halves of a joint being animated are drawn by the animation.
+                const ownLeft =
+                  moving &&
+                  ((day === j.day && j.left) || (day === j.day - 1 && j.right));
+                const ownRight =
+                  moving &&
+                  ((day === j.day && j.right) || (day === j.day + 1 && j.left));
+                if (cell?.c) {
+                  if (!ownLeft && cells[day + 1]?.[row.id]?.c)
+                    canvas.drawRect(
+                      Skia.XYWHRect(x, barTop, column / 2, bar),
+                      barFill(cell),
+                    );
+                  if (!ownRight && cells[day - 1]?.[row.id]?.c)
+                    canvas.drawRect(
+                      Skia.XYWHRect(middleX, barTop, column / 2, bar),
+                      barFill(cell),
+                    );
+                }
+                if (moving && Math.abs(day - j.day) <= 1) {
+                  // Joins grow out of the neighbour into the tapped box, and
+                  // retract back into the neighbour when broken.
+                  const length = column * (j.joining ? jt : 1 - jt);
+                  if (j.left) {
+                    const from = columnX(j.day + 1, width, shift, column);
+                    const start = Math.max(x, from + column / 2);
+                    const end = Math.min(
+                      x + column,
+                      from + column / 2 + length,
+                    );
+                    if (end > start)
+                      canvas.drawRect(
+                        Skia.XYWHRect(start, barTop, end - start, bar),
+                        barFill(cells[j.day + 1]?.[row.id]),
+                      );
+                  }
+                  if (j.right) {
+                    const from = columnX(j.day - 1, width, shift, column);
+                    const start = Math.max(x, from + column / 2 - length);
+                    const end = Math.min(x + column, from + column / 2);
+                    if (end > start)
+                      canvas.drawRect(
+                        Skia.XYWHRect(start, barTop, end - start, bar),
+                        barFill(cells[j.day - 1]?.[row.id]),
+                      );
+                  }
+                }
+              }
               if (!cell) {
                 canvas.drawLine(
                   middleX - 5,
@@ -434,6 +538,31 @@ export function useCanvasGrid(props: CanvasGridProps): {
                   middleY,
                   p.dash,
                 );
+                continue;
+              }
+              // Empty markers are unchecked boxes and unrecorded "—" labels.
+              const empty = cell.k === 0 ? !cell.c : !cell.r;
+              const missed =
+                missedMarks && empty && day > 0 && cell.s === 1 && !cell.m;
+              if (
+                empty &&
+                !missed &&
+                ((todayOutlines && day !== 0) ||
+                  (missedMarks && day > 0 && cell.s === 2))
+              )
+                continue;
+              if (missed) {
+                // Smaller than a checkbox, with the same line weight.
+                const crossSize = shape.size * 0.75;
+                canvas.save();
+                canvas.translate(
+                  middleX - crossSize / 2,
+                  middleY - crossSize / 2,
+                );
+                canvas.scale(crossSize / 24, crossSize / 24);
+                p.missed.setStrokeWidth((1.8 * shape.size) / crossSize);
+                canvas.drawPath(cross, p.missed);
+                canvas.restore();
                 continue;
               }
               if (cell.p) {
@@ -448,6 +577,12 @@ export function useCanvasGrid(props: CanvasGridProps): {
               canvas.translate(middleX, middleY);
               if (hit !== null && hit.id === row.id && hit.day === day)
                 canvas.scale(pulseScale.value, pulseScale.value);
+              if (
+                knock !== null &&
+                knock.id === row.id &&
+                knock.days.includes(day)
+              )
+                canvas.scale(bumpScale.value, bumpScale.value);
               const line = cell.m ? p.colourLine : p.box;
               if (checkboxStyle === 'boxes') {
                 if (cell.c)
@@ -456,7 +591,10 @@ export function useCanvasGrid(props: CanvasGridProps): {
                   line.setStrokeWidth(shape.stroke);
                   canvas.drawRRect(shape.outline, line);
                 }
-                if (cell.c) {
+                if (cell.q)
+                  // Streak numbers replace the tick with the streak position.
+                  cell.q.paint(canvas, -shape.box / 2, -cell.q.getHeight() / 2);
+                else if (cell.c) {
                   const glyph = shape.box * 0.85;
                   canvas.translate(-glyph / 2, -glyph / 2);
                   canvas.scale(glyph / 24, glyph / 24);
@@ -494,14 +632,66 @@ export function useCanvasGrid(props: CanvasGridProps): {
     const key = `${id}:${date}`;
     const before = store.getSnapshot().replay.state.values[key];
     onCellPress(habit, entryDay(date));
-    const after = store.getSnapshot().replay.state.values[key];
+    const values = store.getSnapshot().replay.state.values;
+    const after = values[key];
+    const checked = checkboxChecked(habit, after, date);
     if (
       habitType(habit) === 'checkbox' &&
       tapAnimations &&
       !reducedMotion &&
-      checkboxChecked(habit, before, date) !==
-        checkboxChecked(habit, after, date)
+      checkboxChecked(habit, before, date) !== checked
     ) {
+      if (joinedRuns && checkboxStyle === 'boxes') {
+        const checkedOn = (neighbour: number) => {
+          const other = timingDate(todayOrdinal - neighbour);
+          return checkboxChecked(habit, values[`${id}:${other}`], other);
+        };
+        const left = checkedOn(day + 1);
+        const right = checkedOn(day - 1);
+        if (left || right) {
+          joint.set({ id, day, left, right, joining: checked });
+          // The bar nudges the box it reaches the moment it touches that box:
+          // the tapped box when joining, the neighbours when retracting. Both
+          // happen at the same eased progress, when the bar end is half a box
+          // from that box's centre.
+          const box = shapes[id]?.box ?? 0;
+          const contact = Math.min(1, Math.max(0, 1 - box / 2 / column));
+          // Inverse of Easing.out(Easing.cubic): 1 - (1 - t)^3.
+          const contactAt = 1 - Math.cbrt(1 - contact);
+          bump.set({
+            id,
+            days: checked
+              ? [day]
+              : [...(left ? [day + 1] : []), ...(right ? [day - 1] : [])],
+          });
+          bumpScale.set(
+            withDelay(
+              JOINT_DURATION * contactAt,
+              withSequence(
+                withTiming(1.07, {
+                  duration: 70,
+                  easing: Easing.out(Easing.quad),
+                }),
+                withTiming(1, {
+                  duration: 160,
+                  easing: Easing.out(Easing.cubic),
+                }),
+              ),
+            ),
+          );
+          jointProgress.set(0);
+          jointProgress.set(
+            withTiming(
+              1,
+              { duration: JOINT_DURATION, easing: Easing.out(Easing.cubic) },
+              (done) => {
+                'worklet';
+                if (done) joint.set(null);
+              },
+            ),
+          );
+        }
+      }
       pulse.set({ id, day });
       pulseScale.set(
         withSequence(

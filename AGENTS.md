@@ -7,7 +7,7 @@ Read `PROJECT_GOALS.md`, `docs/DEVELOPMENT.md`, and `docs/DECISIONS.md`;
 (project owner and maintainer) is new to the stack: explain technical choices in
 plain language and connect them to the product goal.
 
-Current storage writers and backup exports are v19 with SQL schema 1;
+Current storage writers and backup exports are v20 with SQL schema 1;
 `docs/STORAGE.md` is the authority. Version numbers in the sections below record
 when a feature's fields arrived, and each older version must keep replaying
 unchanged.
@@ -79,7 +79,8 @@ preserve earlier icon choices/removals and raw history.
   iOS-style rubber-band future pull (both phones) and `scrollToDay`. Pure
   `gridMotion.ts` plans each release before it moves: it projects iOS fast
   deceleration (0.99), picks the nearest column and retunes the curve to end
-  exactly there (springs for slow releases, bounces at edges); `withFling.ts`
+  exactly there (springs for slow releases; momentum stops at the Today and
+  history edges without bouncing, only a finger pulls past); `withFling.ts`
   runs that closed-form curve. Never add a separate snap after momentum. A
   touch on momentum faster than `TAP_STOP_SPEED` only stops it, never edits.
   Worklets do not capture default-parameter identifiers or call JS functions
@@ -92,7 +93,9 @@ preserve earlier icon choices/removals and raw history.
   do nothing); unprepared days draw dashes. Keep the drawing rules ported from
   the old renderer: background precedence pressed > goal met > Today > plain,
   rule hairline, both checkbox styles and fitted paragraphs. Day columns are
-  whole physical pixels (`PixelRatio.get()` into `gridLayout`).
+  whole physical pixels (`PixelRatio.get()` into `gridLayout`). Both canvases draw at
+  the offset rounded to a physical pixel (`pixelOffset`), so cell edges never
+  anti-alias into seams while scrolling.
   Keep grid callbacks/definitions stable across save acknowledgements. Cache colour
   levels in `gridAppearance.ts`.
   See `docs/PERFORMANCE.md`; never infer iPhone frame rates from Node benchmarks.
@@ -100,6 +103,17 @@ preserve earlier icon choices/removals and raw history.
   `rowTops`, and release on the same cell calls `onCellPress`. Disable taps when
   not editable, during a drag or in reorder mode; lock scrolling while the menu
   is open or a drag is active.
+- Cell look (v20, Settings → Appearance → Cells): `CellLook` in
+  `displayPreferences.ts` holds Outlines only on Today, Missed days (from
+  `CellState.schedule`: due, off or none; quotas and tracking-only habits are
+  never missed per day), Round checkboxes, Streak numbers (`checkedStreak`
+  counts back from saved values; the model rebuilds newer prepared days after an
+  edit), Joined checkboxes and Connector thickness (20–100% of the box). The
+  last four apply to the checkbox style only. A tapped join grows from or
+  retracts into the neighbour over 220 ms and the reached box bumps to 1.07 the
+  moment the bar touches it, gated like the pulse. App memoizes the look by its
+  fields so acknowledgements keep its identity, and the grid defers it with the
+  other presentation preferences. Never shade cells by goal progress.
 - `GridAccessibilityLayer.tsx` stays mounted: invisible native views follow the
   shared offset with per-cell `cell-<habit>-<date>` testIDs, roles, checked/
   disabled states, labels, hints and activation (wording in pure

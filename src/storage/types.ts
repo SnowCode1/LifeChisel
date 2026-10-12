@@ -33,6 +33,12 @@ export type StoredState = {
   themeMode?: ThemeMode;
   darkBackground?: string;
   lightBackground?: string;
+  todayOutlines?: boolean;
+  missedDays?: boolean;
+  joinedCheckboxes?: boolean;
+  streakNumbers?: boolean;
+  roundCheckboxes?: boolean;
+  connectorThickness?: number;
 };
 export type DeletedHabit = {
   habit: Habit;
@@ -82,7 +88,14 @@ export type Change =
   // before is null until the first choice, so defaults can change freely.
   | { kind: 'themeMode'; before: ThemeMode | null; after: ThemeMode }
   | { kind: 'darkBackground'; before: string | null; after: string }
-  | { kind: 'lightBackground'; before: string | null; after: string };
+  | { kind: 'lightBackground'; before: string | null; after: string }
+  // v20: cell look; before is null until the first choice.
+  | { kind: 'todayOutlines'; before: boolean | null; after: boolean }
+  | { kind: 'missedDays'; before: boolean | null; after: boolean }
+  | { kind: 'joinedCheckboxes'; before: boolean | null; after: boolean }
+  | { kind: 'streakNumbers'; before: boolean | null; after: boolean }
+  | { kind: 'roundCheckboxes'; before: boolean | null; after: boolean }
+  | { kind: 'connectorThickness'; before: number | null; after: number };
 export type PreferenceChange = Extract<
   Change,
   {
@@ -104,7 +117,13 @@ export type PreferenceChange = Extract<
       | 'hideCompleted'
       | 'themeMode'
       | 'darkBackground'
-      | 'lightBackground';
+      | 'lightBackground'
+      | 'todayOutlines'
+      | 'missedDays'
+      | 'joinedCheckboxes'
+      | 'streakNumbers'
+      | 'roundCheckboxes'
+      | 'connectorThickness';
   }
 >;
 export type HabitChange = Exclude<Change, PreferenceChange>;
@@ -128,7 +147,8 @@ export type EventMeta = {
     | 16
     | 17
     | 18
-    | 19;
+    | 19
+    | 20;
   id: string;
   sequence: number;
   recordedAt: string;
@@ -158,7 +178,8 @@ export type CurrentChangeEvent = EventMeta & {
     | 16
     | 17
     | 18
-    | 19;
+    | 19
+    | 20;
 } & (
     | { type: 'change'; groupId: string; change: HabitChange }
     | { type: 'undo' | 'redo'; targetId: string; change: HabitChange }
@@ -201,4 +222,5 @@ export type Replay = {
   hasV17: boolean;
   hasV18: boolean;
   hasV19: boolean;
+  hasV20: boolean;
 };

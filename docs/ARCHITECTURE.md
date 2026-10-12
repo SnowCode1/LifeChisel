@@ -186,7 +186,7 @@ see [PERFORMANCE.md](PERFORMANCE.md).
 | HabitGrid               | Measured outer width, names, rows, vertical scrolling, reorder controls, toolbar and the date picker            |
 | useGridDates            | Settled rightmost day, unlocked future, month/year label, Today/date/future navigation and resize anchoring     |
 | useCanvasGridScroll     | Gesture-handler pan on the UI thread: drag, release, rubber band, pull threshold and arrivals                   |
-| gridMotion, withFling   | Release planning (momentum landing exactly on a column, springs, edge bounces) and the animation that runs it   |
+| gridMotion, withFling   | Release planning (momentum landing exactly on a column, springs, edge stops) and the animation that runs it     |
 | useGridModel            | JS-thread cell records in 30-day chunks around the visible dates, Skia paragraphs, updates on changed days      |
 | useCanvasGrid           | Heading and cell canvases, Today pill, week shading, streak, tap hit testing, pressed highlight, checkbox pulse |
 | GridAccessibilityLayer  | Invisible native views giving visible cells and headings their roles, states, labels and actions                |
@@ -247,8 +247,9 @@ month/year label and the Today action. A touch on momentum faster than 0.15
 points per millisecond only stops it; it never checks a box or opens a dialog.
 
 The Today/future boundary sits at −unlocked future × column. A fling that would
-pass it decelerates to the boundary, overshoots briefly (at most 80 points) and
-springs back, as native iOS lists do; this bounce never reveals dates. Both platforms use the same iOS-style pull: dragging past the
+pass it decelerates harder so it stops exactly at the boundary, easing out over
+at least a 45 ms time constant, without overshooting or bouncing: momentum alone
+never crosses it, only a finger pulling past. Both platforms use the same iOS-style pull: dragging past the
 boundary moves the columns with rubber-band resistance, the heading streak grows
 with the pull, and the threshold haptic fires once at 64 points. Releasing past
 64 points unlocks 30 more future days (`FUTURE_BATCH`) and animates by the

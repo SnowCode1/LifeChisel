@@ -1,5 +1,9 @@
 import { useState } from 'react';
-import type { CheckboxStyle, WeekStart } from './displayPreferences.ts';
+import type {
+  CellLook,
+  CheckboxStyle,
+  WeekStart,
+} from './displayPreferences.ts';
 import type { GridSize } from './gridSizing.ts';
 import type { Theme } from './theme.ts';
 
@@ -11,6 +15,8 @@ export type GridDisplayPreferences = {
   columnWidth: GridSize;
   rowHeight: GridSize;
   checkboxStyle: CheckboxStyle;
+  // Memoized by its fields, so an unchanged look keeps its identity.
+  cellLook: CellLook;
   weekDividers: boolean;
   tapAnimations: boolean;
   weekStart: WeekStart;

@@ -247,7 +247,7 @@ test('backup round trip retains deletion and exact undo data; restore keeps a re
     meta(1).recordedAt,
     digest,
   );
-  assert.equal(JSON.parse(encoded).version, 19);
+  assert.equal(JSON.parse(encoded).version, 20);
   const decoded = await decodeArchive(encoded, digest);
   assert.deepEqual(decoded.replay.state, f.store.getSnapshot().replay.state);
   f.store.undo();
@@ -321,7 +321,7 @@ test('deletion validates full records, exact position/definition, archived state
     () =>
       applyEvent(f.store.getSnapshot().replay, {
         ...meta(event.sequence + 1),
-        version: 19,
+        version: 20,
         type: 'undo',
         targetId: event.id,
         change: { ...inverse(change), index: 1 },
@@ -339,7 +339,7 @@ test('deletion validates full records, exact position/definition, archived state
           change: { kind: 'haptics', before: true, after: false },
         },
       ]),
-    /version-19/,
+    /version-20/,
   );
   await f.store.flush();
 });

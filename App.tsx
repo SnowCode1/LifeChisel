@@ -13,6 +13,7 @@ import { applyPlaceholderDescriptions } from './src/storage/presetDescriptions';
 import {
   displayDefaults,
   effectiveColumnSpacing,
+  cellLookOf,
 } from './src/displayPreferences';
 import { useGridDisplayPreferences } from './src/useGridDisplayPreferences';
 import { gridSizing } from './src/gridSizing';
@@ -230,6 +231,34 @@ function PersistentApp({
     darkBackground = displayDefaults.darkBackground,
     lightBackground = displayDefaults.lightBackground,
   } = snapshot.replay.state;
+  const {
+    todayOutlines,
+    missedDays,
+    joinedCheckboxes,
+    streakNumbers,
+    roundCheckboxes,
+    connectorThickness,
+  } = snapshot.replay.state;
+  // One object per distinct look, so save acknowledgements keep its identity.
+  const cellLook = useMemo(
+    () =>
+      cellLookOf({
+        todayOutlines,
+        missedDays,
+        joinedCheckboxes,
+        streakNumbers,
+        roundCheckboxes,
+        connectorThickness,
+      }),
+    [
+      todayOutlines,
+      missedDays,
+      joinedCheckboxes,
+      streakNumbers,
+      roundCheckboxes,
+      connectorThickness,
+    ],
+  );
   const theme = themeFor(
     themeMode,
     useColorScheme(),
@@ -270,6 +299,7 @@ function PersistentApp({
       textScale,
       hideCompleted,
       checkboxStyle,
+      cellLook,
       weekDividers,
       tapAnimations,
       weekStart,
@@ -676,6 +706,13 @@ function PersistentApp({
           if (store.change({ kind: 'tapAnimations', before, after }))
             feedback('selection');
         }}
+        cellLook={cellLook}
+        onCellLookChange={(kind, after) => {
+          if (!editable) return;
+          const before = store.getSnapshot().replay.state[kind] ?? null;
+          if (store.change({ kind, before, after } as Change))
+            feedback('selection');
+        }}
         checkboxStyle={checkboxStyle}
         onCheckboxStyleChange={(after) => {
           if (!editable) return;
@@ -791,6 +828,7 @@ function PersistentApp({
                         weekDividers={gridDisplay.weekDividers}
                         tapAnimations={gridDisplay.tapAnimations}
                         checkboxStyle={gridDisplay.checkboxStyle}
+                        cellLook={gridDisplay.cellLook}
                         weekStart={gridDisplay.weekStart}
                         hideCompleted={gridDisplay.hideCompleted}
                         sampleData={sampleData}

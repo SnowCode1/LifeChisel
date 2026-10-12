@@ -41,6 +41,63 @@ export const displayDefaults = {
   darkBackground: defaultBackgrounds.dark,
   lightBackground: defaultBackgrounds.light,
 } as const;
+/**
+ * Cell look (v20): optional ways to draw grid cells, chosen in Settings →
+ * Appearance. Stored with `before: null` until first chosen, so these defaults
+ * stay display rules that can change without rewriting saved data.
+ */
+export type CellLook = {
+  /** Empty checkboxes and "—" placeholders only in the Today column. */
+  todayOutlines: boolean;
+  /** A quiet cross on past scheduled days that missed; off days stay blank. */
+  missedDays: boolean;
+  /** Consecutive checked boxes joined by a bar (checkbox style). */
+  joinedCheckboxes: boolean;
+  /** Checked boxes show their streak position instead of a tick. */
+  streakNumbers: boolean;
+  /** Circular checkboxes (checkbox style). */
+  roundCheckboxes: boolean;
+  /** Joining bar height, percent of the checkbox (20–100 in steps of 5). */
+  connectorThickness: number;
+};
+export type CellLookKind = keyof CellLook;
+export const cellLookDefaults: CellLook = {
+  todayOutlines: false,
+  missedDays: false,
+  joinedCheckboxes: false,
+  streakNumbers: false,
+  roundCheckboxes: false,
+  connectorThickness: 55,
+};
+export const cellLookToggles = [
+  'todayOutlines',
+  'missedDays',
+  'joinedCheckboxes',
+  'streakNumbers',
+  'roundCheckboxes',
+] as const;
+export function isConnectorThickness(value: unknown): value is number {
+  return (
+    typeof value === 'number' &&
+    Number.isInteger(value) &&
+    value >= 20 &&
+    value <= 100 &&
+    value % 5 === 0
+  );
+}
+/** Saved cell look with defaults for choices never made. */
+export function cellLookOf(state: Partial<CellLook>): CellLook {
+  return {
+    todayOutlines: state.todayOutlines ?? cellLookDefaults.todayOutlines,
+    missedDays: state.missedDays ?? cellLookDefaults.missedDays,
+    joinedCheckboxes:
+      state.joinedCheckboxes ?? cellLookDefaults.joinedCheckboxes,
+    streakNumbers: state.streakNumbers ?? cellLookDefaults.streakNumbers,
+    roundCheckboxes: state.roundCheckboxes ?? cellLookDefaults.roundCheckboxes,
+    connectorThickness:
+      state.connectorThickness ?? cellLookDefaults.connectorThickness,
+  };
+}
 export function weekDayOrder(start: WeekStart): number[] {
   return Array.from(
     { length: 7 },

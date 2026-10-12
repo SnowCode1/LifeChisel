@@ -21,7 +21,13 @@ export function isPreference(change: Change): change is PreferenceChange {
     change.kind === 'hideCompleted' ||
     change.kind === 'themeMode' ||
     change.kind === 'darkBackground' ||
-    change.kind === 'lightBackground'
+    change.kind === 'lightBackground' ||
+    change.kind === 'todayOutlines' ||
+    change.kind === 'missedDays' ||
+    change.kind === 'joinedCheckboxes' ||
+    change.kind === 'streakNumbers' ||
+    change.kind === 'roundCheckboxes' ||
+    change.kind === 'connectorThickness'
   );
 }
 export function sameValue(left: unknown, right: unknown): boolean {

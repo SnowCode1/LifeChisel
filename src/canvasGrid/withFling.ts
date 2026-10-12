@@ -53,7 +53,7 @@ export function withFling(
       callback,
       // Reanimated skips an animation whose `current` equals the value before
       // onStart (built-ins keep their target there). NaN never matches, so a
-      // bounce that starts and ends on the same column still runs.
+      // fling that starts and ends on the same column still runs.
       current: NaN,
       toValue: fling.rest,
       startTime: 0,

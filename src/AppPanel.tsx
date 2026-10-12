@@ -1,4 +1,9 @@
-import { type CheckboxStyle, type WeekStart } from './displayPreferences';
+import {
+  type CheckboxStyle,
+  type WeekStart,
+  type CellLook,
+  type CellLookKind,
+} from './displayPreferences';
 import type { GridSize, GridSizeKind, GridSizing } from './gridSizing';
 import { useState, type ComponentType, type ReactNode } from 'react';
 import {
@@ -38,6 +43,8 @@ export function AppPanel({
   onTapAnimationsChange,
   checkboxStyle,
   onCheckboxStyleChange,
+  cellLook,
+  onCellLookChange,
   textScale,
   onTextScaleChange,
   hideCompleted,
@@ -84,6 +91,11 @@ export function AppPanel({
   onTapAnimationsChange: (value: boolean) => void;
   checkboxStyle: CheckboxStyle;
   onCheckboxStyleChange: (value: CheckboxStyle) => void;
+  cellLook: CellLook;
+  onCellLookChange: <K extends CellLookKind>(
+    kind: K,
+    value: CellLook[K],
+  ) => void;
   textScale: number;
   onTextScaleChange: (value: number) => void;
   hideCompleted: boolean;
@@ -234,6 +246,8 @@ export function AppPanel({
                   onTapAnimationsChange={onTapAnimationsChange}
                   checkboxStyle={checkboxStyle}
                   onCheckboxStyleChange={onCheckboxStyleChange}
+                  cellLook={cellLook}
+                  onCellLookChange={onCellLookChange}
                   hideCompleted={hideCompleted}
                   onHideCompletedChange={onHideCompletedChange}
                   hapticsEnabled={hapticsEnabled}

@@ -1915,3 +1915,33 @@ signing and device enrolment are still prerequisites, not completed deployment.
   iPhone builds may run at 120 Hz; Expo Go stays at 60 on the iPhone.
 - Supersedes the decay-then-snap release described in
   [Skia canvas grid](#12-october-2026--skia-canvas-grid).
+- Founder revision the same day: momentum alone must not pass the Today
+  boundary, only a finger. A fling toward it now decelerates harder to stop
+  exactly at the boundary (time constant at least 45 ms) instead of
+  overshooting and bouncing back; the edge bounce above is superseded.
+
+## 12 October 2026 — Grid look experiments
+
+- Founder decision: try alternative cell looks side by side before choosing:
+  empty checkboxes and "—" only in the Today column; a quiet cross on past
+  scheduled days that missed a daily goal, with unscheduled days left blank;
+  consecutive checked boxes joined by a bar thinner than the boxes while cell
+  backgrounds stay full squares (revising a first version that joined the met
+  backgrounds into rounded bands); a bar thickness control (first 70%, then
+  thinner); streak positions in checked boxes instead of ticks, from 1 on every
+  streak's first box; and circular checkboxes.
+- Founder requests: a tap that makes or breaks a join animates it (220 ms) —
+  the bar grows out of the neighbouring box into the tapped one or retracts
+  into the neighbour — and the box it reaches bumps briefly to 1.07 at the
+  moment of contact (not when the animation ends); missed-day crosses smaller.
+- Founder decision: do not shade cells by progress toward a numeric goal; it
+  confuses the grid and makes values harder to read. A Loop-style glyph-only
+  grid with no fills is unnecessary.
+- Founder decision (same day): make Streak numbers separate from Joined
+  checkboxes, and move all of these from development switches into
+  Settings → Appearance → Cells as saved preferences (storage v20, `before:
+null` until chosen). Defaults are still to be chosen; all start Off with a
+  55% connector.
+- Assistant implementation: `CellState.schedule` (due, off or none; period
+  quotas and tracking-only habits are never missed per day) feeds the canvas;
+  `checkedStreak` counts streaks from saved values.

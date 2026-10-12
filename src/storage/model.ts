@@ -52,6 +52,7 @@ export const emptyReplay = (): Replay => ({
   hasV17: false,
   hasV18: false,
   hasV19: false,
+  hasV20: false,
 });
 export const GROUP_INACTIVITY_MS = 2 * 60 * 1000;
 
@@ -179,6 +180,7 @@ function reduceEvent(
       hasV17: event.version >= 17,
       hasV18: event.version >= 18,
       hasV19: event.version >= 19,
+      hasV20: event.version >= 20,
     };
   }
   insist(
@@ -224,6 +226,10 @@ function reduceEvent(
   insist(
     !previous.hasV11 || event.version >= 11,
     'Older events cannot follow version-11 events.',
+  );
+  insist(
+    !previous.hasV20 || event.version >= 20,
+    'Older events cannot follow version-20 events.',
   );
   insist(
     !previous.hasV19 || event.version >= 19,
@@ -409,6 +415,7 @@ function reduceEvent(
     hasV17: previous.hasV17 || event.version >= 17,
     hasV18: previous.hasV18 || event.version >= 18,
     hasV19: previous.hasV19 || event.version >= 19,
+    hasV20: previous.hasV20 || event.version >= 20,
   };
 }
 const firstThemeDefaults = {
@@ -423,7 +430,7 @@ function reduceChange(
   state: StoredState,
   change: Change,
   mutable: boolean,
-  version = 19,
+  version = 20,
 ): StoredState {
   validateChange(change, version);
   let next: StoredState;
@@ -463,6 +470,21 @@ function reduceChange(
         ? change.before === null ||
             change.before === firstThemeDefaults[change.kind]
         : stored === change.before,
+      'Preference precondition failed.',
+    );
+    next = { ...state, [change.kind]: change.after };
+  } else if (
+    change.kind === 'todayOutlines' ||
+    change.kind === 'missedDays' ||
+    change.kind === 'joinedCheckboxes' ||
+    change.kind === 'streakNumbers' ||
+    change.kind === 'roundCheckboxes' ||
+    change.kind === 'connectorThickness'
+  ) {
+    // `before` is null until the first choice, so defaults stay display rules.
+    const stored = state[change.kind];
+    insist(
+      stored === undefined ? change.before === null : stored === change.before,
       'Preference precondition failed.',
     );
     next = { ...state, [change.kind]: change.after };
@@ -639,7 +661,24 @@ export function replayEvents(input: unknown): {
   }
   return { events, replay };
 }
+const cellLookNames = {
+  todayOutlines: 'Outlines only on Today',
+  missedDays: 'Missed days',
+  joinedCheckboxes: 'Joined checkboxes',
+  streakNumbers: 'Streak numbers',
+  roundCheckboxes: 'Round checkboxes',
+} as const;
 export function describeChange(change: Change, state: StoredState): string {
+  if (change.kind === 'connectorThickness')
+    return `Connector thickness · ${change.after}%`;
+  if (
+    change.kind === 'todayOutlines' ||
+    change.kind === 'missedDays' ||
+    change.kind === 'joinedCheckboxes' ||
+    change.kind === 'streakNumbers' ||
+    change.kind === 'roundCheckboxes'
+  )
+    return `${cellLookNames[change.kind]} ${change.after ? 'on' : 'off'}`;
   if (change.kind === 'themeMode') return `Theme · ${change.after}`;
   if (change.kind === 'darkBackground')
     return `Dark background · ${change.after}`;

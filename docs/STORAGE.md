@@ -36,7 +36,7 @@ physical iPhone.
 
 ### Example event
 
-This entry event comes from [the v19 fixture](examples/storage-v19.json). It was
+This entry event comes from [the v20 fixture](examples/storage-v20.json). It was
 written at version 6 and still replays unchanged.
 
 ```json
@@ -81,8 +81,8 @@ introduced each feature.
 | Number                     | Where it lives     | Current | Meaning                                                                                                                                            |
 | -------------------------- | ------------------ | ------: | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 | SQL `PRAGMA user_version`  | SQLite database    |       1 | Table layout. Changes only through an explicit migration.                                                                                          |
-| Event `version`            | Each event         |      19 | Format the event was written in. Old events keep their version and that version's rules. Replay accepts 1–19; a log never returns to an older one. |
-| Export container `version` | Backup JSON header |      19 | Format of the export file. The importer accepts 1–19, and a container cannot hold events newer than its own version.                               |
+| Event `version`            | Each event         |      20 | Format the event was written in. Old events keep their version and that version's rules. Replay accepts 1–20; a log never returns to an older one. |
+| Export container `version` | Backup JSON header |      20 | Format of the export file. The importer accepts 1–20, and a container cannot hold events newer than its own version.                               |
 
 ### Glossary
 
@@ -355,7 +355,7 @@ pending saves and captures a stable log. The export is a readable JSON container
 of **changes**, not a replacement snapshot of habit/day values. Every event
 version has a synthetic example in [docs/examples](examples/), from
 [the unchanged version-1 fixture](examples/storage-v1.json) to
-[the newest fixture](examples/storage-v19.json); see
+[the newest fixture](examples/storage-v20.json); see
 [Version history](#version-history).
 
 The container has `format: "onpurpose.changes"`, `version`, `exportedAt`,
@@ -484,6 +484,7 @@ version, older events cannot follow it.
 |      17 | `nameColumnWidth` and revised `columnDensity` preferences                                |
 |      18 | `gridNameWidth`, `gridColumnWidth` and `gridRowHeight` size preferences                  |
 |      19 | `themeMode`, `darkBackground` and `lightBackground` preferences                          |
+|      20 | Cell look preferences (`todayOutlines` … `connectorThickness`)                           |
 
 ### Version 1: the original log
 
@@ -731,6 +732,21 @@ and use the ordinary serialized write/restore path. Saved habit colours are
 never rewritten: other backgrounds only change how a colour is displayed. The
 [v19 fixture](examples/storage-v19.json) extends the v18 prefix with Light
 theme, a White light background and a custom navy dark background.
+
+### Version 20: cell look
+
+Six preferences choose how grid cells are drawn: the booleans `todayOutlines`,
+`missedDays`, `joinedCheckboxes`, `streakNumbers` and `roundCheckboxes`, and
+`connectorThickness`, an integer percent of the checkbox height from 20 to 100
+in steps of 5. As with the v18 sizes and v19 theme, `before` is `null` until
+the first choice, so the defaults (all off, 55%) are a rendering rule that can
+change without touching stored events (`cellLookDefaults`). Older event
+versions reject these kinds.
+
+The preferences stay outside History/Undo, preserve Redo and correction groups,
+and use the ordinary serialized write/restore path. The
+[v20 fixture](examples/storage-v20.json) extends the v19 prefix by turning on
+every cell look and setting a 50% connector.
 
 ## References
 

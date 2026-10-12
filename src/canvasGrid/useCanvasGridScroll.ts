@@ -55,7 +55,7 @@ export function useCanvasGridScroll({
     'worklet';
     runOnJS(onSettle)(rightmostDayAt(target, column));
   }
-  // Momentum, edge bounces and snapping are one planned curve that ends
+  // Momentum, edge stops and snapping are one planned curve that ends
   // exactly on a column (see gridMotion.ts).
   function release(velocity: number) {
     'worklet';
