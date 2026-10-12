@@ -6,9 +6,11 @@ There is no signed build, App Store Connect record or in-app purchase, and
 `eas.json` only prepares an internal preview profile. Requirements were checked
 on 4 October 2026; recheck them before acting.
 
-Release is iOS-first. Android is tested through Expo Go over USB, and its
-release scope is undecided (see the 8 October 2026 Android entry in
-[DECISIONS.md](DECISIONS.md)).
+Which platform launches first is undecided (see the 12 October 2026 entry in
+[DECISIONS.md](DECISIONS.md)). The iPhone release matters more; launching on
+Android first is cheaper, since Google Play registration is a one-time US$25
+against US$99 a year for Apple. This guide covers the App Store path; the Google
+Play path is not yet documented here.
 
 ## 1. Validate on the phone
 

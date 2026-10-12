@@ -12,6 +12,12 @@ Current storage writers and backup exports are v19 with SQL schema 1;
 when a feature's fields arrived, and each older version must keep replaying
 unchanged.
 
+Maintainer-only planning (launch, legal, business) lives in the gitignored
+`private/` folder, for example `private/LAUNCH_PLAN.md`. Read it for launch
+context when present. It is a working draft, not confirmed scope, so confirm with
+the founder before acting on it, and never copy its contents into tracked files,
+commit messages or pull requests.
+
 ## Duplicate messages
 
 The Codex client sometimes repeats a user message. When a message clearly
@@ -156,8 +162,9 @@ preserve earlier icon choices/removals and raw history.
 - `src/habits.ts` contains demo habits/colours. `index.ts` registers the app.
 - `app.json` owns Expo configuration. Generated native folders stay ignored.
 - Development happens on Linux and Windows (no Mac); a physical iPhone is the primary test device.
-  Android testing over USB/adb started 8 October 2026; iOS remains the release
-  target. Keep iOS behaviour unchanged when adapting a screen for Android.
+  Android testing over USB/adb started 8 October 2026. Which platform launches
+  first is undecided; the iPhone release matters more. Keep iOS behaviour
+  unchanged when adapting a screen for Android.
 - Use `npx expo install <package>` for Expo/native dependencies to match the SDK.
 - Keep dependencies and architecture small. Add structure when a feature needs it.
 - Use functional state updates when new state depends on previous state.

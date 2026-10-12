@@ -5,9 +5,9 @@ the top, and a tap to record. The aim is to make tracking so quick that it
 becomes a seamless part of the day. Open the app, tap a familiar position, and
 get on with life.
 
-**Status: early development.** The app is not yet on the App Store and the name
-is provisional. iPhone is the release target; Android is used for testing. Data
-stays on the device: there is no account, server or sync.
+**Status: early development.** The app is not yet in any app store and the name
+is provisional. It runs on iPhone and Android; which launches first is still
+being decided. Data stays on the device: there is no account, server or sync.
 
 ## Features
 

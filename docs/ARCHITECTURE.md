@@ -12,8 +12,8 @@ OnPurpose is one React Native screen written in strict TypeScript on Expo SDK 57
 The home view is the habit-by-day grid. History, Settings, Notes/Statistics and
 the editors open as native sheets or dialogs above it, so the grid stays mounted
 underneath. There is no navigation library, backend, account flow, scheduler or
-analytics SDK. iOS is the release target; Android runs for device testing; web is
-a layout preview.
+analytics SDK. It runs on iOS and Android devices (which launches first is
+undecided); web is a layout preview.
 
 ```text
 UI       App.tsx: screen state, dialogs and nested native sheets
@@ -561,9 +561,9 @@ output.
 
 ## Platform differences
 
-iOS is the release target. Android testing started on 8 October 2026 and is not
-part of the committed release scope (see [DECISIONS.md](DECISIONS.md)). Keep iOS
-behaviour unchanged when adapting a screen for Android.
+Android testing started on 8 October 2026. Which platform launches first is
+undecided (see [DECISIONS.md](DECISIONS.md)). Keep iOS behaviour unchanged when
+adapting a screen for Android.
 
 | Area               | iOS                                 | Android                                                         | Web (layout preview)  |
 | ------------------ | ----------------------------------- | --------------------------------------------------------------- | --------------------- |
@@ -612,8 +612,8 @@ checks.
 
 - **Local only.** No backend, account or sync. Data lives on one device; backups
   are manual exports. Revisit a backend only if agreed requirements need it.
-- **Android is for testing.** It is not in the release scope, and current Android
-  runs use Expo Go.
+- **No store builds yet.** Both platforms currently run in Expo Go; no signed
+  iOS or Android build exists.
 - **Storage cost per edit.** Each edit revalidates and rewrites the whole
   projection JSON, and startup replays the full log. Native timing with long
   histories is unmeasured; see [PERFORMANCE.md](PERFORMANCE.md).

@@ -22,9 +22,11 @@ and uncertainty about whether something was saved.
 
 ### Scope, licence and business model
 
-- Build an iOS habit tracker intended for an actual App Store release.
-- Release iOS first. An Android phone is used for testing; Android release is a
-  later founder decision. Development happens on Linux and Windows without a Mac,
+- Build a habit tracker intended for actual store releases on iPhone and
+  Android.
+- Which platform launches first is undecided (12 October 2026): the iPhone
+  release matters more, while launching on Android first is cheaper. An Android
+  phone is used for testing alongside the iPhone. Development happens on Linux and Windows without a Mac,
   and the physical iPhone (an iPhone 16 Pro) is the primary test device.
 - Release the source under GPLv3 or later, with the founder as sole copyright
   holder. The repository is public at https://github.com/SnowCode1/OnPurpose.
@@ -275,7 +277,7 @@ The following capabilities are desired; their milestone order is proposed.
 ## Deferred candidates, not permanent exclusions
 
 Cloud sync and any backend, accounts, social features, leaderboards, coaching,
-AI features, reminders, widgets, Apple Watch, and Android release support. Each
+AI features, reminders, widgets and Apple Watch. Each
 needs a concrete reason to enter the first release. Statistics, numeric habits,
 comments, and incremental history are desired scope, not excluded candidates.
 
@@ -319,16 +321,17 @@ Permanent erasure of deleted data is also deferred.
 
 ## Next suggested work
 
-1. Work through the iPhone acceptance backlog in [TESTING.md](docs/TESTING.md),
+1. Decide which platform launches first; it sets the order of the steps below.
+2. Work through the iPhone acceptance backlog in [TESTING.md](docs/TESTING.md),
    starting with backup restore and older Undo, before relying on the app daily.
-2. Set up internal builds and TestFlight: the Expo project, a provisional bundle
-   identifier, Apple Developer membership and signing.
-3. Decide the free-tier limit (an active-habit cap or a free trial) and build the
+3. Set up internal builds and store testing: the Expo project, a provisional
+   bundle identifier, the developer accounts and signing.
+4. Decide the free-tier limit (an active-habit cap or a free trial) and build the
    in-app unlock, which needs a development build rather than Expo Go.
-4. Discuss an explicit “skipped/not applicable” value before relying on streaks,
+5. Discuss an explicit “skipped/not applicable” value before relying on streaks,
    so intentionally skipping a habit need not look like a missed day.
-5. Design comments, including whether they attach to a habit, a day or an entry.
-6. Choose the final name and bundle identifier before App Store submission.
+6. Design comments, including whether they attach to a habit, a day or an entry.
+7. Choose the final name and bundle identifier before store submission.
 
 This ordering is an assistant proposal, not an approved requirement. Keep further
 ideas connected to reducing cognitive friction rather than adding screen clutter.

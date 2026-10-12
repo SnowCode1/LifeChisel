@@ -173,8 +173,8 @@ The native bridge, Files UI and phone interactions still need phone testing; see
 
 ## Android phone over USB
 
-iOS remains the release target until Android release scope is decided (see the
-8 October 2026 Android entry in [DECISIONS.md](DECISIONS.md)). Unlike an iPhone,
+Which platform launches first is undecided (see the 12 October 2026 entry in
+[DECISIONS.md](DECISIONS.md)). Unlike an iPhone,
 an Android phone can be driven from Linux or Windows: `adb` (Android Debug
 Bridge) lets the computer, and an AI assistant with terminal access, install,
 open, screenshot and read logs from a USB-connected phone.

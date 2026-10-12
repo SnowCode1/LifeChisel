@@ -86,7 +86,7 @@ See "Known dependency audit findings" in [DEVELOPMENT.md](DEVELOPMENT.md).
 Connect a phone as described in [DEVELOPMENT.md](DEVELOPMENT.md) ("First run on
 the iPhone" and "Android phone over USB"). Test devices so far:
 
-- **iPhone 16 Pro** in Expo Go: the primary test device; iOS is the release target.
+- **iPhone 16 Pro** in Expo Go: the primary test device.
 - **Samsung Galaxy S21** (SM-G991B), Android 15 (API 35), One UI 7, Expo Go
   57.0.9, over USB with adb since 8 October 2026.
 

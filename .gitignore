@@ -44,3 +44,6 @@ credentials.json
 # generated native folders
 /ios
 /android
+
+# maintainer-only planning (launch, legal, business); never committed
+/private/

@@ -1432,6 +1432,7 @@ signing and device enrolment are still prerequisites, not completed deployment.
 - Founder asked to support porting and testing on Android, starting with an
   older Android phone over USB alongside the iPhone. Release scope is unchanged:
   iOS remains the committed target until the founder decides on Android release.
+  Reopened 12 October 2026: the launch order is undecided (see that entry).
 - Assistant setup: Expo Go on Android for the first runs, with `adb` for
   screenshots and crash logs from Linux (Windows has since been used as well).
   Added `export:android`, `android` and
@@ -1724,3 +1725,13 @@ signing and device enrolment are still prerequisites, not completed deployment.
   scanned only while the calendar is open. Node timing (not a phone measurement)
   for 20,000 synthetic actions: about 7 ms uncached, 2 ms cached, 0.1 ms for 40
   days.
+
+## 12 October 2026 — Launch platform order reopened
+
+- Founder: which platform launches first is undecided. The iPhone release
+  matters more; launching on Android first is cheaper, since Google Play
+  registration is a one-time US$25 against US$99 a year for the Apple Developer
+  Program. This replaces the iOS-first statement in the 8 October 2026 entry.
+- Unchanged: both platforms are tested on real phones, and screens adapted for
+  Android keep iOS behaviour unchanged. RELEASING.md covers the App Store path;
+  the Google Play path is not yet documented.
