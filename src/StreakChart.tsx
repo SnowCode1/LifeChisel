@@ -2,16 +2,19 @@ import { View } from 'react-native';
 import { Path, Rect, Text as SvgText } from 'react-native-svg';
 import { Text } from './Typography';
 import { ChartFrame, type ChartSlot } from './ChartFrame';
-import { checkmarkColor } from './colors';
-import type { WeekStart } from './displayPreferences';
-import { dateKey } from './statistics';
-import { statisticSpanLabel, statisticTickLabel } from './statisticsFormatting';
+import { checkmarkColor } from '@onpurpose/core/colors';
+import type { WeekStart } from '@onpurpose/core/displayPreferences';
+import { dateKey } from '@onpurpose/core/statistics';
+import {
+  statisticSpanLabel,
+  statisticTickLabel,
+} from '@onpurpose/core/statisticsFormatting';
 import {
   streakRows,
   timeTicks,
   type StreakRow as Row,
   type StreakRun,
-} from './statsSeries';
+} from '@onpurpose/core/statsSeries';
 import { themedStyles, useTheme } from './ThemeContext';
 
 const HEADING = 20;

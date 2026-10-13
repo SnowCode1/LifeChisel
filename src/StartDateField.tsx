@@ -2,9 +2,9 @@ import { Text, TextInput } from './Typography';
 import { useState } from 'react';
 import { Platform, Pressable, View } from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { localDateKey } from './calendar';
+import { localDateKey } from '@onpurpose/core/calendar';
 import { DateCalendar } from './DateCalendar';
-import type { WeekStart } from './displayPreferences';
+import type { WeekStart } from '@onpurpose/core/displayPreferences';
 import { useTheme } from './ThemeContext';
 
 export type StartDateFieldProps = {

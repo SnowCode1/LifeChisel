@@ -7,7 +7,7 @@ import {
   TEXT_SCALE_MIN,
   TEXT_SCALE_MAX,
   TEXT_SCALE_STEP,
-} from './textSize';
+} from '@onpurpose/core/textSize';
 import { useTheme } from './ThemeContext';
 
 export function TextSizeSetting({

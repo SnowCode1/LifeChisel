@@ -1,6 +1,6 @@
 import { createContext, useContext, type ReactNode } from 'react';
 import { StyleSheet } from 'react-native';
-import { blackTheme, type Theme } from './theme';
+import { blackTheme, type Theme } from '@onpurpose/core/theme';
 
 const ThemeContext = createContext<Theme>(blackTheme);
 export function ThemeProvider({

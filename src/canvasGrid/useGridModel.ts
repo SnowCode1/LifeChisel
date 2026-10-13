@@ -11,16 +11,16 @@ import {
   useSharedValue,
   type SharedValue,
 } from 'react-native-reanimated';
-import type { EntryValue } from '../entries';
-import { ordinal, timingDate } from '../goalTiming';
+import type { EntryValue } from '@onpurpose/core/entries';
+import { ordinal, timingDate } from '@onpurpose/core/goalTiming';
 import {
   GRID_ENTRY_FONT_SIZE,
   GRID_ENTRY_LINE_HEIGHT,
   gridEntryTextLines,
 } from '../gridEntryText';
-import type { GridPalette } from '../gridAppearance';
-import type { Habit } from '../habits';
-import type { ChangeStore } from '../storage/store';
+import type { GridPalette } from '@onpurpose/core/gridAppearance';
+import type { Habit } from '@onpurpose/core/habits';
+import type { ChangeStore } from '@onpurpose/core/storage/store';
 import { cellState, checkedStreak } from './cellAccessibility';
 import { checkboxGeometry } from './gridGeometry';
 

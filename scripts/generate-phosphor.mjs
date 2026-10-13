@@ -5,7 +5,7 @@ import { readFile, writeFile, readdir } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { format } from 'prettier';
-import { commonHabitIcons } from '../src/commonHabitIcons.ts';
+import { commonHabitIcons } from '../packages/core/src/commonHabitIcons.ts';
 
 const directory = resolve(process.argv[2] ?? '.dev/phosphor/package');
 const pkg = JSON.parse(await readFile(join(directory, 'package.json'), 'utf8'));
@@ -75,7 +75,7 @@ for (const [name, source] of [
   ],
 ]) {
   await writeFile(
-    new URL(`../src/${name}`, import.meta.url),
+    new URL(`../packages/core/src/${name}`, import.meta.url),
     await format(header + source, { parser: 'typescript', singleQuote: true }),
   );
 }

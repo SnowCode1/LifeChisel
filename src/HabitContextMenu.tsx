@@ -4,7 +4,7 @@ import Animated from 'react-native-reanimated';
 import { Text } from './Typography';
 import { Icon } from './Icon';
 import { appear, disappear, menuAppear } from './motion';
-import type { Habit } from './habits';
+import type { Habit } from '@onpurpose/core/habits';
 import type { HabitAction, HabitAnchor } from './HabitName';
 import { useTheme } from './ThemeContext';
 

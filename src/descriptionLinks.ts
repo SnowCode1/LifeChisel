@@ -1,5 +1,5 @@
 import { Alert, Linking } from 'react-native';
-import { descriptionLink } from './description';
+import { descriptionLink } from '@onpurpose/core/description';
 
 export async function openDescriptionLink(url: string): Promise<void> {
   const link = descriptionLink(url);

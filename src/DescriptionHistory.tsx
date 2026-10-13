@@ -22,9 +22,12 @@ import {
   descriptionChangeNavigator,
   type DescriptionScrollPort,
 } from './descriptionChangeNavigation';
-import { descriptionDiff, type DescriptionPassage } from './descriptionDiff';
+import {
+  descriptionDiff,
+  type DescriptionPassage,
+} from '@onpurpose/core/descriptionDiff';
 import { DescriptionText } from './DescriptionText';
-import type { HistoryAction, StoredState } from './storage/model';
+import type { HistoryAction, StoredState } from '@onpurpose/core/storage/model';
 import { useTheme } from './ThemeContext';
 
 export function DescriptionHistory({

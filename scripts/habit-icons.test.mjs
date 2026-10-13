@@ -4,10 +4,10 @@ import {
   isSingleEmoji,
   isHabitIcon,
   habitIconLabel,
-} from '../src/habitIcons.ts';
-import { habitIconCatalog } from '../src/habitIconCatalog.ts';
-import { phosphorPaths } from '../src/phosphorPaths.ts';
-import { historyPresentation } from '../src/history.ts';
+} from '../packages/core/src/habitIcons.ts';
+import { habitIconCatalog } from '../packages/core/src/habitIconCatalog.ts';
+import { phosphorPaths } from '../packages/core/src/phosphorPaths.ts';
+import { historyPresentation } from '../packages/core/src/history.ts';
 
 test('emoji validation accepts a whole emoji including skin tones, flags and joined sequences', () => {
   for (const value of ['💧', '🏋️', '🚶🏽‍♀️', '👩🏿‍💻', '👨‍👩‍👧‍👦', '🇦🇺', '1️⃣', '❤️']) {
@@ -79,8 +79,10 @@ test('history distinguishes icon-only changes and removal from combined habit ed
 });
 
 test('full regular catalogue preserves common choices and searches all icons by words, categories and aliases', async () => {
-  const { searchHabitIcons } = await import('../src/searchHabitIcons.ts');
-  const { commonHabitIcons } = await import('../src/commonHabitIcons.ts');
+  const { searchHabitIcons } =
+    await import('../packages/core/src/searchHabitIcons.ts');
+  const { commonHabitIcons } =
+    await import('../packages/core/src/commonHabitIcons.ts');
   assert.equal(habitIconCatalog.length, 1512);
   assert.deepEqual(
     searchHabitIcons('', false, 'phosphor').map((item) => item.id),
@@ -121,8 +123,9 @@ test('full regular catalogue preserves common choices and searches all icons by 
 });
 
 test('Tabler outline IDs and rendering attributes are complete and reject unknown values', async () => {
-  const { tablerIconCatalog } = await import('../src/tablerIconCatalog.ts');
-  const { tablerPaths } = await import('../src/tablerPaths.ts');
+  const { tablerIconCatalog } =
+    await import('../packages/core/src/tablerIconCatalog.ts');
+  const { tablerPaths } = await import('../packages/core/src/tablerPaths.ts');
   assert.equal(tablerIconCatalog.length, 5166);
   assert.equal(new Set(tablerIconCatalog.map((icon) => icon.id)).size, 5166);
   assert.deepEqual(
@@ -156,7 +159,7 @@ test('Tabler outline IDs and rendering attributes are complete and reject unknow
 
 test('shared search overrides browsing filters, preserves pack identity and finds habit vocabulary', async () => {
   const { searchHabitIcons, packIconCount } =
-    await import('../src/searchHabitIcons.ts');
+    await import('../packages/core/src/searchHabitIcons.ts');
   assert.equal(packIconCount, 6678);
   assert.equal(searchHabitIcons('', true).length, 6678);
   assert.equal(searchHabitIcons('', true, 'tabler').length, 5166);

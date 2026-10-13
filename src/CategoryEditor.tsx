@@ -12,12 +12,12 @@ import { randomUUID } from 'expo-crypto';
 import { Text, TextInput, useAppWindowDimensions } from './Typography';
 import { Icon } from './Icon';
 import { themedStyles, useTheme } from './ThemeContext';
-import type { HabitCategory } from './habits';
+import type { HabitCategory } from '@onpurpose/core/habits';
 import {
   MAX_CATEGORIES,
   MAX_CATEGORY_LABEL,
   MAX_CATEGORY_SHORT_LABEL,
-} from './entries';
+} from '@onpurpose/core/entries';
 
 export function CategoryEditor({
   categories,

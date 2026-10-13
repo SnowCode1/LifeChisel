@@ -4,8 +4,8 @@ import { DatabaseSync } from 'node:sqlite';
 import {
   createPerformanceRecorder,
   validPerformanceReport,
-} from '../src/performanceModel.ts';
-import { entrySelection } from '../src/storage/selection.ts';
+} from '../packages/core/src/performanceModel.ts';
+import { entrySelection } from '../packages/core/src/storage/selection.ts';
 import { performanceFixture, nodeSqlPort } from './performance-fixture.mjs';
 const plain = (value) => JSON.parse(JSON.stringify(value));
 const example = () => ({

@@ -1,5 +1,8 @@
 import { Profiler, type ReactNode } from 'react';
-import { performanceEnabled, recordPerformance } from './performance';
+import {
+  performanceEnabled,
+  recordPerformance,
+} from '@onpurpose/core/performance';
 
 export function PerformanceBoundary({
   name,

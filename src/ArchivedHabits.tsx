@@ -2,9 +2,9 @@ import { useMemo } from 'react';
 import {
   archivedHabitDetails,
   archivedRecordRange,
-} from './archivedHabitDetails';
-import { descriptionExcerpt } from './descriptionReading';
-import type { EntryValues } from './entries';
+} from '@onpurpose/core/archivedHabitDetails';
+import { descriptionExcerpt } from '@onpurpose/core/descriptionReading';
+import type { EntryValues } from '@onpurpose/core/entries';
 import { Text } from './Typography';
 import {
   Alert,
@@ -15,8 +15,8 @@ import {
   View,
 } from 'react-native';
 import Animated from 'react-native-reanimated';
-import type { Habit } from './habits';
-import { habitTypeLabel } from './habits';
+import type { Habit } from '@onpurpose/core/habits';
+import { habitTypeLabel } from '@onpurpose/core/habits';
 import { Icon } from './Icon';
 import { HabitSymbol } from './HabitSymbol';
 import { appear, disappear, rowTransition } from './motion';

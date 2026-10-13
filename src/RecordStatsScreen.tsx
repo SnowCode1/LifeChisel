@@ -3,19 +3,19 @@ import { memo, useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from './Typography';
 import { Icon } from './Icon';
-import { entryLabel, type EntryValues } from './entries';
-import type { Habit } from './habits';
-import type { HistoryAction, StoredEvent } from './storage/model';
-import { entryMinutes, timeOfDayStatistics } from './timeOfDay';
+import { entryLabel, type EntryValues } from '@onpurpose/core/entries';
+import type { Habit } from '@onpurpose/core/habits';
+import type { HistoryAction, StoredEvent } from '@onpurpose/core/storage/model';
+import { entryMinutes, timeOfDayStatistics } from '@onpurpose/core/timeOfDay';
 import { TimeOfDayChart } from './TimeOfDayChart';
-import { entryDay, type EntryDay } from './calendar';
+import { entryDay, type EntryDay } from '@onpurpose/core/calendar';
 import {
   dateKey,
   dayNumber,
   habitTrackingStart,
   type StatsRange,
-} from './statistics';
-import { recordStatistics } from './recordStatistics';
+} from '@onpurpose/core/statistics';
+import { recordStatistics } from '@onpurpose/core/recordStatistics';
 import {
   PeriodNavigator,
   RangePicker,
@@ -29,8 +29,8 @@ import {
   statisticDateLabel,
   statisticMonthLabel,
   statisticSpanLabel,
-} from './statisticsFormatting';
-import type { WeekStart } from './displayPreferences';
+} from '@onpurpose/core/statisticsFormatting';
+import type { WeekStart } from '@onpurpose/core/displayPreferences';
 import { InfoNote } from './InfoNote';
 import { GoalSummary } from './GoalSummary';
 import { useSheetScroll } from './SheetModal';
@@ -46,12 +46,12 @@ import {
   TREND_SIGMA_DAYS,
   TREND_MINIMUM_WEIGHT,
   type SeriesDay,
-} from './statsSeries';
+} from '@onpurpose/core/statsSeries';
 import { SuccessChart } from './SuccessChart';
 import { StreakChart } from './StreakChart';
 import { StatsCalendar } from './StatsCalendar';
 import { CategoryMatrix } from './CategoryMatrix';
-import { categoryColours } from './categoryColours';
+import { categoryColours } from '@onpurpose/core/categoryColours';
 import { themedStyles, useTheme } from './ThemeContext';
 
 type JournalRow =

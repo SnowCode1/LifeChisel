@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { localDateKey } from '../src/calendar.ts';
+import { localDateKey } from '../packages/core/src/calendar.ts';
 import {
   burstGapMs,
   burstMemberLabel,
@@ -12,7 +12,7 @@ import {
   historyDayIndex,
   historyDays,
   historyRows,
-} from '../src/history.ts';
+} from '../packages/core/src/history.ts';
 
 const days = (actions, filter, limit) =>
   historyDays(actions, filter, limit).days;

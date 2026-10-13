@@ -254,10 +254,10 @@ helpers and category colours.
 
 ## Ownership and verification
 
-`src/statistics.ts` is pure derived logic. `src/HabitDetailsScreen.tsx` owns the
+`packages/core/src/statistics.ts` is pure derived logic. `src/HabitDetailsScreen.tsx` owns the
 Notes/Statistics tabs and common header; `src/HabitStatsScreen.tsx` owns
 checkbox and Daily total statistics, and `src/RecordStatsScreen.tsx` with pure
-`src/recordStatistics.ts` owns Categories and Free text. Pure `statsSeries.ts`
+`packages/core/src/recordStatistics.ts` owns Categories and Free text. Pure `statsSeries.ts`
 owns day outcomes, bins, observations, the smoothed trend and streak runs.
 Nothing is stored separately; the change log and its replayed projection remain
 authoritative (see [STORAGE.md](STORAGE.md)).
@@ -334,7 +334,7 @@ Added 10 October 2026 (founder request). Both statistics screens show a Time of
 day section: 24 hourly bars for the selected window, the most common hour, and
 how many of the window's recorded days the chart covers. Tap or track a bar, or
 use the VoiceOver/TalkBack adjustable actions, to inspect an hour.
-`src/timeOfDay.ts` owns the pure calculation; `src/TimeOfDayChart.tsx` is the
+`packages/core/src/timeOfDay.ts` owns the pure calculation; `src/TimeOfDayChart.tsx` is the
 shared chart.
 
 Founder decisions:

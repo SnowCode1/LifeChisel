@@ -13,8 +13,15 @@ The home view is the habit-by-day grid. History, Settings, Notes/Statistics and
 the editors open as native sheets or dialogs above it, so the grid stays mounted
 underneath. There is no navigation library, backend, account flow or
 scheduler, and no analytics SDK yet (crash reporting and analytics are planned). It runs on iOS and Android devices (which launches first is
-undecided). Web is a layout preview for the rest of the screen; it shows a short
-notice in place of the habit grid.
+undecided). The Expo web build is a layout preview for the rest of the screen;
+it shows a short notice in place of the habit grid.
+
+The repository uses npm workspaces. The phone app stays at the root.
+`packages/core` (`@onpurpose/core`) holds the platform-neutral logic: storage,
+dates, entries, goals, completion, statistics, theme and icon catalogues. The
+phone app and the separate browser app in `apps/web` both use it
+(see [WEB.md](WEB.md)). Paths under `packages/core/src/` below are shared;
+paths under `src/` are phone-only.
 
 ```text
 UI       App.tsx: screen state, dialogs and nested native sheets
@@ -73,14 +80,14 @@ Grid
     gridGeometry.ts            offset ↔ day maths, snapping, rubber band, checkbox geometry
     gridDates.ts               worklet date keys, weekdays and week shading
   src/gridNavigation.ts        future-pull threshold, batch size and reveal target
-  src/gridSizing.ts            stored grid sizes, legacy mapping, automatic rules
+  packages/core/src/gridSizing.ts            stored grid sizes, legacy mapping, automatic rules
   src/gridLayout.ts            adaptive name/day geometry with text scaling
   src/useMeasuredRowHeights.ts batched native row measurement
-  src/gridAppearance.ts        cached per-habit grid colours
+  packages/core/src/gridAppearance.ts        cached per-habit grid colours
   src/gridEntryText.ts         text/category cell previews
   src/ReorderRow.tsx           RowPositions: shared row movement
   src/DateNavigationSheet.tsx  date picker sheet (src/DateCalendar.tsx on Android)
-  src/calendar.ts              local date keys and signed date arithmetic
+  packages/core/src/calendar.ts              local date keys and signed date arithmetic
 
 Storage and History
   src/storage/                 event model, validation, replay, repositories, ChangeStore, backups
@@ -89,11 +96,11 @@ Storage and History
   src/AppPanel.tsx             History/Settings/archive sheet over the grid
   src/HistoryView.tsx          day sections, burst/action rows, jumps, floating Undo bar
   src/HistoryFilters.tsx       filter chips, habit picker and jump calendar
-  src/history.ts               cached edit-day grouping, filters, bursts, row text
+  packages/core/src/history.ts               cached edit-day grouping, filters, bursts, row text
   src/useQuickUndo.ts          four-second Undo receipts (quickUndo.ts, quickEntryUndo.ts)
 
 Habits, entries and goals
-  src/habits.ts, src/entries.ts  habit/entry types, demo habits, labels, previews
+  packages/core/src/habits.ts, packages/core/src/entries.ts  habit/entry types, demo habits, labels, previews
   src/useDailyEntryActions.ts    shared daily input/save controller
   src/NumericRecordDialog.tsx    numeric drafts and suggestions
   src/DailyRecordDialog.tsx      category and text entry
@@ -101,15 +108,15 @@ Habits, entries and goals
   src/useHabitReorder.ts         drag geometry, preview order and drop
   src/HabitContextMenu.tsx       anchored hold menu
   src/HabitDialog.tsx            create/edit habit and colour drafts
-  src/habitCompletion.ts         completion rules for all habit types
-  src/habitGoals.ts              effective-dated goal timelines
-  src/goalTiming.ts              period quotas and on/off cycles
+  packages/core/src/habitCompletion.ts         completion rules for all habit types
+  packages/core/src/habitGoals.ts              effective-dated goal timelines
+  packages/core/src/goalTiming.ts              period quotas and on/off cycles
   src/HabitGoalsEditor.tsx       goal sheet and timeline (GoalVersionForm.tsx and others)
   src/ArchivedHabits.tsx         archive, restore and undoable delete
 
 Descriptions
   src/HabitDetailsScreen.tsx     Notes/Statistics pager (with useHabitPages.ts)
-  src/description.ts             Markdown parsing, validation and previews
+  packages/core/src/description.ts             Markdown parsing, validation and previews
   src/DescriptionReader.tsx      virtualized native note reading
   src/DescriptionEditor.tsx      full-screen editor host
   src/RichDescription.tsx        Expo DOM/Tiptap editing surface
@@ -122,20 +129,20 @@ Statistics
   src/RecordStatsScreen.tsx      category and text recording statistics
   src/StatsLayout.tsx            range tabs, period stepping, sections, tiles
   src/ChartFrame.tsx             shared chart interaction and axes
-  src/statsSeries.ts             day outcomes, bins, trend and streak runs
-  src/statistics.ts              pure checkbox/numeric calculations
-  src/completionStatistics.ts    scheduled-opportunity counts and streaks
-  src/periodStatistics.ts        period progress, results and period streaks
-  src/recordStatistics.ts        logging counts and category frequency
+  packages/core/src/statsSeries.ts             day outcomes, bins, trend and streak runs
+  packages/core/src/statistics.ts              pure checkbox/numeric calculations
+  packages/core/src/completionStatistics.ts    scheduled-opportunity counts and streaks
+  packages/core/src/periodStatistics.ts        period progress, results and period streaks
+  packages/core/src/recordStatistics.ts        logging counts and category frequency
 
 Settings, theme and feedback
   src/SettingsScreen.tsx         settings index and detail pages
-  src/displayPreferences.ts      preference defaults
+  packages/core/src/displayPreferences.ts      preference defaults
   src/useGridDisplayPreferences.ts  grid presentation deferral behind Settings
   src/GridSizeSettings.tsx       Name column / Day columns / Rows sliders
   src/BackgroundSettings.tsx     theme backgrounds, OKLCH sliders, preview
-  src/theme.ts                   pure theme derivation (ThemeContext.tsx provides it)
-  src/colors.ts                  OKLCH/sRGB conversion, gamut mapping, contrast
+  packages/core/src/theme.ts                   pure theme derivation (ThemeContext.tsx provides it)
+  packages/core/src/colors.ts                  OKLCH/sRGB conversion, gamut mapping, contrast
   src/ColourPicker.tsx           habit colour presets and custom colours
   src/Typography.tsx             app-wide Text/TextInput scaling (textSize.ts)
   src/haptics.ts                 nonblocking haptic feedback
@@ -145,9 +152,9 @@ Settings, theme and feedback
 
 Development only (excluded from release JavaScript)
   src/dev/                       sample data, preview capture, performance controls
-  src/performance.ts             diagnostic runs and aggregates (performanceModel.ts)
-  src/developmentFeatures.ts     comparison-session override
-  src/storage/profileSql.ts      SQL timing wrapper
+  packages/core/src/performance.ts             diagnostic runs and aggregates (performanceModel.ts)
+  packages/core/src/developmentFeatures.ts     comparison-session override
+  packages/core/src/storage/profileSql.ts      SQL timing wrapper
 
 scripts/
   *.test.mjs                     node:test suites run by npm test
@@ -584,8 +591,9 @@ Android testing started on 8 October 2026. Which platform launches first is
 undecided (see [DECISIONS.md](DECISIONS.md)). Keep iOS behaviour unchanged when
 adapting a screen for Android. Since 12 October 2026 the habit grid is the same
 Skia canvas on both phones, including scrolling, the iOS-style future pull and
-far navigation; web is not developed as a product and shows a notice instead of
-the grid.
+far navigation. The Expo web preview (the last column below) shows a notice
+instead of the grid. The browser product is a separate app in `apps/web`,
+described in [WEB.md](WEB.md).
 
 | Area               | iOS                                 | Android                                                     | Web (layout preview)      |
 | ------------------ | ----------------------------------- | ----------------------------------------------------------- | ------------------------- |
@@ -617,7 +625,7 @@ checks.
   date button, or a panel or dialog title also shares a preview; a short press on
   the date button still opens the date menu. Settings has an accessible
   development-only fallback.
-- **Sample data.** `src/dev/sampleData.ts` and its companions build an isolated
+- **Sample data.** `packages/core/src/dev/sampleData.ts` and its companions build an isolated
   in-memory store of fictional history, notes, goals and records for statistics
   review. It never touches real data or backups.
 - **Grid diagnostics.** With the performance flag on, Settings → Development

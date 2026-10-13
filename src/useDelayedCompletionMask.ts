@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { Habit } from './habits.ts';
+import type { Habit } from '@onpurpose/core/habits';
 
 export const COMPLETION_PAUSE_MS = 700;
 // Undo/unchecking reveals immediately. Newly completed rows wait for a pause in

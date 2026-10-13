@@ -1,5 +1,5 @@
-import { nextPeriodStart } from './goalTiming';
-import type { WeekStart } from './displayPreferences';
+import { nextPeriodStart } from '@onpurpose/core/goalTiming';
+import type { WeekStart } from '@onpurpose/core/displayPreferences';
 import { useCallback, useRef, useState, type ComponentType } from 'react';
 import {
   Alert,
@@ -18,7 +18,7 @@ import { Text } from './Typography';
 import { InfoNote } from './InfoNote';
 import { Icon } from './Icon';
 import { GoalVersionForm } from './GoalVersionForm';
-import type { Habit } from './habits';
+import type { Habit } from '@onpurpose/core/habits';
 import {
   allWeekdays,
   defaultSuccessRule,
@@ -29,9 +29,9 @@ import {
   timingSummary,
   validGoalTimeline,
   type HabitGoal,
-} from './habitGoals';
-import { calendarDay, localDateKey } from './calendar';
-import { sameValue } from './storage/model';
+} from '@onpurpose/core/habitGoals';
+import { calendarDay, localDateKey } from '@onpurpose/core/calendar';
+import { sameValue } from '@onpurpose/core/storage/model';
 import { appear } from './motion';
 import { themedStyles, useTheme } from './ThemeContext';
 

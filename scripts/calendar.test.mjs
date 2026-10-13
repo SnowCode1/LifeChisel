@@ -6,7 +6,7 @@ import {
   millisecondsUntilTomorrow,
   calendarDay,
   entryDay,
-} from '../src/calendar.ts';
+} from '../packages/core/src/calendar.ts';
 
 process.env.TZ = 'Australia/Melbourne';
 

@@ -3,9 +3,9 @@ import type {
   CellLook,
   CheckboxStyle,
   WeekStart,
-} from './displayPreferences.ts';
-import type { GridSize } from './gridSizing.ts';
-import type { Theme } from './theme.ts';
+} from '@onpurpose/core/displayPreferences';
+import type { GridSize } from '@onpurpose/core/gridSizing';
+import type { Theme } from '@onpurpose/core/theme';
 
 export type GridDisplayPreferences = {
   // Themes are cached by background, so an unchanged theme keeps its identity.

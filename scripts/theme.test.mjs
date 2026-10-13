@@ -14,28 +14,34 @@ import {
   MIN_CONTRAST,
   resolveScheme,
   themeFor,
-} from '../src/theme.ts';
+} from '../packages/core/src/theme.ts';
 import {
   colorOnBlack,
   contrastRatio,
   dimmedColor,
   hexToOklch,
   luminance,
-} from '../src/colors.ts';
-import { habitColors } from '../src/habits.ts';
-import { createGridPalette, dateTone } from '../src/gridAppearance.ts';
-import { highlightColours } from '../src/richText/highlights.ts';
+} from '../packages/core/src/colors.ts';
+import { habitColors } from '../packages/core/src/habits.ts';
+import {
+  createGridPalette,
+  dateTone,
+} from '../packages/core/src/gridAppearance.ts';
+import { highlightColours } from '../packages/core/src/richText/highlights.ts';
 import { editorPalette, inkVariable } from '../src/richText/editorTheme.ts';
-import { ChangeStore } from '../src/storage/store.ts';
-import { sqliteRepository } from '../src/storage/repository.ts';
-import { encodeArchive, decodeArchive } from '../src/storage/archive.ts';
+import { ChangeStore } from '../packages/core/src/storage/store.ts';
+import { sqliteRepository } from '../packages/core/src/storage/repository.ts';
+import {
+  encodeArchive,
+  decodeArchive,
+} from '../packages/core/src/storage/archive.ts';
 import {
   applyChange,
   applyEvent,
   replayEvents,
   validateChange,
-} from '../src/storage/model.ts';
-import { displayDefaults } from '../src/displayPreferences.ts';
+} from '../packages/core/src/storage/model.ts';
+import { displayDefaults } from '../packages/core/src/displayPreferences.ts';
 
 const grey = (level) => {
   const pair = level.toString(16).padStart(2, '0').toUpperCase();

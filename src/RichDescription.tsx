@@ -32,13 +32,13 @@ import {
   highlightColours,
   highlightVariable,
   type HighlightColour,
-} from './richText/highlights';
-import { descriptionLink } from './description';
+} from '@onpurpose/core/richText/highlights';
+import { descriptionLink } from '@onpurpose/core/description';
 import {
   editorPosition,
   useEditorPosition,
 } from './richText/useEditorPosition';
-import type { DescriptionPosition } from './descriptionPosition';
+import type { DescriptionPosition } from '@onpurpose/core/descriptionPosition';
 import { useEditorReady } from './richText/useEditorReady';
 import { useFloatingMenuSpace } from './richText/useFloatingMenuSpace';
 import { descriptionUpdateQueue } from './richText/descriptionUpdateQueue';

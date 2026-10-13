@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { gridRowHeight, isRowSpacing } from '../src/rowSpacing.ts';
+import {
+  gridRowHeight,
+  isRowSpacing,
+} from '../packages/core/src/rowSpacing.ts';
 
 test('row heights retain touch targets, adapt to the screen and expand for larger text', () => {
   assert.deepEqual(

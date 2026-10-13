@@ -10,10 +10,13 @@ import {
   applyEvent,
   inverse,
   validDate,
-} from '../src/storage/model.ts';
-import { sqliteRepository } from '../src/storage/repository.ts';
-import { ChangeStore } from '../src/storage/store.ts';
-import { encodeArchive, decodeArchive } from '../src/storage/archive.ts';
+} from '../packages/core/src/storage/model.ts';
+import { sqliteRepository } from '../packages/core/src/storage/repository.ts';
+import { ChangeStore } from '../packages/core/src/storage/store.ts';
+import {
+  encodeArchive,
+  decodeArchive,
+} from '../packages/core/src/storage/archive.ts';
 
 const habits = [
   { id: 'walk', name: 'Walk', color: '#82E6BC' },
@@ -559,7 +562,7 @@ test('the documented v1 archive is importable and preserves its backdated and fu
 
 test('browser preview persists independently and quota failure leaves its prior document intact', async () => {
   const { browserRepository } =
-    await import('../src/storage/browserRepository.ts');
+    await import('../packages/core/src/storage/browserRepository.ts');
   let text = null;
   let fail = false;
   const storage = {

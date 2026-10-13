@@ -9,17 +9,20 @@ import {
   snapGridSize,
   autoNameWidth,
   autoRowHeight,
-} from '../src/gridSizing.ts';
+} from '../packages/core/src/gridSizing.ts';
 import { gridLayout } from '../src/gridLayout.ts';
-import { ChangeStore } from '../src/storage/store.ts';
-import { sqliteRepository } from '../src/storage/repository.ts';
-import { encodeArchive, decodeArchive } from '../src/storage/archive.ts';
+import { ChangeStore } from '../packages/core/src/storage/store.ts';
+import { sqliteRepository } from '../packages/core/src/storage/repository.ts';
+import {
+  encodeArchive,
+  decodeArchive,
+} from '../packages/core/src/storage/archive.ts';
 import {
   applyChange,
   applyEvent,
   replayEvents,
   validateChange,
-} from '../src/storage/model.ts';
+} from '../packages/core/src/storage/model.ts';
 
 const digest = async (text) => createHash('sha256').update(text).digest('hex');
 const habit = { id: 'read', name: 'Read', color: '#BDA5FF', type: 'number' };

@@ -1,6 +1,10 @@
-import { decodeArchive, encodeArchive, MAX_ARCHIVE_BYTES } from './archive';
+import {
+  decodeArchive,
+  encodeArchive,
+  MAX_ARCHIVE_BYTES,
+} from '@onpurpose/core/storage/archive';
 import { digest } from './native';
-import type { ChangeStore } from './store';
+import type { ChangeStore } from '@onpurpose/core/storage/store';
 export async function shareBackup(store: ChangeStore) {
   const text = await store.exclusive(() =>
     encodeArchive(store.getSnapshot().events, new Date().toISOString(), digest),

@@ -2,7 +2,7 @@ import {
   AUTO_COLUMN_WIDTH,
   autoNameWidth,
   type GridSizing,
-} from './gridSizing.ts';
+} from '@onpurpose/core/gridSizing';
 // Fill the available space with whole days while keeping names and touch
 // targets readable. Larger system text gets more space, rather than clipping.
 // With a pixel ratio, day columns are whole physical pixels wide and the name

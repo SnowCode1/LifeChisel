@@ -4,7 +4,7 @@ import Animated, { FadeOut, ReduceMotion } from 'react-native-reanimated';
 import { Text } from './Typography';
 import { Icon } from './Icon';
 import { feedback } from './haptics';
-import type { QuickUndo } from './quickUndo';
+import type { QuickUndo } from '@onpurpose/core/quickUndo';
 import { appear } from './motion';
 import { themedStyles, useTheme } from './ThemeContext';
 

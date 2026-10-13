@@ -1,8 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { ChangeStore } from '../src/storage/store.ts';
-import { replayEvents } from '../src/storage/model.ts';
-import { createQuickUndo, QUICK_UNDO_MS } from '../src/quickUndo.ts';
+import { ChangeStore } from '../packages/core/src/storage/store.ts';
+import { replayEvents } from '../packages/core/src/storage/model.ts';
+import {
+  createQuickUndo,
+  QUICK_UNDO_MS,
+} from '../packages/core/src/quickUndo.ts';
 let id = 0;
 const meta = (sequence) => ({
   version: 17,

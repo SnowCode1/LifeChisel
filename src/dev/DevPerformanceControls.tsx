@@ -1,8 +1,11 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { Alert, AppState, Platform, Pressable, View } from 'react-native';
 import { Text } from '../Typography';
-import { performanceEnabled, performanceRun } from '../performance';
-import type { GridExperiment } from '../performanceModel';
+import {
+  performanceEnabled,
+  performanceRun,
+} from '@onpurpose/core/performance';
+import type { GridExperiment } from '@onpurpose/core/performanceModel';
 import { uploadPerformance } from './performanceUpload';
 import { useTheme } from '../ThemeContext';
 const options: { value: GridExperiment; label: string }[] = [

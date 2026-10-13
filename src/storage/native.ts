@@ -1,27 +1,14 @@
-import { presetDescriptions } from '../presetDescriptions';
-import { localDateKey } from '../calendar';
 import { openDatabaseAsync } from 'expo-sqlite';
 import {
   randomUUID,
   digestStringAsync,
   CryptoDigestAlgorithm,
 } from 'expo-crypto';
-import { demoHabits } from '../habits';
-import { ChangeStore } from './store';
-import { sqliteRepository } from './repository';
-import type { EventMeta } from './model';
+import { ChangeStore } from '@onpurpose/core/storage/store';
+import { sqliteRepository } from '@onpurpose/core/storage/repository';
+import { eventMeta, initialEvent } from '@onpurpose/core/storage/newEvents';
 
-function metadata(sequence: number): EventMeta {
-  const now = new Date();
-  return {
-    version: 20,
-    id: randomUUID(),
-    sequence,
-    recordedAt: now.toISOString(),
-    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'unknown',
-    utcOffsetMinutes: -now.getTimezoneOffset(),
-  };
-}
+const metadata = (sequence: number) => eventMeta(sequence, randomUUID());
 export const digest = (text: string) =>
   digestStringAsync(CryptoDigestAlgorithm.SHA256, text);
 let opening: Promise<ChangeStore> | null = null;
@@ -30,15 +17,7 @@ export function openStore(): Promise<ChangeStore> {
     opening = (async () => {
       const db = await openDatabaseAsync('onpurpose.db');
       const store = new ChangeStore(
-        sqliteRepository(db, () => ({
-          ...metadata(1),
-          type: 'initialize',
-          habits: demoHabits.map((habit) => ({
-            ...habit,
-            description: presetDescriptions[habit.id],
-            startDate: localDateKey(new Date()),
-          })),
-        })),
+        sqliteRepository(db, () => initialEvent(randomUUID())),
         metadata,
       );
       await store.load();

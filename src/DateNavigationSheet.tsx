@@ -4,10 +4,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Text, TextInput } from './Typography';
 import { Icon } from './Icon';
-import { localDateKey } from './calendar';
-import { validTimingDate } from './goalTiming';
+import { localDateKey } from '@onpurpose/core/calendar';
+import { validTimingDate } from '@onpurpose/core/goalTiming';
 import { DateCalendar } from './DateCalendar';
-import type { WeekStart } from './displayPreferences';
+import type { WeekStart } from '@onpurpose/core/displayPreferences';
 import { themedStyles, useTheme } from './ThemeContext';
 
 export function DateNavigationSheet({

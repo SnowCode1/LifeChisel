@@ -13,16 +13,20 @@ import {
 } from './canvasGrid/cellPainter';
 import { headingHeight } from './canvasGrid/gridGeometry';
 import { streakLabel, type CanvasCell } from './canvasGrid/useGridModel';
-import type { CellLook, CheckboxStyle, WeekStart } from './displayPreferences';
-import { ordinal } from './goalTiming';
-import { createGridPalette } from './gridAppearance';
+import type {
+  CellLook,
+  CheckboxStyle,
+  WeekStart,
+} from '@onpurpose/core/displayPreferences';
+import { ordinal } from '@onpurpose/core/goalTiming';
+import { createGridPalette } from '@onpurpose/core/gridAppearance';
 import { useLocalToday } from './useLocalToday';
 import { Text, useAppWindowDimensions } from './Typography';
 import { gridLayout } from './gridLayout';
-import { gridRowHeight } from './rowSpacing';
+import { gridRowHeight } from '@onpurpose/core/rowSpacing';
 import { screenLongSide } from './screenSize';
 import { HabitSymbol } from './HabitSymbol';
-import { demoHabits, type Habit } from './habits';
+import { demoHabits, type Habit } from '@onpurpose/core/habits';
 import {
   AUTO_COLUMN_WIDTH,
   autoNameWidth,
@@ -32,7 +36,7 @@ import {
   type GridSize,
   type GridSizeKind,
   type GridSizing,
-} from './gridSizing';
+} from '@onpurpose/core/gridSizing';
 import { themedStyles, useTheme } from './ThemeContext';
 
 const labels: Record<GridSizeKind, string> = {

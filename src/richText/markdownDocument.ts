@@ -1,5 +1,8 @@
 import type { JSONContent } from '@tiptap/core';
-import { parseDescription, type DescriptionToken } from '../description.ts';
+import {
+  parseDescription,
+  type DescriptionToken,
+} from '@onpurpose/core/description';
 
 type TokenNode = { token: DescriptionToken; children: TokenNode[] };
 function tree(tokens: DescriptionToken[]) {

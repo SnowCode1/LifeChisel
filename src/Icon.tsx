@@ -1,28 +1,8 @@
 import Svg, { Circle, Path, Polygon, Rect } from 'react-native-svg';
 import { useTheme } from './ThemeContext';
+import type { IconName } from '@onpurpose/core/iconNames';
 
-export type IconName =
-  | 'history'
-  | 'settings'
-  | 'close'
-  | 'tick'
-  | 'chevron'
-  | 'checked'
-  | 'unchecked'
-  | 'number'
-  | 'categories'
-  | 'text'
-  | 'erase'
-  | 'palette'
-  | 'haptics'
-  | 'undo'
-  | 'redo'
-  | 'edit'
-  | 'reorder'
-  | 'archive'
-  | 'info'
-  | 'plus'
-  | 'calendar';
+export type { IconName };
 
 // Small, consistent outline icons; no icon font or loading state.
 const gear = Array.from({ length: 40 }, (_, index) => {

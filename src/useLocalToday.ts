@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import { AppState } from 'react-native';
-import { localDateKey, millisecondsUntilTomorrow } from './calendar';
+import {
+  localDateKey,
+  millisecondsUntilTomorrow,
+} from '@onpurpose/core/calendar';
 
 export function useLocalToday() {
   const [today, setToday] = useState(() => localDateKey(new Date()));

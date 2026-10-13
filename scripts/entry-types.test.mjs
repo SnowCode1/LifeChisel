@@ -5,30 +5,33 @@ import { createHash } from 'node:crypto';
 import { mkdtempSync, rmSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { ChangeStore } from '../src/storage/store.ts';
-import { sqliteRepository } from '../src/storage/repository.ts';
+import { ChangeStore } from '../packages/core/src/storage/store.ts';
+import { sqliteRepository } from '../packages/core/src/storage/repository.ts';
 import {
   replayEvents,
   validateEvent,
   validateChange,
   applyEvent,
-} from '../src/storage/model.ts';
-import { encodeArchive, decodeArchive } from '../src/storage/archive.ts';
+} from '../packages/core/src/storage/model.ts';
+import {
+  encodeArchive,
+  decodeArchive,
+} from '../packages/core/src/storage/archive.ts';
 import {
   categorySelection,
   textEntry,
   entryLabel,
   cellEntryLabel,
   MAX_ENTRY_TEXT,
-} from '../src/entries.ts';
-import { habitIsComplete } from '../src/habitCompletion.ts';
+} from '../packages/core/src/entries.ts';
+import { habitIsComplete } from '../packages/core/src/habitCompletion.ts';
 import {
   recordedDaySelection,
   entrySelection,
-} from '../src/storage/selection.ts';
-import { recordStatistics } from '../src/recordStatistics.ts';
-import { historyPresentation } from '../src/history.ts';
-import { createSampleStore } from '../src/dev/sampleData.ts';
+} from '../packages/core/src/storage/selection.ts';
+import { recordStatistics } from '../packages/core/src/recordStatistics.ts';
+import { historyPresentation } from '../packages/core/src/history.ts';
+import { createSampleStore } from '../packages/core/src/dev/sampleData.ts';
 
 const today = '2026-10-05';
 const categories = {

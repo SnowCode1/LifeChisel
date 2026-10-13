@@ -11,9 +11,13 @@ import {
 import { Icon } from './Icon';
 import { HabitSymbol } from './HabitSymbol';
 import { DateCalendar } from './DateCalendar';
-import type { WeekStart } from './displayPreferences';
-import { historyHabits, type HistoryFilter, type HistoryKind } from './history';
-import type { HistoryAction, StoredState } from './storage/model';
+import type { WeekStart } from '@onpurpose/core/displayPreferences';
+import {
+  historyHabits,
+  type HistoryFilter,
+  type HistoryKind,
+} from '@onpurpose/core/history';
+import type { HistoryAction, StoredState } from '@onpurpose/core/storage/model';
 import { useSheetScroll } from './SheetModal';
 import { themedStyles, useTheme } from './ThemeContext';
 

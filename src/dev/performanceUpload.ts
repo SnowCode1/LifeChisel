@@ -1,7 +1,7 @@
 import {
   validPerformanceReport,
   type PerformanceReport,
-} from '../performanceModel';
+} from '@onpurpose/core/performanceModel';
 import type { PreviewTransport } from './previewUpload';
 export async function uploadPerformance(
   report: PerformanceReport,

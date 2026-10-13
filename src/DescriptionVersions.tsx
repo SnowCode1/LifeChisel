@@ -11,9 +11,9 @@ import {
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { DescriptionHistory } from './DescriptionHistory';
-import { descriptionExcerpt } from './descriptionReading';
-import type { Habit } from './habits';
-import type { HistoryAction, StoredState } from './storage/model';
+import { descriptionExcerpt } from '@onpurpose/core/descriptionReading';
+import type { Habit } from '@onpurpose/core/habits';
+import type { HistoryAction, StoredState } from '@onpurpose/core/storage/model';
 import { themedStyles, useTheme } from './ThemeContext';
 
 export function DescriptionVersions({

@@ -1,15 +1,15 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createSampleStore } from '../src/dev/sampleData.ts';
-import { evaluateGoal } from '../src/habitGoals.ts';
+import { createSampleStore } from '../packages/core/src/dev/sampleData.ts';
+import { evaluateGoal } from '../packages/core/src/habitGoals.ts';
 import {
   dayNumber,
   dateKey,
   habitStatistics,
   habitTrackingStart,
-} from '../src/statistics.ts';
-import { recordStatistics } from '../src/recordStatistics.ts';
-import { periodStatistics } from '../src/periodStatistics.ts';
+} from '../packages/core/src/statistics.ts';
+import { recordStatistics } from '../packages/core/src/recordStatistics.ts';
+import { periodStatistics } from '../packages/core/src/periodStatistics.ts';
 import {
   binSeries,
   habitSeries,
@@ -22,9 +22,9 @@ import {
   timeTicks,
   smoothedRates,
   weekStartOf,
-} from '../src/statsSeries.ts';
-import { categoryColours } from '../src/categoryColours.ts';
-import { hexToOklch } from '../src/colors.ts';
+} from '../packages/core/src/statsSeries.ts';
+import { categoryColours } from '../packages/core/src/categoryColours.ts';
+import { hexToOklch } from '../packages/core/src/colors.ts';
 
 const today = '2026-10-10';
 async function sample() {

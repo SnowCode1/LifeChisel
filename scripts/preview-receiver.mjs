@@ -3,7 +3,7 @@ import { Buffer } from 'node:buffer';
 import { createServer } from 'node:http';
 import { mkdir, rename, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { validPerformanceReport } from '../src/performanceModel.ts';
+import { validPerformanceReport } from '../packages/core/src/performanceModel.ts';
 
 const MAX_BODY = 12 * 1024 * 1024;
 const PNG_SIGNATURE = Buffer.from('89504e470d0a1a0a', 'hex');

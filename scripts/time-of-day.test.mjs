@@ -1,9 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { ChangeStore } from '../src/storage/store.ts';
-import { replayEvents } from '../src/storage/model.ts';
-import { entryMinutes, timeOfDayStatistics } from '../src/timeOfDay.ts';
-import { createSampleStore } from '../src/dev/sampleData.ts';
+import { ChangeStore } from '../packages/core/src/storage/store.ts';
+import { replayEvents } from '../packages/core/src/storage/model.ts';
+import {
+  entryMinutes,
+  timeOfDayStatistics,
+} from '../packages/core/src/timeOfDay.ts';
+import { createSampleStore } from '../packages/core/src/dev/sampleData.ts';
 
 const walk = { id: 'walk', name: 'Walk', color: '#82E6BC' };
 const water = {

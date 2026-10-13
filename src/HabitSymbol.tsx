@@ -1,11 +1,11 @@
 import { Text } from './Typography';
 import { View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
-import type { HabitIcon } from './habitIcons';
-import { normalizeHex } from './colors';
+import type { HabitIcon } from '@onpurpose/core/habitIcons';
+import { normalizeHex } from '@onpurpose/core/colors';
 import { useTheme } from './ThemeContext';
-import { phosphorPaths } from './phosphorPaths';
-import { tablerPaths } from './tablerPaths';
+import { phosphorPaths } from '@onpurpose/core/phosphorPaths';
+import { tablerPaths } from '@onpurpose/core/tablerPaths';
 
 // Decorative beside the habit name, whose accessible label remains authoritative.
 export function HabitSymbol({

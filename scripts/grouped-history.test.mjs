@@ -3,12 +3,18 @@ import test from 'node:test';
 import { DatabaseSync } from 'node:sqlite';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
-import { ChangeStore } from '../src/storage/store.ts';
-import { applyPresetIcons } from '../src/storage/presetIcons.ts';
-import { demoHabits } from '../src/habits.ts';
-import { replayEvents, applyEvent } from '../src/storage/model.ts';
-import { sqliteRepository } from '../src/storage/repository.ts';
-import { encodeArchive, decodeArchive } from '../src/storage/archive.ts';
+import { ChangeStore } from '../packages/core/src/storage/store.ts';
+import { applyPresetIcons } from '../packages/core/src/storage/presetIcons.ts';
+import { demoHabits } from '../packages/core/src/habits.ts';
+import {
+  replayEvents,
+  applyEvent,
+} from '../packages/core/src/storage/model.ts';
+import { sqliteRepository } from '../packages/core/src/storage/repository.ts';
+import {
+  encodeArchive,
+  decodeArchive,
+} from '../packages/core/src/storage/archive.ts';
 
 const habits = [
   { id: 'walk', name: 'Walk', color: '#82E6BC' },

@@ -5,7 +5,7 @@ import { DescriptionText } from './DescriptionText';
 import {
   descriptionReadingPassages,
   type ReadingPassage,
-} from './descriptionReading';
+} from '@onpurpose/core/descriptionReading';
 import { useSheetScroll } from './SheetModal';
 import { themedStyles } from './ThemeContext';
 

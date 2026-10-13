@@ -1,5 +1,5 @@
-import type { Theme } from '../theme.ts';
-import { highlightPalette } from './highlights.ts';
+import type { Theme } from '@onpurpose/core/theme';
+import { highlightPalette } from '@onpurpose/core/richText/highlights';
 
 // Interface greys that editor.css reads as `var(--ink-XX, #original)`. The
 // native screen sends this palette into the DOM editor, so the web view needs

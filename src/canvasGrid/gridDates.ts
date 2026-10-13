@@ -1,4 +1,4 @@
-import type { WeekStart } from '../displayPreferences.ts';
+import type { WeekStart } from '@onpurpose/core/displayPreferences';
 
 // Calendar parts for a UTC epoch day (as `goalTiming.ordinal` counts them),
 // using integer arithmetic only so the canvas can call these on the UI thread

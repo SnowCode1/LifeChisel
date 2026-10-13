@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { weekDayOrder } from '../src/displayPreferences.ts';
+import { weekDayOrder } from '../packages/core/src/displayPreferences.ts';
 import { gridLayout } from '../src/gridLayout.ts';
-import { autoNameWidth } from '../src/gridSizing.ts';
-import { monthDays } from '../src/statistics.ts';
+import { autoNameWidth } from '../packages/core/src/gridSizing.ts';
+import { monthDays } from '../packages/core/src/statistics.ts';
 
 test('column widths fit whole dates and preserve name width across orientations and text sizes', () => {
   const sizes = [

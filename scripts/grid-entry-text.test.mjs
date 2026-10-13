@@ -6,8 +6,8 @@ import {
   gridEntryTextLines,
   GRID_ENTRY_LINE_HEIGHT,
 } from '../src/gridEntryText.ts';
-import { gridRowHeight } from '../src/rowSpacing.ts';
-import { combinedTextScale } from '../src/textSize.ts';
+import { gridRowHeight } from '../packages/core/src/rowSpacing.ts';
+import { combinedTextScale } from '../packages/core/src/textSize.ts';
 
 test('cell line capacity follows row height and combined text scale without fitting more through shrinking', () => {
   assert.equal(gridEntryTextLines(44, 1), 2);

@@ -12,14 +12,18 @@ import {
   type CheckboxStyle,
   weekStartOptions,
   type WeekStart,
-} from './displayPreferences';
-import type { GridSize, GridSizeKind, GridSizing } from './gridSizing';
+} from '@onpurpose/core/displayPreferences';
+import type {
+  GridSize,
+  GridSizeKind,
+  GridSizing,
+} from '@onpurpose/core/gridSizing';
 import {
   GridLivePreview,
   GridSizeSettings,
   type PreviewAppearance,
 } from './GridSizeSettings';
-import type { StoreSnapshot } from './storage/store';
+import type { StoreSnapshot } from '@onpurpose/core/storage/store';
 import { useSheetScroll } from './SheetModal';
 import { BackgroundSettings, type ThemePreference } from './BackgroundSettings';
 import {
@@ -27,7 +31,7 @@ import {
   fitBackground,
   themeModeOptions,
   type ThemeMode,
-} from './theme';
+} from '@onpurpose/core/theme';
 import { themedStyles, useTheme } from './ThemeContext';
 
 // Checkbox style and round checkboxes, chosen together as one shape.

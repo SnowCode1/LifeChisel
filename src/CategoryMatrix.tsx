@@ -2,9 +2,17 @@ import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 import Svg, { Rect } from 'react-native-svg';
 import { Text } from './Typography';
-import { weekDayOrder, type WeekStart } from './displayPreferences';
-import type { Habit } from './habits';
-import { binSeries, valueUnit, weekdayOf, type SeriesDay } from './statsSeries';
+import {
+  weekDayOrder,
+  type WeekStart,
+} from '@onpurpose/core/displayPreferences';
+import type { Habit } from '@onpurpose/core/habits';
+import {
+  binSeries,
+  valueUnit,
+  weekdayOf,
+  type SeriesDay,
+} from '@onpurpose/core/statsSeries';
 import { themedStyles, useTheme } from './ThemeContext';
 
 const ROW = 26,

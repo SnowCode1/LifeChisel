@@ -1,0 +1,14 @@
+{
+  "name": "@onpurpose/core",
+  "version": "0.1.0",
+  "private": true,
+  "license": "GPL-3.0-or-later",
+  "description": "Platform-neutral OnPurpose logic shared by the phone and web apps.",
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "dependencies": {
+    "emoji-regex": "11.0.0",
+    "markdown-it": "^15.0.2"
+  }
+}

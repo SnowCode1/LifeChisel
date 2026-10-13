@@ -1,10 +1,16 @@
 import { Text } from './Typography';
 import { memo, type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { highlightPalette, isHighlightColour } from './richText/highlights';
+import {
+  highlightPalette,
+  isHighlightColour,
+} from '@onpurpose/core/richText/highlights';
 import { themedStyles, useTheme } from './ThemeContext';
 import { openDescriptionLink } from './descriptionLinks';
-import { parseDescription, type DescriptionToken } from './description';
+import {
+  parseDescription,
+  type DescriptionToken,
+} from '@onpurpose/core/description';
 
 type Node = { token: DescriptionToken; children: Node[] };
 function tree(tokens: DescriptionToken[]) {

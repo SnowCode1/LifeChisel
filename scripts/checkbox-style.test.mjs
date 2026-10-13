@@ -7,11 +7,17 @@ import {
   isShadedWeek,
   displayDefaults,
   isCheckboxStyle,
-} from '../src/displayPreferences.ts';
-import { ChangeStore } from '../src/storage/store.ts';
-import { sqliteRepository } from '../src/storage/repository.ts';
-import { validateChange, replayEvents } from '../src/storage/model.ts';
-import { encodeArchive, decodeArchive } from '../src/storage/archive.ts';
+} from '../packages/core/src/displayPreferences.ts';
+import { ChangeStore } from '../packages/core/src/storage/store.ts';
+import { sqliteRepository } from '../packages/core/src/storage/repository.ts';
+import {
+  validateChange,
+  replayEvents,
+} from '../packages/core/src/storage/model.ts';
+import {
+  encodeArchive,
+  decodeArchive,
+} from '../packages/core/src/storage/archive.ts';
 const digest = async (text) => createHash('sha256').update(text).digest('hex');
 let id = 0;
 const meta = (sequence) => ({

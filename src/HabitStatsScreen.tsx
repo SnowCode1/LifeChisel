@@ -1,8 +1,11 @@
 import { PeriodProgress } from './PeriodProgress';
-import type { EntryValues } from './entries';
+import type { EntryValues } from '@onpurpose/core/entries';
 import { GoalSummary } from './GoalSummary';
 import { Text, useAppWindowDimensions } from './Typography';
-import { weekDayOrder, type WeekStart } from './displayPreferences';
+import {
+  weekDayOrder,
+  type WeekStart,
+} from '@onpurpose/core/displayPreferences';
 import { memo, useMemo, useState } from 'react';
 import { ScrollView, View } from 'react-native';
 import {
@@ -18,10 +21,10 @@ import {
   formatStatistic as format,
   statisticDateLabel as dateLabel,
   statisticSpanLabel,
-} from './statisticsFormatting';
-import type { Habit } from './habits';
-import type { HistoryAction, StoredEvent } from './storage/model';
-import { timeOfDayStatistics } from './timeOfDay';
+} from '@onpurpose/core/statisticsFormatting';
+import type { Habit } from '@onpurpose/core/habits';
+import type { HistoryAction, StoredEvent } from '@onpurpose/core/storage/model';
+import { timeOfDayStatistics } from '@onpurpose/core/timeOfDay';
 import { TimeOfDayChart } from './TimeOfDayChart';
 import {
   dateKey,
@@ -29,7 +32,7 @@ import {
   habitStatistics,
   habitTrackingStart,
   type StatsRange,
-} from './statistics';
+} from '@onpurpose/core/statistics';
 import {
   binSeries,
   habitSeries,
@@ -42,13 +45,13 @@ import {
   TREND_SIGMA_DAYS,
   TREND_MINIMUM_WEIGHT,
   valueUnit,
-} from './statsSeries';
+} from '@onpurpose/core/statsSeries';
 import { ValueChart } from './ValueChart';
 import { SuccessChart } from './SuccessChart';
 import { StreakChart } from './StreakChart';
 import { StatsCalendar } from './StatsCalendar';
 import { InfoNote } from './InfoNote';
-import type { EntryDay } from './calendar';
+import type { EntryDay } from '@onpurpose/core/calendar';
 import { useSheetScroll } from './SheetModal';
 import { useTheme } from './ThemeContext';
 

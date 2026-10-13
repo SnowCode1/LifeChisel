@@ -4,18 +4,18 @@ import { DatabaseSync } from 'node:sqlite';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { descriptionPositionKey } from '../src/descriptionPosition.ts';
+import { descriptionPositionKey } from '../packages/core/src/descriptionPosition.ts';
 import {
   descriptionResume,
   completeDescriptionDraft,
   rememberDescriptionPosition,
-} from '../src/storage/descriptionBookmarks.ts';
+} from '../packages/core/src/storage/descriptionBookmarks.ts';
 import {
   serializedDrafts,
   sqliteDrafts,
   memoryDrafts,
   validateDraft,
-} from '../src/storage/descriptionDraftModel.ts';
+} from '../packages/core/src/storage/descriptionDraftModel.ts';
 const draft = { version: 1, base: 'Saved note', text: '**Unfinished** draft' };
 const port = (db) => ({
   async getFirstAsync(sql, ...params) {

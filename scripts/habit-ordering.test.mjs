@@ -1,13 +1,13 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { replayEvents } from '../src/storage/model.ts';
+import { replayEvents } from '../packages/core/src/storage/model.ts';
 import {
   moveHabit,
   fullHabitOrder,
   displayedHabitOrder,
   dragDestination,
   habitRowPositions,
-} from '../src/habitOrdering.ts';
+} from '../packages/core/src/habitOrdering.ts';
 test('reorder moves only the intended ID, clamps ends, and retains archived slots', () => {
   const ids = ['a', 'b', 'c'];
   assert.deepEqual(moveHabit(ids, 'b', 9), ['a', 'c', 'b']);

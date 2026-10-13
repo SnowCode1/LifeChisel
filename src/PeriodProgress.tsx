@@ -2,8 +2,11 @@ import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { Text } from './Typography';
 import { Icon } from './Icon';
-import { periodSummary, periodMet } from './goalTiming';
-import type { periodStatistics, PeriodResult } from './periodStatistics';
+import { periodSummary, periodMet } from '@onpurpose/core/goalTiming';
+import type {
+  periodStatistics,
+  PeriodResult,
+} from '@onpurpose/core/periodStatistics';
 import { themedStyles, useTheme } from './ThemeContext';
 
 export function PeriodProgress({

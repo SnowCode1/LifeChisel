@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { habitStatistics, monthDays } from '../src/statistics.ts';
-import { replayEvents } from '../src/storage/model.ts';
+import { habitStatistics, monthDays } from '../packages/core/src/statistics.ts';
+import { replayEvents } from '../packages/core/src/storage/model.ts';
 const habit = { id: 'walk', name: 'Walk', color: '#82E6BC', type: 'checkbox' };
 const number = { ...habit, type: 'number', unit: 'minutes' };
 function seed(day = '2026-10-01', definition = habit) {
@@ -295,7 +295,8 @@ test('numeric totals, prior-period comparisons and future-start habits respect t
 });
 
 test('legacy start-date defaults reflect captured local creation or older entries without mutation', async () => {
-  const { habitTrackingStart } = await import('../src/statistics.ts');
+  const { habitTrackingStart } =
+    await import('../packages/core/src/statistics.ts');
   const events = [
     {
       ...seed('2026-10-03'),

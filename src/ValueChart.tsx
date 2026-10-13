@@ -1,22 +1,22 @@
 import { Line, Rect } from 'react-native-svg';
 import { ChartFrame, type ChartSlot } from './ChartFrame';
-import type { WeekStart } from './displayPreferences';
-import type { Habit } from './habits';
-import { levelFill, outcomeFill } from './outcomeColours';
-import { dateKey } from './statistics';
+import type { WeekStart } from '@onpurpose/core/displayPreferences';
+import type { Habit } from '@onpurpose/core/habits';
+import { levelFill, outcomeFill } from '@onpurpose/core/outcomeColours';
+import { dateKey } from '@onpurpose/core/statistics';
 import {
   formatStatistic as format,
   statisticDayLabel,
   statisticMonthLabel,
   statisticSpanLabel,
   statisticTickLabel,
-} from './statisticsFormatting';
+} from '@onpurpose/core/statisticsFormatting';
 import {
   niceMaximum,
   timeTicks,
   type BinUnit,
   type SeriesBin,
-} from './statsSeries';
+} from '@onpurpose/core/statsSeries';
 import { useTheme } from './ThemeContext';
 
 const OUTCOME_TEXT: Record<string, string> = {

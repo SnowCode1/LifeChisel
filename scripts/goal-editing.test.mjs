@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseGoalAmount, goalDraftIssue } from '../src/goalEditing.ts';
+import {
+  parseGoalAmount,
+  goalDraftIssue,
+} from '../packages/core/src/goalEditing.ts';
 const habit = { id: 'read', name: 'Read', type: 'number', color: '#82E6BC' };
 const goal = {
   id: 'goal',

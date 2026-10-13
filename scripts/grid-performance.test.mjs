@@ -1,20 +1,23 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createGridPalette } from '../src/gridAppearance.ts';
+import { createGridPalette } from '../packages/core/src/gridAppearance.ts';
 import {
   colorOnBlack,
   contrastOnBlack,
   checkmarkColor,
-} from '../src/colors.ts';
-import { blackTheme } from '../src/theme.ts';
-import { demoHabits } from '../src/habits.ts';
-import { createGridDayCache, makeGridDays } from '../src/calendar.ts';
-import { createSampleStore } from '../src/dev/sampleData.ts';
+} from '../packages/core/src/colors.ts';
+import { blackTheme } from '../packages/core/src/theme.ts';
+import { demoHabits } from '../packages/core/src/habits.ts';
+import {
+  createGridDayCache,
+  makeGridDays,
+} from '../packages/core/src/calendar.ts';
+import { createSampleStore } from '../packages/core/src/dev/sampleData.ts';
 import {
   entrySelection,
   recordedDaySelection,
   selectStore,
-} from '../src/storage/selection.ts';
+} from '../packages/core/src/storage/selection.ts';
 
 function change(store, habitId, date, after) {
   const before =
@@ -122,8 +125,9 @@ test('date-heading selection counts numeric zero, ignores other dates, and chang
 test('mounted entry selectors see restore and rapid latest values without a second cached projection', async () => {
   const store = await createSampleStore('2026-10-04');
   // A production-like replace-capable memory repository exercises store.replace.
-  const { ChangeStore } = await import('../src/storage/store.ts');
-  const { replayEvents } = await import('../src/storage/model.ts');
+  const { ChangeStore } = await import('../packages/core/src/storage/store.ts');
+  const { replayEvents } =
+    await import('../packages/core/src/storage/model.ts');
   const { events } = store.getSnapshot();
   let journal = events;
   const repository = {

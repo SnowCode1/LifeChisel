@@ -1,8 +1,8 @@
 import { Rect } from 'react-native-svg';
 import { ChartFrame, type ChartSlot } from './ChartFrame';
 import { StatsSection } from './StatsLayout';
-import { niceMaximum } from './statsSeries';
-import type { TimeOfDayStatistics } from './timeOfDay';
+import { niceMaximum } from '@onpurpose/core/statsSeries';
+import type { TimeOfDayStatistics } from '@onpurpose/core/timeOfDay';
 
 const HEIGHT = 110;
 const hourLabel = (hour: number) =>

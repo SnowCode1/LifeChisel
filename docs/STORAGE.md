@@ -149,25 +149,30 @@ conflated.
 
 ## Code layout
 
-`src/storage/` owns persistence. React subscribes through
-`usePersistentStore.ts`.
+`packages/core/src/storage/` owns persistence for both apps; the modules below
+live there unless noted. The phone opens the store in `src/storage/native.ts`
+(expo-sqlite) and subscribes through `usePersistentStore.ts`. The browser app
+opens the same `ChangeStore` and `sqliteRepository` over SQLite WebAssembly
+(`apps/web/src/storage/`, see [WEB.md](WEB.md)). `newEvents.ts` writes the
+current writer version and the first-run event for both.
 
-| Module                                              | Responsibility                                                                                          |
-| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `model.ts`                                          | Public facade: deterministic live/replay transitions, grouping and the exports other code imports       |
-| `types.ts`                                          | Event, change, state and replay shapes only; no runtime logic                                           |
-| `validation.ts`                                     | Strict fields, version gates, date/value/habit checks and precondition assertions; never imports replay |
-| `changeUtils.ts`                                    | Preference classification, structural equality and inversion                                            |
-| `repository.ts`                                     | SQL operations against a small SQL interface                                                            |
-| `native.ts`                                         | Opens Expo SQLite and supplies native UUID/SHA-256                                                      |
-| `native.web.ts`, `browserRepository.ts`             | Web preview adapter over `localStorage`                                                                 |
-| `store.ts`                                          | `ChangeStore`: loading, immediate UI state, serialized write queue, Undo/Redo and exclusive backup work |
-| `selection.ts`                                      | Per-cell and per-heading selectors                                                                      |
-| `archive.ts`, `backups.ts`, `backups.web.ts`        | Backup encoding/validation and the share/pick file flows                                                |
-| `presetIcons.ts`, `presetDescriptions.ts`           | One-time, requested, undoable updates to the original preset habits                                     |
-| `descriptionDraftModel.ts`, `descriptionDraft.*.ts` | Separate recoverable description-draft store                                                            |
-| `descriptionBookmarks.ts`                           | Reading/editing positions kept in the draft store                                                       |
-| `profileSql.ts`                                     | Development-only SQL timing wrapper (see [PERFORMANCE.md](PERFORMANCE.md))                              |
+| Module                                               | Responsibility                                                                                          |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `model.ts`                                           | Public facade: deterministic live/replay transitions, grouping and the exports other code imports       |
+| `types.ts`                                           | Event, change, state and replay shapes only; no runtime logic                                           |
+| `validation.ts`                                      | Strict fields, version gates, date/value/habit checks and precondition assertions; never imports replay |
+| `changeUtils.ts`                                     | Preference classification, structural equality and inversion                                            |
+| `repository.ts`                                      | SQL operations against a small SQL interface                                                            |
+| `native.ts` (phone)                                  | Opens Expo SQLite and supplies native UUID/SHA-256                                                      |
+| `native.web.ts` (phone), `browserRepository.ts`      | Expo web preview adapter over `localStorage` (not used by the browser app)                              |
+| `store.ts`                                           | `ChangeStore`: loading, immediate UI state, serialized write queue, Undo/Redo and exclusive backup work |
+| `selection.ts`                                       | Per-cell and per-heading selectors                                                                      |
+| `newEvents.ts`                                       | Writer version, event metadata and the first-run event shared by both apps                              |
+| `archive.ts`; `backups.ts`, `backups.web.ts` (phone) | Backup encoding/validation; the phone's share/pick file flows                                           |
+| `presetIcons.ts`, `presetDescriptions.ts`            | One-time, requested, undoable updates to the original preset habits                                     |
+| `descriptionDraftModel.ts`, `descriptionDraft.*.ts`  | Separate recoverable description-draft store (the `.native`/`.web` adapters are phone files)            |
+| `descriptionBookmarks.ts`                            | Reading/editing positions kept in the draft store                                                       |
+| `profileSql.ts`                                      | Development-only SQL timing wrapper (see [PERFORMANCE.md](PERFORMANCE.md))                              |
 
 Replay owns fresh mutable state to avoid copying the entire history on each
 event; live UI updates remain immutable. On 7 October 2026 `types.ts`,
@@ -418,7 +423,7 @@ founder.
 ## Development sample store
 
 For statistics review, development builds can temporarily switch to a separate
-in-memory `ChangeStore` (`src/dev/sampleData.ts`). It generates 180 days of
+in-memory `ChangeStore` (`packages/core/src/dev/sampleData.ts`). It generates 180 days of
 fictional entries for the 12 preset habits, with long fictional notes on some,
 then appends fictional category/text records, effective-dated goals and
 period/cycle examples (`sampleRecords.ts`, `sampleGoals.ts`, `sampleTiming.ts`).
@@ -724,7 +729,7 @@ the first `before`, because development builds on 10 October 2026 briefly wrote
 them; logs from that day still load.
 
 Validation checks only the stored shape. The readable lightness range for each
-scheme is also a rendering rule (`fitBackground` in `src/theme.ts`), so a later
+scheme is also a rendering rule (`fitBackground` in `packages/core/src/theme.ts`), so a later
 range change can never make an old event fail to replay.
 
 The preferences stay outside History/Undo, preserve Redo and correction groups,

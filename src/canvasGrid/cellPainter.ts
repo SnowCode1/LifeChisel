@@ -9,9 +9,9 @@ import {
   type SkParagraph,
 } from '@shopify/react-native-skia';
 import { PixelRatio } from 'react-native';
-import type { WeekStart } from '../displayPreferences';
-import type { GridPalette } from '../gridAppearance';
-import type { Theme } from '../theme';
+import type { WeekStart } from '@onpurpose/core/displayPreferences';
+import type { GridPalette } from '@onpurpose/core/gridAppearance';
+import type { Theme } from '@onpurpose/core/theme';
 import { civilFromDays, shadedWeekOf, weekdayOf } from './gridDates';
 import { checkboxGeometry, columnX } from './gridGeometry';
 import type { CanvasCell } from './useGridModel';

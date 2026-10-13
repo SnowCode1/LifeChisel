@@ -6,14 +6,14 @@ import { DatabaseSync } from 'node:sqlite';
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { JSDOM } from 'jsdom';
-import { recentNumericTotals } from '../src/numericSuggestions.ts';
+import { recentNumericTotals } from '../packages/core/src/numericSuggestions.ts';
 import { gridLayout } from '../src/gridLayout.ts';
-import { gridSizing } from '../src/gridSizing.ts';
+import { gridSizing } from '../packages/core/src/gridSizing.ts';
 import {
   effectiveColumnSpacing,
   displayDefaults,
-} from '../src/displayPreferences.ts';
-import { createGridDayCache } from '../src/calendar.ts';
+} from '../packages/core/src/displayPreferences.ts';
+import { createGridDayCache } from '../packages/core/src/calendar.ts';
 import {
   evaluateGoal,
   goalAt,
@@ -21,21 +21,31 @@ import {
   ruleIsMet,
   allWeekdays,
   checkboxChecked,
-} from '../src/habitGoals.ts';
-import { ordinal, timingDate, scheduledOn } from '../src/goalTiming.ts';
-import { entryCorrection, receiptIsCurrent } from '../src/quickEntryUndo.ts';
+} from '../packages/core/src/habitGoals.ts';
+import {
+  ordinal,
+  timingDate,
+  scheduledOn,
+} from '../packages/core/src/goalTiming.ts';
+import {
+  entryCorrection,
+  receiptIsCurrent,
+} from '../packages/core/src/quickEntryUndo.ts';
 import {
   useDelayedCompletionMask,
   COMPLETION_PAUSE_MS,
 } from '../src/useDelayedCompletionMask.ts';
-import { ChangeStore } from '../src/storage/store.ts';
-import { sqliteRepository } from '../src/storage/repository.ts';
-import { encodeArchive, decodeArchive } from '../src/storage/archive.ts';
+import { ChangeStore } from '../packages/core/src/storage/store.ts';
+import { sqliteRepository } from '../packages/core/src/storage/repository.ts';
+import {
+  encodeArchive,
+  decodeArchive,
+} from '../packages/core/src/storage/archive.ts';
 import {
   validateChange,
   replayEvents,
   applyEvent,
-} from '../src/storage/model.ts';
+} from '../packages/core/src/storage/model.ts';
 const digest = async (text) => createHash('sha256').update(text).digest('hex');
 const habit = { id: 'read', name: 'Read', color: '#BDA5FF', type: 'number' };
 test('recent totals are distinct, bounded, ranked by frequency then recency, and preserve zero', () => {
@@ -414,7 +424,8 @@ test('v17 width/density preferences persist in SQLite/backup without changing le
   assert.equal(replayEvents(previous.events).replay.hasV17, false);
 });
 test('quick correction targets its own entry, retains unrelated edits, and invalidates after retouch/restore/archive', async () => {
-  const { createSampleStore } = await import('../src/dev/sampleData.ts');
+  const { createSampleStore } =
+    await import('../packages/core/src/dev/sampleData.ts');
   const store = await createSampleStore('2026-10-07');
   const change = {
     kind: 'entry',

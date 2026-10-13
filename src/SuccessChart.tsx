@@ -1,19 +1,19 @@
 import { Path, Rect } from 'react-native-svg';
 import { ChartFrame, type ChartSlot } from './ChartFrame';
-import type { WeekStart } from './displayPreferences';
-import { dateKey } from './statistics';
+import type { WeekStart } from '@onpurpose/core/displayPreferences';
+import { dateKey } from '@onpurpose/core/statistics';
 import {
   statisticMonthLabel,
   statisticSpanLabel,
   statisticTickLabel,
-} from './statisticsFormatting';
+} from '@onpurpose/core/statisticsFormatting';
 import {
   timeTicks,
   type BinUnit,
   type Observation,
   type SeriesBin,
   type SuccessMode,
-} from './statsSeries';
+} from '@onpurpose/core/statsSeries';
 import { useTheme } from './ThemeContext';
 
 const percent = (rate: number) => `${Math.round(rate * 100)}%`;

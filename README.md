@@ -55,7 +55,8 @@ Android over USB and troubleshooting, see the
 [development guide](docs/DEVELOPMENT.md).
 
 ```sh
-npm run web             # browser preview of other screens; the grid is phones only
+npm run web:dev         # the browser app (apps/web); see docs/WEB.md
+npm run web             # Expo browser preview of phone screens; the grid is phones only
 npm run check           # TypeScript, lint and formatting
 npm test                # storage, replay, date, layout and other test suites
 npm run export:ios      # verify the iOS JavaScript bundle (not a signed build)
@@ -72,6 +73,7 @@ screenshot sharing, isolated sample data and grid performance diagnostics.
 - [Documentation index](docs/README.md): every guide, grouped by topic
 - [Development setup](docs/DEVELOPMENT.md) and [testing](docs/TESTING.md)
 - [Architecture](docs/ARCHITECTURE.md) and [storage design](docs/STORAGE.md)
+- [Web app](docs/WEB.md) and the shared core package
 - [Decision log](docs/DECISIONS.md)
 - [Contributing](CONTRIBUTING.md)
 - [Instructions for AI coding assistants](AGENTS.md) (also loaded through

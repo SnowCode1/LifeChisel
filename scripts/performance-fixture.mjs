@@ -4,8 +4,8 @@ import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import { performance } from 'node:perf_hooks';
 import ts from 'typescript';
-import * as model from '../src/storage/model.ts';
-import * as metrics from '../src/performanceModel.ts';
+import * as model from '../packages/core/src/storage/model.ts';
+import * as metrics from '../packages/core/src/performanceModel.ts';
 function load(path, imports, context = {}) {
   const module = { exports: {} };
   const code = ts.transpileModule(
@@ -46,9 +46,13 @@ export function performanceFixture({
     __DEV__: development,
     process: { env: { EXPO_PUBLIC_DEV_COMPARISON: String(comparison) } },
   };
-  const features = load('../src/developmentFeatures.ts', {}, featureContext);
+  const features = load(
+    '../packages/core/src/developmentFeatures.ts',
+    {},
+    featureContext,
+  );
   const timing = load(
-    '../src/performance.ts',
+    '../packages/core/src/performance.ts',
     { './performanceModel.ts': metrics, './developmentFeatures.ts': features },
     {
       __DEV__: development,
@@ -67,21 +71,21 @@ export function performanceFixture({
       clearTimeout: (handle) => timers.delete(handle),
     },
   );
-  const profiled = load('../src/storage/profileSql.ts', {
+  const profiled = load('../packages/core/src/storage/profileSql.ts', {
     '../performance.ts': timing,
   });
-  const repository = load('../src/storage/repository.ts', {
+  const repository = load('../packages/core/src/storage/repository.ts', {
     './model.ts': model,
     '../performance.ts': timing,
     './profileSql.ts': profiled,
   });
   const stores = load(
-    '../src/storage/store.ts',
+    '../packages/core/src/storage/store.ts',
     { './model.ts': model, '../performance.ts': timing },
     { performance: clock },
   );
   const upload = load('../src/dev/performanceUpload.ts', {
-    '../performanceModel': metrics,
+    '@onpurpose/core/performanceModel': metrics,
   });
   return {
     timing,

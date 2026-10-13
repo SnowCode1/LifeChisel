@@ -46,14 +46,27 @@ preferences persist locally. Sample habits are initialized
 once; never reset or reseed an existing store during loading or an error.
 The 12 presets are for development only: release builds will start empty with
 a short first-run walkthrough (not built yet).
-`src/storage/presetIcons.ts` applies preset icons as normal undoable edits;
+`packages/core/src/storage/presetIcons.ts` applies preset icons as normal undoable edits;
 preserve earlier icon choices/removals and raw history.
 
 ## Stack and layout
 
-- React Native + Expo SDK 57, TypeScript strict mode, npm with package-lock.json.
-- `src/storage/` owns versioned events, replay, native SQLite, the write queue,
-  undo/redo, and backup restore. Read STORAGE.md before changing these invariants.
+- npm workspaces in one repository. The phone app (React Native + Expo SDK 57)
+  stays at the root (`App.tsx`, `src/`, `app.json`, `eas.json`).
+  `packages/core/src` is `@onpurpose/core`: platform-neutral logic both apps
+  share (storage model/replay/validation, ChangeStore, the SQLite repository,
+  backups, dates, entries, goals, completion, statistics, theme/colours, icon
+  catalogues, display preferences). Apps import it as `@onpurpose/core/<path>`.
+  Core never imports React, React Native, Expo or app code, not even types.
+  Module names below without a folder may live in either place; pure logic is
+  in core. `apps/web` is the browser app (see the Web app section). Tests stay
+  in `scripts/` and `apps/web/test/`.
+- TypeScript strict mode, npm with one root package-lock.json.
+- `packages/core/src/storage/` owns versioned events, replay, the SQLite
+  repository, the write queue, undo/redo and backup restore; `newEvents.ts`
+  holds the writer version and first-run event for both apps. `src/storage/`
+  keeps the phone adapters (expo-sqlite opening, backup files, draft stores).
+  Read STORAGE.md before changing these invariants.
 - `App.tsx` owns screen state and dialogs; `src/HabitGrid.tsx` renders the grid.
   `useDailyEntryActions.ts` owns the shared daily input/save controller and stable
   cell callback; `NumericRecordDialog.tsx` owns numeric draft typing/validation and
@@ -123,13 +136,14 @@ preserve earlier icon choices/removals and raw history.
   disabled states, labels, hints and activation (wording in pure
   `cellAccessibility.ts`), header dates and an adjustable Dates strip. Never
   collapse it into one element. It takes touches only while a screen reader is
-  on. Web is not developed: `useCanvasGrid.web.tsx` shows a notice instead.
+  on. The Expo web preview is not developed: `useCanvasGrid.web.tsx` shows a
+  notice instead. The browser product is `apps/web`, not this preview.
 - Keep the compact top bar visible, with Today centred and History/Settings at right.
   Month/year stays beside the day headings; future pull streak grows left from the
   fixed right edge of the existing divider beneath the headings. Do not add a border.
 - `src/AppPanel.tsx` owns real change History/undo and the Settings/backup sheet; `src/SettingsScreen.tsx` owns the compact settings index and detail pages; `src/Icon.tsx` owns outline icons.
 - `src/HistoryView.tsx` renders compact action rows and sticky edit-day groups;
-  `src/history.ts` keeps grouping separate from effective habit dates. Preserve
+  `packages/core/src/history.ts` keeps grouping separate from effective habit dates. Preserve
   reverse sequence order; do not reorder logged actions by their timestamps.
   `historyRows` collapses only neighbouring same-date entries within 5 minutes,
   keyed by their oldest member. Filters are unsaved view state; the floating
@@ -142,7 +156,7 @@ preserve earlier icon choices/removals and raw history.
   preserve archive entries. `src/HabitDialog.tsx` owns editor/colour drafts;
   `src/ArchivedHabits.tsx` owns the Settings archive/restore list. Add belongs at the
   end of the grid. `src/HabitStatsScreen.tsx` owns full-screen statistics, with pure
-  calculations in `src/statistics.ts`. Read HABIT_MANAGEMENT.md and STATISTICS.md.
+  calculations in `packages/core/src/statistics.ts`. Read HABIT_MANAGEMENT.md and STATISTICS.md.
   `src/HabitDetailsScreen.tsx`, `src/DescriptionReader.tsx`, `src/DescriptionEditor.tsx` and `src/DescriptionHistory.tsx`
   own description reading, full-screen draft editing and Before/After restore.
   `src/DescriptionVersions.tsx` lists that habit's active note actions using the pure
@@ -161,7 +175,7 @@ preserve earlier icon choices/removals and raw history.
   DOM snapshot before applying. Applied descriptions use ordinary habit changes (introduced in v7);
   recoverable drafts stay outside History/backups in a separate local store. Keep
   `storage/descriptionDraftModel.ts` distinct from native/web adapters for Metro.
-  `src/dev/sampleData.ts` owns isolated mock history for statistics testing. Keep
+  `packages/core/src/dev/sampleData.ts` owns isolated mock history for statistics testing. Keep
   it in memory, excluded via `__DEV__` from release, and separate from real data.
   `src/HabitSymbol.tsx` renders optional emoji/Phosphor/Tabler icons; the editor owns
   selection drafts through `src/HabitIconPicker.tsx`. Read HABIT_ICONS.md.
@@ -176,7 +190,7 @@ preserve earlier icon choices/removals and raw history.
   name control so position animation does not report per-frame layout to JS.
   `src/motion.ts` shares reduced-motion-aware row/menu transitions; keep name and
   date-cell layout timing aligned.
-- `src/displayPreferences.ts` owns column spacing and week start defaults (the retired `dateFading` default
+- `packages/core/src/displayPreferences.ts` owns column spacing and week start defaults (the retired `dateFading` default
   stays only so saved changes replay); keep absent-field defaults compatible with old logs and all preferences outside History/Undo. Read docs/SETTINGS.md.
 - `useGridDisplayPreferences.ts` holds only grid display preferences while the
   History/Settings/archive sheet is presented or dismissing. Settings and storage
@@ -184,7 +198,7 @@ preserve earlier icon choices/removals and raw history.
   values together. Keep the mounted grid and its inner TypographyProvider stable.
   Do not defer durable writes, unmount the grid, or rebuild prepared days on
   every spacing/text-size choice.
-- `src/gridSizing.ts` owns v18 grid sizes (points or `auto`), legacy mapping and
+- `packages/core/src/gridSizing.ts` owns v18 grid sizes (points or `auto`), legacy mapping and
   automatic rules; `gridLayout.ts`/`rowSpacing.ts` turn them into geometry with font
   scaling and measured row heights. `screenSize.ts` reads the physical screen for
   automatic rows; keep React Native imports out of gridSizing (storage imports it).
@@ -207,11 +221,11 @@ preserve earlier icon choices/removals and raw history.
 - `src/gridLayout.ts` calculates adaptive column geometry for both orientations.
 - `src/gridNavigation.ts` owns `FUTURE_PULL_DISTANCE`, `FUTURE_BATCH` and
   `futureRevealDay`. The app root uses `GestureHandlerRootView` on all platforms.
-- `src/ColourPicker.tsx` and `src/colors.ts` own preset/custom colours and OKLCH.
+- `src/ColourPicker.tsx` and `packages/core/src/colors.ts` own preset/custom colours and OKLCH.
 - `src/haptics.ts` owns action feedback; never trigger it from state updaters
   or await it before updating UI. Keep routine scrolling quiet.
-- `src/calendar.ts` and `src/useLocalToday.ts` handle local dates and rollover.
-- `src/habits.ts` contains demo habits/colours. `index.ts` registers the app.
+- `packages/core/src/calendar.ts` and `src/useLocalToday.ts` handle local dates and rollover.
+- `packages/core/src/habits.ts` contains demo habits/colours. `index.ts` registers the app.
 - `app.json` owns Expo configuration. Generated native folders stay ignored.
 - Development happens on Linux and Windows (no Mac); a physical iPhone is the primary test device.
   Android testing over USB/adb started 8 October 2026. Which platform launches
@@ -240,7 +254,7 @@ preserve earlier icon choices/removals and raw history.
 
 ## Theme (v19)
 
-`src/theme.ts` (pure) derives all colours from one background; `ThemeContext.tsx`
+`packages/core/src/theme.ts` (pure) derives all colours from one background; `ThemeContext.tsx`
 provides `useTheme` and per-theme cached `themedStyles`. Never hardcode interface
 colours: greys designed on black are `t.ink(0xNN)` (exact on black), dark tinted
 surfaces `t.tint(hex)`, accents `t.accent`/`t.link`/`t.danger`, and habit or other
@@ -257,6 +271,20 @@ in v19, retaining v1–v18 prefixes and SQL schema 1. Read docs/SETTINGS.md.
 The description editor uses `@expo/dom-webview`, falling back to
 `react-native-webview` where its native view is missing (Expo Go on Android).
 
+## Web app
+
+`apps/web` is a Vite + React DOM app written for browsers, not a port of the phone
+screens. Read docs/WEB.md. It reuses `@onpurpose/core` for every rule and
+format; never copy core logic into the web app, move it into core instead.
+Storage is the shared `sqliteRepository` over SQLite WebAssembly in a worker on
+OPFS (`opfs-sahpool`, no special headers), so the log, schema 1 and backups match
+the phone. One tab holds a Web Lock on the database; never fall back to a
+temporary or `localStorage` database, because unsaved data must look unsaved.
+The grid is a DOM table, not Skia: browsers scroll, zoom and announce tables
+natively. The product rules above (stable rows, immediate feedback, no backend
+or login without a requirement) apply to the web app too. Sync and the
+web/phone pricing link are not built.
+
 ## UI and accessibility
 
 Keep completed rows in place by default. Optional Hide completed today filters rows meeting their effective-dated goals at Today. Preserve Show completed and full rows when browsing other dates. Avoid gesture-only essential actions. Expose
@@ -270,6 +298,9 @@ Run `npm run check` and relevant `npm test` suites after code changes, and `npm 
 native-facing imports or Expo config. Web preview shows a notice instead of the
 grid and is not evidence that iOS runs correctly. Report actual checks and any unverified device
 behaviour. Follow `docs/TESTING.md` for phone and release testing.
+Changes to `packages/core` affect both apps: run `npm run check` (it typechecks
+both), `npm test`, both exports and `npm run web:build`. Browser checks of
+`apps/web` are not phone evidence, and phone checks are not browser evidence.
 Run `npm run export:android` as well when changing platform-specific code. With an
 Android phone on adb, take your own screenshots with `npm run android:screenshot`
 (read `.dev/android/latest.png`) and crash logs with `adb logcat -d`; see
@@ -315,7 +346,7 @@ US$9.99 unlock. Never paywall existing
 records, export, backups, History or the Loop import. The final bundle
 identifier and the final brand remain open.
 
-`src/habitCompletion.ts` centralizes completion rules; do not infer completion
+`packages/core/src/habitCompletion.ts` centralizes completion rules; do not infer completion
 from a record without an explicit rule; use its effective date and keep blank distinct from zero.
 `completedHabitsSelection` uses a primitive today mask; disabled filtering,
 non-crossing numeric edits and save acknowledgements must not rerender the grid container.

@@ -44,23 +44,23 @@ the picker can shrink in landscape or above the keyboard.
 ## Assets and code
 
 [Phosphor core](https://github.com/phosphor-icons/core) supplies the regular SVG
-paths, pinned to npm `@phosphor-icons/core@2.1.1`. `src/phosphorPaths.ts` contains
+paths, pinned to npm `@phosphor-icons/core@2.1.1`. `packages/core/src/phosphorPaths.ts` contains
 the complete regular glyph set. Its [MIT notice](licenses/PHOSPHOR_LICENSE.txt) is retained.
 [Tabler](https://github.com/tabler/tabler-icons) supplies all outline paths and
-metadata from npm `@tabler/icons@3.48.0`; generated `src/tablerPaths.ts` preserves
+metadata from npm `@tabler/icons@3.48.0`; generated `packages/core/src/tablerPaths.ts` preserves
 path fill, stroke, and opacity overrides. Its [MIT notice](licenses/TABLER_LICENSE.txt)
 is retained. Render on a 24-unit viewBox with 1.5-unit round strokes to sit near
 Phosphor Regular’s weight. Neither asset package is a runtime dependency; existing
 react-native-svg draws the paths.
 There is no remote image fetch and no new native module.
 
-`src/habitIconCatalog.ts` and `src/tablerIconCatalog.ts` own generated stable IDs,
+`packages/core/src/habitIconCatalog.ts` and `packages/core/src/tablerIconCatalog.ts` own generated stable IDs,
 labels, and search terms.
-`src/commonHabitIcons.ts` and `src/commonTablerIcons.ts` preserve curated order,
+`packages/core/src/commonHabitIcons.ts` and `packages/core/src/commonTablerIcons.ts` preserve curated order,
 labels, and habit aliases.
-`src/searchHabitIcons.ts` indexes the full catalogue for multiword search. Keep saved IDs
+`packages/core/src/searchHabitIcons.ts` indexes the full catalogue for multiword search. Keep saved IDs
 and their glyphs when extending the catalogue. `src/HabitSymbol.tsx` draws icons;
-`src/HabitIconPicker.tsx` owns selection UI. `src/habitIcons.ts` owns namespaced
+`src/HabitIconPicker.tsx` owns selection UI. `packages/core/src/habitIcons.ts` owns namespaced
 values, labels, and validation using pinned `emoji-regex@11.0.0`. Do not tighten
 validation on dependency updates without testing previously accepted sequences.
 

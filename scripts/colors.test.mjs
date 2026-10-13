@@ -6,8 +6,8 @@ import {
   oklchToHex,
   contrastOnBlack,
   checkmarkColor,
-} from '../src/colors.ts';
-import { habitColors } from '../src/habits.ts';
+} from '../packages/core/src/colors.ts';
+import { habitColors } from '../packages/core/src/habits.ts';
 
 test('hex input accepts shorthand and mixed case but rejects malformed/alpha values', () => {
   assert.equal(normalizeHex(' #a3f '), '#AA33FF');

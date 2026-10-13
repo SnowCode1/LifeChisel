@@ -1,0 +1,23 @@
+// Names of the outline icons the apps draw; shared labels refer to them.
+export type IconName =
+  | 'history'
+  | 'settings'
+  | 'close'
+  | 'tick'
+  | 'chevron'
+  | 'checked'
+  | 'unchecked'
+  | 'number'
+  | 'categories'
+  | 'text'
+  | 'erase'
+  | 'palette'
+  | 'haptics'
+  | 'undo'
+  | 'redo'
+  | 'edit'
+  | 'reorder'
+  | 'archive'
+  | 'info'
+  | 'plus'
+  | 'calendar';

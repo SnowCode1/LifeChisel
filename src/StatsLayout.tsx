@@ -4,7 +4,7 @@ import Animated from 'react-native-reanimated';
 import { appear } from './motion';
 import { Text, useAppWindowDimensions } from './Typography';
 import { Icon } from './Icon';
-import type { StatsRange } from './statistics';
+import type { StatsRange } from '@onpurpose/core/statistics';
 import { themedStyles, useTheme } from './ThemeContext';
 
 // Shared statistics building blocks. Both statistics screens use these so

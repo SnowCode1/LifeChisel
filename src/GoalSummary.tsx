@@ -1,15 +1,15 @@
 import { Pressable, View } from 'react-native';
 import { Text } from './Typography';
-import type { Habit } from './habits';
+import type { Habit } from '@onpurpose/core/habits';
 import {
   allWeekdays,
   defaultSuccessRule,
   goalAt,
   ruleSummary,
   timingSummary,
-} from './habitGoals';
+} from '@onpurpose/core/habitGoals';
 import { Icon } from './Icon';
-import { habitType } from './habits';
+import { habitType } from '@onpurpose/core/habits';
 import { themedStyles, useTheme } from './ThemeContext';
 
 export function GoalSummary({

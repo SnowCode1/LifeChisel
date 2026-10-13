@@ -1,4 +1,5 @@
-import type { TextStyle } from 'react-native';
+// The size fields of a text style, without depending on a UI framework.
+type SizedText = { fontSize?: number; lineHeight?: number };
 
 export const TEXT_SCALE_MIN = 0.85;
 export const TEXT_SCALE_MAX = 1.5;
@@ -17,10 +18,10 @@ export const roundTextScale = (value: number) =>
   20;
 export const combinedTextScale = (system: number, app: number) => system * app;
 export function textSizeStyle(
-  style: TextStyle | undefined,
+  style: SizedText | undefined,
   scale: number,
   nested = false,
-): TextStyle {
+): SizedText {
   return {
     ...(typeof style?.fontSize === 'number'
       ? { fontSize: style.fontSize * scale }

@@ -4,7 +4,7 @@ import { entryLabel } from './entries.ts';
 import { localDateKey } from './calendar.ts';
 import { habitType, isNumericHabit } from './habits.ts';
 import type { HistoryAction, StoredState } from './storage/model.ts';
-import type { IconName } from './Icon.tsx';
+import type { IconName } from './iconNames.ts';
 
 // Exclusive kinds for the History filter and day summaries. Notes are rows that
 // read "Description edited/cleared" and open Before/After.

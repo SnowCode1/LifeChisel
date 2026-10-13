@@ -9,9 +9,12 @@ import {
   calendarDay,
   localDateKey,
   createGridDayCache,
-} from '../src/calendar.ts';
-import { entrySelection } from '../src/storage/selection.ts';
-import { checkboxChecked, evaluateGoal } from '../src/habitGoals.ts';
+} from '../packages/core/src/calendar.ts';
+import { entrySelection } from '../packages/core/src/storage/selection.ts';
+import {
+  checkboxChecked,
+  evaluateGoal,
+} from '../packages/core/src/habitGoals.ts';
 import { performanceFixture, nodeSqlPort } from './performance-fixture.mjs';
 const today = '2026-10-07';
 const directory = mkdtempSync(join(tmpdir(), 'onpurpose-grid-benchmark-'));

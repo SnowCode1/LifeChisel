@@ -3,20 +3,23 @@ import test from 'node:test';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
-import { ChangeStore } from '../src/storage/store.ts';
-import { sqliteRepository } from '../src/storage/repository.ts';
-import { encodeArchive, decodeArchive } from '../src/storage/archive.ts';
+import { ChangeStore } from '../packages/core/src/storage/store.ts';
+import { sqliteRepository } from '../packages/core/src/storage/repository.ts';
+import {
+  encodeArchive,
+  decodeArchive,
+} from '../packages/core/src/storage/archive.ts';
 import {
   applyChange,
   applyEvent,
   replayEvents,
   validateChange,
-} from '../src/storage/model.ts';
+} from '../packages/core/src/storage/model.ts';
 import {
   cellLookDefaults,
   cellLookOf,
   isConnectorThickness,
-} from '../src/displayPreferences.ts';
+} from '../packages/core/src/displayPreferences.ts';
 
 const digest = async (text) => createHash('sha256').update(text).digest('hex');
 const habit = { id: 'read', name: 'Read', color: '#BDA5FF', type: 'number' };

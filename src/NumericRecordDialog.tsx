@@ -12,13 +12,13 @@ import {
 import { Text, TextInput } from './Typography';
 import { Icon } from './Icon';
 import { useKeyboardFocus } from './useKeyboardFocus';
-import type { EntryDay } from './calendar';
-import type { EntryValues } from './entries';
-import type { Habit } from './habits';
-import { checkmarkColor } from './colors';
+import type { EntryDay } from '@onpurpose/core/calendar';
+import type { EntryValues } from '@onpurpose/core/entries';
+import type { Habit } from '@onpurpose/core/habits';
+import { checkmarkColor } from '@onpurpose/core/colors';
 import { themedStyles, useTheme } from './ThemeContext';
 import { feedback } from './haptics';
-import { recentNumericTotals } from './numericSuggestions';
+import { recentNumericTotals } from '@onpurpose/core/numericSuggestions';
 
 // Key the dialog by habit/date. Typing stays local; Done reads the latest store
 // precondition through onSave, and Close discards this uncommitted draft.

@@ -4,9 +4,9 @@ import {
   descriptionExcerpt,
   descriptionReadingPassages,
   DESCRIPTION_EXCERPT_LENGTH,
-} from '../src/descriptionReading.ts';
-import { parseDescription } from '../src/description.ts';
-import { sampleDescriptions } from '../src/dev/sampleDescriptions.ts';
+} from '../packages/core/src/descriptionReading.ts';
+import { parseDescription } from '../packages/core/src/description.ts';
+import { sampleDescriptions } from '../packages/core/src/dev/sampleDescriptions.ts';
 
 test('excerpt work is bounded independently of the rest of a long note and retains readable labels', () => {
   const prefix = '**My purpose**: [a reminder](https://example.com)\n\n';

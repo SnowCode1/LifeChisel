@@ -1,10 +1,10 @@
 import { Text } from '../Typography';
 import { useEffect, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Pressable, Switch, View } from 'react-native';
-import { localDateKey } from '../calendar';
-import type { ChangeStore } from '../storage/store';
-import { createSampleStore } from './sampleData';
-import { performanceRun } from '../performance';
+import { localDateKey } from '@onpurpose/core/calendar';
+import type { ChangeStore } from '@onpurpose/core/storage/store';
+import { createSampleStore } from '@onpurpose/core/dev/sampleData';
+import { performanceRun } from '@onpurpose/core/performance';
 import { themedStyles, useTheme } from '../ThemeContext';
 
 // Mounted inside the app's ThemeProvider (Settings), unlike SampleDataMode

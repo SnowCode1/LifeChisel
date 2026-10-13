@@ -1,5 +1,5 @@
 import { useLayoutEffect, useState } from 'react';
-import { calendarDay } from './calendar';
+import { calendarDay } from '@onpurpose/core/calendar';
 import { useCanvasGridScroll } from './canvasGrid/useCanvasGridScroll';
 import { FUTURE_BATCH, futureRevealDay } from './gridNavigation';
 import { feedback } from './haptics';

@@ -3,14 +3,14 @@ import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { Text, TextInput } from './Typography';
 import { StartDateField } from './StartDateField';
-import { allWeekdays } from './habitGoals';
+import { allWeekdays } from '@onpurpose/core/habitGoals';
 import {
   weekAnchor,
   validTimingDate,
   type GoalTiming,
   type GoalPeriod,
-} from './goalTiming';
-import type { WeekStart } from './displayPreferences';
+} from '@onpurpose/core/goalTiming';
+import type { WeekStart } from '@onpurpose/core/displayPreferences';
 import { themedStyles, useTheme } from './ThemeContext';
 
 function NumberField({

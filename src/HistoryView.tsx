@@ -20,8 +20,8 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Icon } from './Icon';
 import { FilterBar, HabitFilterMenu, JumpCalendar } from './HistoryFilters';
-import { calendarDay, localDateKey } from './calendar';
-import type { WeekStart } from './displayPreferences';
+import { calendarDay, localDateKey } from '@onpurpose/core/calendar';
+import type { WeekStart } from '@onpurpose/core/displayPreferences';
 import {
   allHistory,
   burstMemberLabel,
@@ -36,9 +36,9 @@ import {
   type HistoryFilter,
   type HistoryKind,
   type HistoryRowItem,
-} from './history';
-import type { HistoryAction, StoredState } from './storage/model';
-import type { StoreSnapshot } from './storage/store';
+} from '@onpurpose/core/history';
+import type { HistoryAction, StoredState } from '@onpurpose/core/storage/model';
+import type { StoreSnapshot } from '@onpurpose/core/storage/store';
 import { useLocalToday } from './useLocalToday';
 import { useSheetScroll } from './SheetModal';
 import { themedStyles, useTheme } from './ThemeContext';

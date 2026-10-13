@@ -292,7 +292,7 @@ each scheme (dark at most OKLCH 0.34, light at least 0.86, colourfulness at most
 note saying so. Saved colours are never rejected; the range is applied at
 display time. The page also says whether that background is in use now.
 
-How colours adapt (assistant design, `src/theme.ts`):
+How colours adapt (assistant design, `packages/core/src/theme.ts`):
 
 - Every interface grey was designed on black. `ink(level)` keeps each grey at
   the same relative contrast against the active background, on a log contrast

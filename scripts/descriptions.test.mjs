@@ -10,19 +10,25 @@ import {
   parseDescription,
   descriptionSummary,
   descriptionPreview,
-} from '../src/description.ts';
-import { demoHabits } from '../src/habits.ts';
+} from '../packages/core/src/description.ts';
+import { demoHabits } from '../packages/core/src/habits.ts';
 import {
   presetDescriptions,
   genericPlaceholderDescription,
-} from '../src/presetDescriptions.ts';
-import { ChangeStore } from '../src/storage/store.ts';
-import { browserRepository } from '../src/storage/browserRepository.ts';
-import { replayEvents, applyEvent } from '../src/storage/model.ts';
-import { encodeArchive, decodeArchive } from '../src/storage/archive.ts';
-import { applyPlaceholderDescriptions } from '../src/storage/presetDescriptions.ts';
-import { descriptionVersions } from '../src/descriptionVersionFilter.ts';
-import { historyPresentation } from '../src/history.ts';
+} from '../packages/core/src/presetDescriptions.ts';
+import { ChangeStore } from '../packages/core/src/storage/store.ts';
+import { browserRepository } from '../packages/core/src/storage/browserRepository.ts';
+import {
+  replayEvents,
+  applyEvent,
+} from '../packages/core/src/storage/model.ts';
+import {
+  encodeArchive,
+  decodeArchive,
+} from '../packages/core/src/storage/archive.ts';
+import { applyPlaceholderDescriptions } from '../packages/core/src/storage/presetDescriptions.ts';
+import { descriptionVersions } from '../packages/core/src/descriptionVersionFilter.ts';
+import { historyPresentation } from '../packages/core/src/history.ts';
 
 let counter = 0;
 const metadata = (sequence) => ({

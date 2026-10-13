@@ -21,18 +21,21 @@ import {
   type TextProps,
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { MAX_DESCRIPTION_LENGTH, normalizeDescription } from './description';
+import {
+  MAX_DESCRIPTION_LENGTH,
+  normalizeDescription,
+} from '@onpurpose/core/description';
 import RichDescription, { type RichDescriptionRef } from './RichDescription';
 import { openDescriptionLink } from './descriptionLinks';
 import {
   descriptionPositionKey,
   validDescriptionPosition,
   type DescriptionPosition,
-} from './descriptionPosition';
+} from '@onpurpose/core/descriptionPosition';
 import {
   descriptionResume,
   rememberDescriptionPosition,
-} from './storage/descriptionBookmarks';
+} from '@onpurpose/core/storage/descriptionBookmarks';
 import { draftsFor } from './descriptionDrafts';
 import { editorPalette } from './richText/editorTheme';
 import { themedStyles, useTheme } from './ThemeContext';

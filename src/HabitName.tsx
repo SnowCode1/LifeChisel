@@ -6,7 +6,7 @@ import {
   View,
   type LayoutChangeEvent,
 } from 'react-native';
-import type { Habit } from './habits';
+import type { Habit } from '@onpurpose/core/habits';
 import { Icon } from './Icon';
 import { HabitSymbol } from './HabitSymbol';
 import { ReorderRow, type RowMotion } from './ReorderRow';

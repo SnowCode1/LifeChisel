@@ -6,8 +6,11 @@ import {
   habitIconPackLabel,
   isSingleEmoji,
   type HabitIcon,
-} from './habitIcons';
-import { searchHabitIcons, packIconCount } from './searchHabitIcons';
+} from '@onpurpose/core/habitIcons';
+import {
+  searchHabitIcons,
+  packIconCount,
+} from '@onpurpose/core/searchHabitIcons';
 import { HabitSymbol } from './HabitSymbol';
 import { themedStyles, useTheme } from './ThemeContext';
 

@@ -2,8 +2,12 @@ import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import * as DocumentPicker from 'expo-document-picker';
 import { digest } from './native';
-import { decodeArchive, encodeArchive, MAX_ARCHIVE_BYTES } from './archive';
-import type { ChangeStore } from './store';
+import {
+  decodeArchive,
+  encodeArchive,
+  MAX_ARCHIVE_BYTES,
+} from '@onpurpose/core/storage/archive';
+import type { ChangeStore } from '@onpurpose/core/storage/store';
 
 export async function shareBackup(store: ChangeStore) {
   if (!(await Sharing.isAvailableAsync()))

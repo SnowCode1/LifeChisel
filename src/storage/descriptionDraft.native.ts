@@ -4,7 +4,7 @@ import {
   sqliteDrafts,
   type DraftPort,
   type DraftStorage,
-} from './descriptionDraftModel';
+} from '@onpurpose/core/storage/descriptionDraftModel';
 let opening: Promise<DraftStorage> | null = null;
 async function open() {
   if (!opening)

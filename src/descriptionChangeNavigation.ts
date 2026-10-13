@@ -1,4 +1,4 @@
-import type { DescriptionPassage } from './descriptionDiff.ts';
+import type { DescriptionPassage } from '@onpurpose/core/descriptionDiff';
 
 export type DescriptionScrollPort = {
   scrollToIndex(options: {

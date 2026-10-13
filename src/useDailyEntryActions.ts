@@ -1,11 +1,14 @@
 import { useCallback, useState } from 'react';
-import type { EntryDay } from './calendar';
-import { sameEntry, type EntryValue } from './entries';
-import { habitType, isNumericHabit, type Habit } from './habits';
-import { checkboxChecked, toggleCheckboxValue } from './habitGoals';
+import type { EntryDay } from '@onpurpose/core/calendar';
+import { sameEntry, type EntryValue } from '@onpurpose/core/entries';
+import { habitType, isNumericHabit, type Habit } from '@onpurpose/core/habits';
+import {
+  checkboxChecked,
+  toggleCheckboxValue,
+} from '@onpurpose/core/habitGoals';
 import { feedback } from './haptics';
-import type { QuickUndo } from './quickUndo';
-import type { ChangeStore } from './storage/store';
+import type { QuickUndo } from '@onpurpose/core/quickUndo';
+import type { ChangeStore } from '@onpurpose/core/storage/store';
 
 type EntryEditor = {
   key: string;

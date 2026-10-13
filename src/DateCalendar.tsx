@@ -2,9 +2,12 @@ import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { Text, useAppWindowDimensions } from './Typography';
 import { Icon } from './Icon';
-import { entryDay } from './calendar';
-import { monthDays } from './statistics';
-import { weekDayOrder, type WeekStart } from './displayPreferences';
+import { entryDay } from '@onpurpose/core/calendar';
+import { monthDays } from '@onpurpose/core/statistics';
+import {
+  weekDayOrder,
+  type WeekStart,
+} from '@onpurpose/core/displayPreferences';
 import { themedStyles, useTheme } from './ThemeContext';
 
 const weekdayLabels = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];

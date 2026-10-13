@@ -9,10 +9,10 @@ import {
   normalizeHex,
   oklchToHex,
   type Oklch,
-} from './colors';
-import { habitColors } from './habits';
+} from '@onpurpose/core/colors';
+import { habitColors } from '@onpurpose/core/habits';
 import { feedback } from './haptics';
-import { MIN_CONTRAST } from './theme';
+import { MIN_CONTRAST } from '@onpurpose/core/theme';
 import { themedStyles, useTheme } from './ThemeContext';
 
 export function ColourPicker({

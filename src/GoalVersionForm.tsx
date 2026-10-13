@@ -16,7 +16,7 @@ import { Icon } from './Icon';
 import { HabitSymbol } from './HabitSymbol';
 import { StartDateField } from './StartDateField';
 import { InfoNote } from './InfoNote';
-import { habitType, type Habit } from './habits';
+import { habitType, type Habit } from '@onpurpose/core/habits';
 import {
   resolveGoalDraft,
   ruleSummary,
@@ -24,9 +24,9 @@ import {
   scheduleSummary,
   type HabitGoal,
   type SuccessRule,
-} from './habitGoals';
-import { goalDraftIssue, parseGoalAmount } from './goalEditing';
-import { sameValue } from './storage/model';
+} from '@onpurpose/core/habitGoals';
+import { goalDraftIssue, parseGoalAmount } from '@onpurpose/core/goalEditing';
+import { sameValue } from '@onpurpose/core/storage/model';
 import { appear } from './motion';
 import { GoalTimingFields } from './GoalTimingFields';
 import {
@@ -40,8 +40,8 @@ import {
   timingDate,
   ordinal,
   type GoalTiming,
-} from './goalTiming';
-import type { WeekStart } from './displayPreferences';
+} from '@onpurpose/core/goalTiming';
+import type { WeekStart } from '@onpurpose/core/displayPreferences';
 import { themedStyles, useTheme } from './ThemeContext';
 
 function Disclosure({

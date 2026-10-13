@@ -1,7 +1,7 @@
 import type { Editor } from '@tiptap/core';
 import { Plugin, TextSelection } from '@tiptap/pm/state';
 import { closeHistory } from '@tiptap/pm/history';
-import { descriptionLink } from '../description.ts';
+import { descriptionLink } from '@onpurpose/core/description';
 
 export function selectionLinkPaste(editor: Editor) {
   return new Plugin({

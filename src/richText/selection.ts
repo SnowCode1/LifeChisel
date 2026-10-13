@@ -1,6 +1,9 @@
 import { getMarkRange, type Editor } from '@tiptap/core';
-import { descriptionLink } from '../description.ts';
-import { isHighlightColour, type HighlightColour } from './highlights.ts';
+import { descriptionLink } from '@onpurpose/core/description';
+import {
+  isHighlightColour,
+  type HighlightColour,
+} from '@onpurpose/core/richText/highlights';
 
 // Read the whole selection: the first text node alone cannot represent a mixed
 // selection, or one that includes both highlighted and plain words.

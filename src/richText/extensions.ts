@@ -6,12 +6,15 @@ import { Placeholder } from '@tiptap/extension-placeholder';
 import { closeHistory } from '@tiptap/pm/history';
 import { Plugin } from '@tiptap/pm/state';
 import type { Node as DocumentNode } from '@tiptap/pm/model';
-import { descriptionLink, MAX_DESCRIPTION_LENGTH } from '../description.ts';
+import {
+  descriptionLink,
+  MAX_DESCRIPTION_LENGTH,
+} from '@onpurpose/core/description';
 import {
   highlightMarkdown,
   highlightVariable,
   isHighlightColour,
-} from './highlights.ts';
+} from '@onpurpose/core/richText/highlights';
 import { markdownDocument } from './markdownDocument.ts';
 import { selectionLinkPaste } from './selectionLinkPaste.ts';
 

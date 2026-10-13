@@ -21,9 +21,9 @@ import {
   cellState,
   checkedStreak,
 } from '../src/canvasGrid/cellAccessibility.ts';
-import { ordinal, timingDate } from '../src/goalTiming.ts';
-import { isShadedWeek } from '../src/displayPreferences.ts';
-import { allWeekdays } from '../src/habitGoals.ts';
+import { ordinal, timingDate } from '../packages/core/src/goalTiming.ts';
+import { isShadedWeek } from '../packages/core/src/displayPreferences.ts';
+import { allWeekdays } from '../packages/core/src/habitGoals.ts';
 
 test('UI-thread date arithmetic matches the Date-based helpers across centuries', () => {
   for (

@@ -3,7 +3,7 @@
 import { writeFile } from 'node:fs/promises';
 import { format } from 'prettier';
 import assert from 'node:assert/strict';
-import { tablerPaths } from '../src/tablerPaths.ts';
+import { tablerPaths } from '../packages/core/src/tablerPaths.ts';
 const icons = {
   undo: 'arrow-back-up',
   redo: 'arrow-forward-up',

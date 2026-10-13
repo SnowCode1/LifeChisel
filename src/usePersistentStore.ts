@@ -1,7 +1,7 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { AppState } from 'react-native';
 import { openStore } from './storage/native';
-import { type ChangeStore } from './storage/store';
+import { type ChangeStore } from '@onpurpose/core/storage/store';
 
 export function useStoreOpening() {
   const [store, setStore] = useState<ChangeStore | null>(null);

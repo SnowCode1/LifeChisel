@@ -10,17 +10,27 @@ import {
   evaluateGoal,
   allWeekdays,
   validGoalTimeline,
-} from '../src/habitGoals.ts';
+} from '../packages/core/src/habitGoals.ts';
 import {
   completionStatistics,
   summarizeCompletion,
-} from '../src/completionStatistics.ts';
-import { periodStatistics } from '../src/periodStatistics.ts';
-import { ordinal, timingDate, periodMet } from '../src/goalTiming.ts';
-import { replayEvents, validateChange } from '../src/storage/model.ts';
-import { ChangeStore } from '../src/storage/store.ts';
-import { sqliteRepository } from '../src/storage/repository.ts';
-import { encodeArchive, decodeArchive } from '../src/storage/archive.ts';
+} from '../packages/core/src/completionStatistics.ts';
+import { periodStatistics } from '../packages/core/src/periodStatistics.ts';
+import {
+  ordinal,
+  timingDate,
+  periodMet,
+} from '../packages/core/src/goalTiming.ts';
+import {
+  replayEvents,
+  validateChange,
+} from '../packages/core/src/storage/model.ts';
+import { ChangeStore } from '../packages/core/src/storage/store.ts';
+import { sqliteRepository } from '../packages/core/src/storage/repository.ts';
+import {
+  encodeArchive,
+  decodeArchive,
+} from '../packages/core/src/storage/archive.ts';
 const base = {
   id: 'walk',
   name: 'Walk',

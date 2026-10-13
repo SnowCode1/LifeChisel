@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { descriptionDiff } from '../src/descriptionDiff.ts';
-import { parseDescription, descriptionSummary } from '../src/description.ts';
+import { descriptionDiff } from '../packages/core/src/descriptionDiff.ts';
+import {
+  parseDescription,
+  descriptionSummary,
+} from '../packages/core/src/description.ts';
 
 const flags = (passages) => passages.map((passage) => passage.changed);
 test('passage comparisons isolate additions, removals and replacements while keeping unchanged neighbours quiet', () => {

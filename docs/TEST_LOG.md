@@ -1910,3 +1910,24 @@ older bug, reached by pulling past Today), and Reanimated skipping the custom
 animation. The founder then confirmed the flings and tap-to-stop on both
 phones, judged 0.998 and 0.995 deceleration too floaty and chose the earlier
 0.99. The iPhone shows 60 fps in Expo Go; 120 Hz awaits our own build.
+
+## 13 October 2026
+
+### Shared core package and first web slice
+
+Automated, on Windows after moving 67 modules into `packages/core`:
+`npm run check` (phone and web typecheck, lint, formatting) passed; `npm test`
+passed 361 of 361, including `apps/web/test/web-storage.test.mjs`, which runs
+the shared `sqliteRepository` and `ChangeStore` over the web worker protocol on
+SQLite WebAssembly in memory (schema 1 created, an entry kept across reopening,
+a failed transaction rolled back). `npm run export:android` and
+`npm run export:ios` bundled, and `npm run web:build` built.
+
+Headless desktop Chrome against `npm run web:preview`: 12 sample habits
+rendered with Today at the right edge; a checkbox tap saved, survived a reload
+(OPFS), and Ctrl+Z undid it; a second tab showed "already open in another
+tab"; at 390-point width Today stayed pinned after a resize.
+
+The founder then confirmed the phone app still works on the iPhone after the
+move, and the web app works in their browser. Not yet checked: the phone app on
+Android after the move, Safari, iPhone Safari and Firefox.

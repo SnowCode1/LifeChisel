@@ -73,8 +73,10 @@ No env file is needed to run the app. `.env.local` only holds the
 - **Android emulator:** with an emulator running, press `a` after `npm start`.
 - **Linux and Windows** cannot run the iOS Simulator, Xcode or `expo run:ios`.
   Use a physical iPhone, and EAS for iOS builds (see [RELEASING.md](RELEASING.md)).
-- **Browser:** `npm run web` is a limited preview. It stores data in browser
-  `localStorage` (`src/storage/browserRepository.ts`), not SQLite, and shows a
+- **Browser app:** `npm run web:dev` runs the separate browser app in
+  `apps/web`; see [WEB.md](WEB.md).
+- **Expo browser preview:** `npm run web` is a limited preview of the phone screens. It stores data in browser
+  `localStorage` (`packages/core/src/storage/browserRepository.ts`), not SQLite, and shows a
   notice instead of the habit grid, because the Skia canvas grid is built for
   phones only and web is not developed. It is not evidence that the app behaves
   correctly on a phone.
@@ -115,13 +117,16 @@ Expo troubleshooting pages, some of which describe an earlier freeze at SDK 54.
 | `npm run start:clear`           | Start with a cleared Metro cache                                            |
 | `npm run start:tunnel`          | Try a tunnel if Wi-Fi isolation blocks local access                         |
 | `npm run android`               | Forward port 8081 over USB with `adb reverse` and open Expo Go on the phone |
-| `npm run web`                   | Limited browser preview; the grid shows a notice (browser storage)          |
-| `npm run typecheck`             | TypeScript checks                                                           |
+| `npm run web`                   | Limited Expo browser preview; the grid shows a notice (browser storage)     |
+| `npm run web:dev`               | Browser app (`apps/web`) development server                                 |
+| `npm run web:build`             | Typecheck and build the browser app into `apps/web/dist/`                   |
+| `npm run web:preview`           | Serve the browser app's production build locally                            |
+| `npm run typecheck`             | TypeScript checks for the phone and web apps                                |
 | `npm run lint`                  | ESLint checks                                                               |
 | `npm run format`                | Format the repository with Prettier                                         |
 | `npm run format:check`          | Check formatting without changing files                                     |
 | `npm run check`                 | Typecheck, lint and format check together                                   |
-| `npm test`                      | Full Node test suite (`scripts/*.test.mjs`) with heap and time limits       |
+| `npm test`                      | Full Node suite (`scripts/`, `apps/web/test/`) with heap and time limits    |
 | `npm run test:calendar`         | Calendar and local-date tests only                                          |
 | `npm run test:preview`          | Preview receiver tests only                                                 |
 | `npm run doctor`                | Expo's environment and dependency diagnostics                               |
@@ -437,7 +442,7 @@ that sample changes are temporary.
 The fixture contains entirely fictional data:
 
 - All 12 presets with 180 days of checkbox and numeric entries
-  (`src/dev/sampleData.ts`, a deterministic event log in a memory-only
+  (`packages/core/src/dev/sampleData.ts`, a deterministic event log in a memory-only
   ChangeStore). `SampleDataMode.tsx` owns the switch.
 - Progressively longer notes on Go for a walk, Read and Meditate, up to about
   2,200, 8,000 and 18,000 characters (`sampleDescriptions.ts`), for testing the

@@ -1,5 +1,5 @@
 import { RecordStatsScreen } from './RecordStatsScreen';
-import type { EntryValues } from './entries';
+import type { EntryValues } from '@onpurpose/core/entries';
 import { memo, useState, type ComponentType } from 'react';
 import { Pressable, StyleSheet, View, type TextProps } from 'react-native';
 import { Text, useAppWindowDimensions } from './Typography';
@@ -12,10 +12,10 @@ import { ChartScrubLock } from './ChartFrame';
 import { HabitSymbol } from './HabitSymbol';
 import { Icon } from './Icon';
 import { themedStyles, useTheme } from './ThemeContext';
-import type { Habit } from './habits';
-import type { WeekStart } from './displayPreferences';
-import type { HistoryAction, StoredEvent } from './storage/model';
-import type { EntryDay } from './calendar';
+import type { Habit } from '@onpurpose/core/habits';
+import type { WeekStart } from '@onpurpose/core/displayPreferences';
+import type { HistoryAction, StoredEvent } from '@onpurpose/core/storage/model';
+import type { EntryDay } from '@onpurpose/core/calendar';
 
 export const HabitDetailsScreen = memo(function HabitDetailsScreen({
   habit,

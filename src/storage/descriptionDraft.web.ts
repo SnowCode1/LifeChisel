@@ -2,7 +2,7 @@ import {
   serializedDrafts,
   validateDraft,
   type DraftPort,
-} from './descriptionDraftModel';
+} from '@onpurpose/core/storage/descriptionDraftModel';
 export const descriptionDrafts: DraftPort = serializedDrafts({
   async get(key) {
     const raw = localStorage.getItem(`onpurpose.description-draft.${key}`);

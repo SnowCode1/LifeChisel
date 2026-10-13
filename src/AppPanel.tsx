@@ -3,8 +3,12 @@ import {
   type WeekStart,
   type CellLook,
   type CellLookKind,
-} from './displayPreferences';
-import type { GridSize, GridSizeKind, GridSizing } from './gridSizing';
+} from '@onpurpose/core/displayPreferences';
+import type {
+  GridSize,
+  GridSizeKind,
+  GridSizing,
+} from '@onpurpose/core/gridSizing';
 import { useState, type ComponentType, type ReactNode } from 'react';
 import {
   SettingsScreen,
@@ -13,9 +17,9 @@ import {
   type SettingsPage,
 } from './SettingsScreen';
 import type { ThemePreference } from './BackgroundSettings';
-import type { ThemeMode } from './theme';
+import type { ThemeMode } from '@onpurpose/core/theme';
 import { themedStyles } from './ThemeContext';
-import type { Habit } from './habits';
+import type { Habit } from '@onpurpose/core/habits';
 import { ArchivedHabits } from './ArchivedHabits';
 import Animated from 'react-native-reanimated';
 import { appear } from './motion';
@@ -24,7 +28,7 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Icon } from './Icon';
 import { SheetModal } from './SheetModal';
 import { HistoryView } from './HistoryView';
-import type { StoreSnapshot } from './storage/store';
+import type { StoreSnapshot } from '@onpurpose/core/storage/store';
 
 export function AppPanel({
   sampleData = false,

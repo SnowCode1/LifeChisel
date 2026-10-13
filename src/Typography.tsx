@@ -10,7 +10,7 @@ import {
   StyleSheet,
   useWindowDimensions,
 } from 'react-native';
-import { combinedTextScale, textSizeStyle } from './textSize';
+import { combinedTextScale, textSizeStyle } from '@onpurpose/core/textSize';
 
 const TextScale = createContext(1);
 const InsideText = createContext(false);

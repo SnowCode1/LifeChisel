@@ -1,7 +1,11 @@
-import { entryLabel, cellEntryLabel, type EntryValue } from '../entries.ts';
-import { checkboxChecked, evaluateGoal } from '../habitGoals.ts';
-import { timingDate } from '../goalTiming.ts';
-import { habitType, isNumericHabit, type Habit } from '../habits.ts';
+import {
+  entryLabel,
+  cellEntryLabel,
+  type EntryValue,
+} from '@onpurpose/core/entries';
+import { checkboxChecked, evaluateGoal } from '@onpurpose/core/habitGoals';
+import { timingDate } from '@onpurpose/core/goalTiming';
+import { habitType, isNumericHabit, type Habit } from '@onpurpose/core/habits';
 
 /** What the canvas draws for one cell; computed on the JS thread. */
 export type CellState = {

@@ -1956,3 +1956,33 @@ null` until chosen). Defaults are still to be chosen; all start Off with a
 - Assistant implementation: `CellState.schedule` (due, off or none; period
   quotas and tracking-only habits are never missed per day) feeds the canvas;
   `checkedStreak` counts streaks from saved values.
+
+## 13 October 2026 — Web app and shared core package
+
+Status: first slice implemented on the `web-app` branch; stack choices are
+assistant proposals awaiting founder review.
+
+- Founder decision: start the web version of the habit app now, while the
+  Google Play review is pending, because building it early may shape how the
+  project evolves. It lives in this repository, so coding assistants see the
+  phone code and docs, and it is designed for browsers rather than copied from
+  the phone screens.
+- Assistant proposal (accepted in principle by the founder): share one copy of
+  the rules and formats instead of porting them. Platform-neutral modules moved
+  unchanged into `packages/core` (`@onpurpose/core`) with npm workspaces; the
+  phone app stays at the root so Expo, EAS and the documented commands are
+  unchanged during the store review. Moving the phone app into `apps/mobile`
+  remains possible later. Two type-only links to phone code were removed
+  (icon names moved to `iconNames.ts`; `textSize.ts` no longer uses React
+  Native's style type), and `storage/newEvents.ts` now holds the writer
+  version and first-run event for both apps. No stored data, event, version or
+  schema changed.
+- Assistant proposal: Vite + React DOM for the web app, a DOM table for the
+  grid instead of Skia's CanvasKit (several megabytes, hand-loaded fonts, no
+  native accessibility, zoom or find), and SQLite WebAssembly on OPFS
+  (`opfs-sahpool`, no special server headers) running the shared
+  `sqliteRepository`, so the browser keeps the same log, schema 1 and backup
+  format. One tab holds the database through a Web Lock, and the app never
+  falls back to temporary storage.
+- Not decided: hosting, the web domain and brand, how the web app relates to
+  pricing and the free tier, and sync. See [WEB.md](WEB.md).

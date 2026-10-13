@@ -1,5 +1,5 @@
 import { descriptionDrafts } from './storage/descriptionDraft.web';
-import { memoryDrafts } from './storage/descriptionDraftModel';
+import { memoryDrafts } from '@onpurpose/core/storage/descriptionDraftModel';
 const sampleDrafts = memoryDrafts();
 export const draftsFor = (temporary: boolean) =>
   temporary ? sampleDrafts : descriptionDrafts;

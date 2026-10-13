@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { Alert } from 'react-native';
-import type { ChangeStore } from './storage/store';
+import type { ChangeStore } from '@onpurpose/core/storage/store';
 import { chooseBackup, shareBackup } from './storage/backups';
 
 // Native confirmations stay here; the store still owns exclusive, atomic restore

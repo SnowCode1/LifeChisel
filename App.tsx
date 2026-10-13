@@ -1,26 +1,26 @@
 import { useQuickUndo } from './src/useQuickUndo';
 import { useDailyEntryActions } from './src/useDailyEntryActions';
 import { NumericRecordDialog } from './src/NumericRecordDialog';
-import { sameValue, type Change } from './src/storage/model';
+import { sameValue, type Change } from '@onpurpose/core/storage/model';
 import { DailyRecordDialog } from './src/DailyRecordDialog';
 import { HabitGoalsEditor } from './src/HabitGoalsEditor';
 import { TypographyProvider, Text } from './src/Typography';
 import { DescriptionVersions } from './src/DescriptionVersions';
-import { descriptionVersions } from './src/descriptionVersionFilter';
+import { descriptionVersions } from '@onpurpose/core/descriptionVersionFilter';
 import { DescriptionEditor } from './src/DescriptionEditor';
 import { descriptionDraftKey } from './src/descriptionDrafts';
-import { applyPlaceholderDescriptions } from './src/storage/presetDescriptions';
+import { applyPlaceholderDescriptions } from '@onpurpose/core/storage/presetDescriptions';
 import {
   displayDefaults,
   effectiveColumnSpacing,
   cellLookOf,
-} from './src/displayPreferences';
+} from '@onpurpose/core/displayPreferences';
 import { useGridDisplayPreferences } from './src/useGridDisplayPreferences';
-import { gridSizing } from './src/gridSizing';
-import { habitTrackingStart } from './src/statistics';
+import { gridSizing } from '@onpurpose/core/gridSizing';
+import { habitTrackingStart } from '@onpurpose/core/statistics';
 import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
-import { blackTheme, themeFor, type Theme } from './src/theme';
+import { blackTheme, themeFor, type Theme } from '@onpurpose/core/theme';
 import { ThemeProvider, themedStyles } from './src/ThemeContext';
 import type { ThemePreference } from './src/BackgroundSettings';
 import {
@@ -44,21 +44,25 @@ import {
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { PerformanceBoundary } from './src/PerformanceBoundary';
-import { developmentToolsEnabled } from './src/developmentFeatures';
+import { developmentToolsEnabled } from '@onpurpose/core/developmentFeatures';
 import { HabitDetailsScreen } from './src/HabitDetailsScreen';
 import { HabitGrid } from './src/HabitGrid';
-import { habitType, type Habit, type HabitCategory } from './src/habits';
+import {
+  habitType,
+  type Habit,
+  type HabitCategory,
+} from '@onpurpose/core/habits';
 import { randomUUID } from 'expo-crypto';
 import { HabitDialog, type HabitDialogMode } from './src/HabitDialog';
-import { displayedHabitOrder, moveHabit } from './src/habitOrdering';
+import { displayedHabitOrder, moveHabit } from '@onpurpose/core/habitOrdering';
 import type { HabitAction } from './src/HabitName';
 import { useLocalToday } from './src/useLocalToday';
 import { feedback, setHapticsEnabled } from './src/haptics';
 import { AppPanel } from './src/AppPanel';
 import { SheetModal } from './src/SheetModal';
 import { usePersistentStore, useStoreOpening } from './src/usePersistentStore';
-import type { ChangeStore } from './src/storage/store';
-import { applyPresetIcons } from './src/storage/presetIcons';
+import type { ChangeStore } from '@onpurpose/core/storage/store';
+import { applyPresetIcons } from '@onpurpose/core/storage/presetIcons';
 import { useBackupActions } from './src/useBackupActions';
 
 // Metro removes this branch (and its module) from release JavaScript.

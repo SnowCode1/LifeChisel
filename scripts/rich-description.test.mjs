@@ -24,9 +24,12 @@ import { markdownDocument } from '../src/richText/markdownDocument.ts';
 import {
   highlightColours,
   highlightMarkdown,
-} from '../src/richText/highlights.ts';
-import { parseDescription, descriptionSummary } from '../src/description.ts';
-import { presetDescriptions } from '../src/presetDescriptions.ts';
+} from '../packages/core/src/richText/highlights.ts';
+import {
+  parseDescription,
+  descriptionSummary,
+} from '../packages/core/src/description.ts';
+import { presetDescriptions } from '../packages/core/src/presetDescriptions.ts';
 
 const browser = new JSDOM('<html><body></body></html>', {
   pretendToBeVisual: true,

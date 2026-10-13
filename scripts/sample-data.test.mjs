@@ -4,14 +4,14 @@ import {
   createSampleEvents,
   createSampleStore,
   SAMPLE_DAYS,
-} from '../src/dev/sampleData.ts';
-import { replayEvents } from '../src/storage/model.ts';
-import { habitStatistics, dayNumber } from '../src/statistics.ts';
-import { sampleDescriptions } from '../src/dev/sampleDescriptions.ts';
-import { presetDescriptions } from '../src/presetDescriptions.ts';
-import { MAX_DESCRIPTION_LENGTH } from '../src/description.ts';
-import { demoHabits, isNumericHabit } from '../src/habits.ts';
-import { entryDay } from '../src/calendar.ts';
+} from '../packages/core/src/dev/sampleData.ts';
+import { replayEvents } from '../packages/core/src/storage/model.ts';
+import { habitStatistics, dayNumber } from '../packages/core/src/statistics.ts';
+import { sampleDescriptions } from '../packages/core/src/dev/sampleDescriptions.ts';
+import { presetDescriptions } from '../packages/core/src/presetDescriptions.ts';
+import { MAX_DESCRIPTION_LENGTH } from '../packages/core/src/description.ts';
+import { demoHabits, isNumericHabit } from '../packages/core/src/habits.ts';
+import { entryDay } from '../packages/core/src/calendar.ts';
 
 const today = '2026-10-04';
 test('calendar corrections update the same dated values and statistics and can be undone', async () => {

@@ -6,7 +6,7 @@ import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { JSDOM } from 'jsdom';
 import ts from 'typescript';
-import * as ordering from '../src/habitOrdering.ts';
+import * as ordering from '../packages/core/src/habitOrdering.ts';
 
 test('hidden/archive rows animate surviving shared targets; geometry and active drag cancellation stay immediate', async (t) => {
   const browser = new JSDOM('<div id="root"></div>');
@@ -53,7 +53,7 @@ test('hidden/archive rows animate surviving shared targets; geometry and active 
             AppState: { addEventListener: () => ({ remove() {} }) },
             AccessibilityInfo: { announceForAccessibility() {} },
           };
-        if (name === './habitOrdering') return ordering;
+        if (name === '@onpurpose/core/habitOrdering') return ordering;
         if (name === './haptics') return { feedback() {} };
         if (name === './motion')
           return {

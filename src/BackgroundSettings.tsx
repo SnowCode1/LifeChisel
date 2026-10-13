@@ -8,7 +8,7 @@ import {
   normalizeHex,
   oklchToHex,
   type Oklch,
-} from './colors';
+} from '@onpurpose/core/colors';
 import { feedback } from './haptics';
 import {
   backgroundLimits,
@@ -19,7 +19,7 @@ import {
   fitBackground,
   type ThemeMode,
   type ThemeScheme,
-} from './theme';
+} from '@onpurpose/core/theme';
 import { ThemeProvider, themedStyles, useTheme } from './ThemeContext';
 
 export type ThemePreference =

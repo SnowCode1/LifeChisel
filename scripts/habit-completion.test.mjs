@@ -4,9 +4,9 @@ import {
   habitIsComplete,
   completionMask,
   visibleHabitRows,
-} from '../src/habitCompletion.ts';
-import { completedHabitsSelection } from '../src/storage/selection.ts';
-import { createSampleStore } from '../src/dev/sampleData.ts';
+} from '../packages/core/src/habitCompletion.ts';
+import { completedHabitsSelection } from '../packages/core/src/storage/selection.ts';
+import { createSampleStore } from '../packages/core/src/dev/sampleData.ts';
 
 const habits = [
   { id: 'a', name: 'Walk', color: '#82E6BC' },

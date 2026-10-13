@@ -7,21 +7,27 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { runInNewContext } from 'node:vm';
 import ts from 'typescript';
-import { ChangeStore } from '../src/storage/store.ts';
-import { sqliteRepository } from '../src/storage/repository.ts';
+import { ChangeStore } from '../packages/core/src/storage/store.ts';
+import { sqliteRepository } from '../packages/core/src/storage/repository.ts';
 import {
   applyChange,
   applyEvent,
   inverse,
   replayEvents,
   validateChange,
-} from '../src/storage/model.ts';
-import { decodeArchive, encodeArchive } from '../src/storage/archive.ts';
-import { historyDisplayState, historyPresentation } from '../src/history.ts';
+} from '../packages/core/src/storage/model.ts';
+import {
+  decodeArchive,
+  encodeArchive,
+} from '../packages/core/src/storage/archive.ts';
+import {
+  historyDisplayState,
+  historyPresentation,
+} from '../packages/core/src/history.ts';
 import {
   archivedHabitDetails,
   archivedRecordRange,
-} from '../src/archivedHabitDetails.ts';
+} from '../packages/core/src/archivedHabitDetails.ts';
 
 const date = '2026-10-06';
 const habits = [

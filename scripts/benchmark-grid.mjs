@@ -1,16 +1,19 @@
 // Synthetic CPU microbenchmarks, not native frame-rate or disk-durability tests.
 import { performance } from 'node:perf_hooks';
-import { demoHabits } from '../src/habits.ts';
-import { colorOnBlack } from '../src/colors.ts';
-import { createGridPalette } from '../src/gridAppearance.ts';
+import { demoHabits } from '../packages/core/src/habits.ts';
+import { colorOnBlack } from '../packages/core/src/colors.ts';
+import { createGridPalette } from '../packages/core/src/gridAppearance.ts';
 import {
   calendarDay,
   localDateKey,
   createGridDayCache,
-} from '../src/calendar.ts';
-import { ChangeStore } from '../src/storage/store.ts';
-import { replayEvents, applyEvent } from '../src/storage/model.ts';
-import { entrySelection } from '../src/storage/selection.ts';
+} from '../packages/core/src/calendar.ts';
+import { ChangeStore } from '../packages/core/src/storage/store.ts';
+import {
+  replayEvents,
+  applyEvent,
+} from '../packages/core/src/storage/model.ts';
+import { entrySelection } from '../packages/core/src/storage/selection.ts';
 
 const today = '2026-10-04';
 function summary(samples) {

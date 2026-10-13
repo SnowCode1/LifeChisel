@@ -1,20 +1,23 @@
 import { CheckboxDefaultField } from './CheckboxDefaultField';
-import { checkboxChecked, withCheckboxDefault } from './habitGoals';
+import {
+  checkboxChecked,
+  withCheckboxDefault,
+} from '@onpurpose/core/habitGoals';
 import { randomUUID } from 'expo-crypto';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import type { WeekStart } from './displayPreferences';
+import type { WeekStart } from '@onpurpose/core/displayPreferences';
 import { CategoryEditor } from './CategoryEditor';
 import { HabitGoalsEditor } from './HabitGoalsEditor';
 import { GoalSummary } from './GoalSummary';
-import { validGoalTimeline, type HabitGoal } from './habitGoals';
+import { validGoalTimeline, type HabitGoal } from '@onpurpose/core/habitGoals';
 import { TextInput, Text, useAppWindowDimensions } from './Typography';
-import { completeDescriptionDraft } from './storage/descriptionBookmarks';
+import { completeDescriptionDraft } from '@onpurpose/core/storage/descriptionBookmarks';
 import { DescriptionEditor } from './DescriptionEditor';
-import { descriptionExcerpt } from './descriptionReading';
+import { descriptionExcerpt } from '@onpurpose/core/descriptionReading';
 import { draftsFor, descriptionDraftKey } from './descriptionDrafts';
 import { StartDateField } from './StartDateField';
 import { useKeyboardFocus } from './useKeyboardFocus';
-import { validDate } from './storage/model';
+import { validDate } from '@onpurpose/core/storage/model';
 import { useMemo, useState, type ComponentType } from 'react';
 import {
   KeyboardAvoidingView,
@@ -27,18 +30,18 @@ import {
   type TextInput as NativeTextInput,
 } from 'react-native';
 import { ColourPicker } from './ColourPicker';
-import { normalizeHex } from './colors';
+import { normalizeHex } from '@onpurpose/core/colors';
 import { themedStyles, useTheme } from './ThemeContext';
 import {
   habitType,
   habitTypeLabel,
   type Habit,
   type HabitType,
-} from './habits';
+} from '@onpurpose/core/habits';
 import { Icon } from './Icon';
 import { HabitIconPicker } from './HabitIconPicker';
 import { HabitSymbol } from './HabitSymbol';
-import { habitIconLabel, type HabitIcon } from './habitIcons';
+import { habitIconLabel, type HabitIcon } from '@onpurpose/core/habitIcons';
 
 export type HabitDialogMode = 'colour' | 'edit' | 'create';
 export function HabitDialog({

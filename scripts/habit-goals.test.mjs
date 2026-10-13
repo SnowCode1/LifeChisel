@@ -12,28 +12,34 @@ import {
   resolveGoalDraft,
   ruleSummary,
   goalAt,
-} from '../src/habitGoals.ts';
-import { habitIsComplete, completionMask } from '../src/habitCompletion.ts';
+} from '../packages/core/src/habitGoals.ts';
+import {
+  habitIsComplete,
+  completionMask,
+} from '../packages/core/src/habitCompletion.ts';
 import {
   completionStatistics,
   summarizeCompletion,
-} from '../src/completionStatistics.ts';
-import { habitStatistics } from '../src/statistics.ts';
-import { recordStatistics } from '../src/recordStatistics.ts';
-import { ChangeStore } from '../src/storage/store.ts';
-import { sqliteRepository } from '../src/storage/repository.ts';
+} from '../packages/core/src/completionStatistics.ts';
+import { habitStatistics } from '../packages/core/src/statistics.ts';
+import { recordStatistics } from '../packages/core/src/recordStatistics.ts';
+import { ChangeStore } from '../packages/core/src/storage/store.ts';
+import { sqliteRepository } from '../packages/core/src/storage/repository.ts';
 import {
   validateEvent,
   replayEvents,
   sameValue,
-} from '../src/storage/model.ts';
-import { encodeArchive, decodeArchive } from '../src/storage/archive.ts';
-import { completedHabitsSelection } from '../src/storage/selection.ts';
-import { historyPresentation } from '../src/history.ts';
+} from '../packages/core/src/storage/model.ts';
+import {
+  encodeArchive,
+  decodeArchive,
+} from '../packages/core/src/storage/archive.ts';
+import { completedHabitsSelection } from '../packages/core/src/storage/selection.ts';
+import { historyPresentation } from '../packages/core/src/history.ts';
 import {
   createSampleStore,
   createSampleEvents,
-} from '../src/dev/sampleData.ts';
+} from '../packages/core/src/dev/sampleData.ts';
 
 const number = {
   id: 'read',

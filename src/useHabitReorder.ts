@@ -12,9 +12,13 @@ import {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import type { Habit } from './habits';
+import type { Habit } from '@onpurpose/core/habits';
 import type { HabitAnchor } from './HabitName';
-import { dragDestination, moveHabit, habitRowPositions } from './habitOrdering';
+import {
+  dragDestination,
+  moveHabit,
+  habitRowPositions,
+} from '@onpurpose/core/habitOrdering';
 import { feedback } from './haptics';
 import { reorderSpring, rowRemovalTiming } from './motion';
 

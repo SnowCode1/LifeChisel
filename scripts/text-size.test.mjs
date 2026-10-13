@@ -5,9 +5,9 @@ import {
   roundTextScale,
   textSizeStyle,
   combinedTextScale,
-} from '../src/textSize.ts';
+} from '../packages/core/src/textSize.ts';
 import { gridLayout } from '../src/gridLayout.ts';
-import { gridRowHeight } from '../src/rowSpacing.ts';
+import { gridRowHeight } from '../packages/core/src/rowSpacing.ts';
 
 test('text size has bounded 5-percent steps and normalises slider floating point values', () => {
   for (let percent = 85; percent <= 150; percent += 5)

@@ -7,16 +7,16 @@ import React, { act } from 'react';
 import * as jsx from 'react/jsx-runtime';
 import { createRoot } from 'react-dom/client';
 import { JSDOM } from 'jsdom';
-import * as calendar from '../src/calendar.ts';
-import * as colors from '../src/colors.ts';
-import * as display from '../src/displayPreferences.ts';
-import * as entries from '../src/entries.ts';
-import * as goals from '../src/habitGoals.ts';
-import * as habits from '../src/habits.ts';
-import * as statistics from '../src/statistics.ts';
-import * as formatting from '../src/statisticsFormatting.ts';
-import * as series from '../src/statsSeries.ts';
-import * as theme from '../src/theme.ts';
+import * as calendar from '../packages/core/src/calendar.ts';
+import * as colors from '../packages/core/src/colors.ts';
+import * as display from '../packages/core/src/displayPreferences.ts';
+import * as entries from '../packages/core/src/entries.ts';
+import * as goals from '../packages/core/src/habitGoals.ts';
+import * as habits from '../packages/core/src/habits.ts';
+import * as statistics from '../packages/core/src/statistics.ts';
+import * as formatting from '../packages/core/src/statisticsFormatting.ts';
+import * as series from '../packages/core/src/statsSeries.ts';
+import * as theme from '../packages/core/src/theme.ts';
 import { themeContextModule } from './theme-fixture.mjs';
 
 function load(file, modules) {
@@ -108,20 +108,23 @@ test('calendar checkbox days announce the dated default, not only saved values',
       useAppWindowDimensions: () => ({ width: 390, height: 844, fontScale: 1 }),
     },
     './Icon': { Icon: () => null },
-    './calendar': calendar,
-    './colors': colors,
-    './displayPreferences': display,
-    './entries': entries,
-    './habitGoals': goals,
-    './habits': habits,
-    './statistics': statistics,
-    './statisticsFormatting': formatting,
-    './statsSeries': series,
+    '@onpurpose/core/calendar': calendar,
+    '@onpurpose/core/colors': colors,
+    '@onpurpose/core/displayPreferences': display,
+    '@onpurpose/core/entries': entries,
+    '@onpurpose/core/habitGoals': goals,
+    '@onpurpose/core/habits': habits,
+    '@onpurpose/core/statistics': statistics,
+    '@onpurpose/core/statisticsFormatting': formatting,
+    '@onpurpose/core/statsSeries': series,
     './ThemeContext': themeContextModule(),
   };
-  modules['./outcomeColours'] = load('../src/outcomeColours.ts', {
-    './theme': theme,
-  });
+  modules['@onpurpose/core/outcomeColours'] = load(
+    '../packages/core/src/outcomeColours.ts',
+    {
+      './theme': theme,
+    },
+  );
   const { StatsCalendar } = load('../src/StatsCalendar.tsx', modules);
 
   const from = statistics.dayNumber(start),

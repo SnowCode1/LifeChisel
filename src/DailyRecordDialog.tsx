@@ -32,8 +32,8 @@ import { useKeyboardFocus } from './useKeyboardFocus';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Icon } from './Icon';
 import { themedStyles, useTheme } from './ThemeContext';
-import type { Habit, HabitCategory } from './habits';
-import type { EntryDay } from './calendar';
+import type { Habit, HabitCategory } from '@onpurpose/core/habits';
+import type { EntryDay } from '@onpurpose/core/calendar';
 import {
   categorySelection,
   textEntry,
@@ -41,7 +41,7 @@ import {
   MAX_CATEGORY_LABEL,
   MAX_ENTRY_TEXT,
   type EntryValue,
-} from './entries';
+} from '@onpurpose/core/entries';
 import { feedback } from './haptics';
 
 const motion = {

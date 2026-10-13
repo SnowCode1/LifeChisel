@@ -7,13 +7,13 @@ import React, { act, useLayoutEffect } from 'react';
 import * as jsx from 'react/jsx-runtime';
 import { createRoot } from 'react-dom/client';
 import { JSDOM } from 'jsdom';
-import { ChangeStore } from '../src/storage/store.ts';
-import { replayEvents } from '../src/storage/model.ts';
-import * as entries from '../src/entries.ts';
-import * as habits from '../src/habits.ts';
-import * as goals from '../src/habitGoals.ts';
-import * as colors from '../src/colors.ts';
-import * as suggestions from '../src/numericSuggestions.ts';
+import { ChangeStore } from '../packages/core/src/storage/store.ts';
+import { replayEvents } from '../packages/core/src/storage/model.ts';
+import * as entries from '../packages/core/src/entries.ts';
+import * as habits from '../packages/core/src/habits.ts';
+import * as goals from '../packages/core/src/habitGoals.ts';
+import * as colors from '../packages/core/src/colors.ts';
+import * as suggestions from '../packages/core/src/numericSuggestions.ts';
 import { themeContextModule } from './theme-fixture.mjs';
 
 // Execute the actual controllers/components with small native mocks. Never print
@@ -122,9 +122,9 @@ async function fixture() {
     receipts = [];
   const { useDailyEntryActions } = load('useDailyEntryActions.ts', {
     ...common,
-    './entries': entries,
-    './habits': habits,
-    './habitGoals': goals,
+    '@onpurpose/core/entries': entries,
+    '@onpurpose/core/habits': habits,
+    '@onpurpose/core/habitGoals': goals,
     './haptics': { feedback: (kind) => feedback.push(kind) },
   });
   const capture = (change) => receipts.push(change);
@@ -176,10 +176,10 @@ test('numeric drafts stay local; Close cancels, invalid input cannot save, and D
         return null;
       },
     },
-    './colors': colors,
+    '@onpurpose/core/colors': colors,
     './Icon': { Icon: () => null },
     './ThemeContext': themeContextModule(),
-    './numericSuggestions': suggestions,
+    '@onpurpose/core/numericSuggestions': suggestions,
     './haptics': { feedback: () => {} },
     './useKeyboardFocus': load('useKeyboardFocus.ts', {
       ...common,

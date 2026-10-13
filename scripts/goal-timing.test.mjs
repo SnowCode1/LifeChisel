@@ -13,19 +13,25 @@ import {
   periodWindow,
   nextPeriodStart,
   weekAnchor,
-} from '../src/goalTiming.ts';
+} from '../packages/core/src/goalTiming.ts';
 import {
   evaluateGoal,
   validGoalTimeline,
   allWeekdays,
-} from '../src/habitGoals.ts';
-import { completionStatistics } from '../src/completionStatistics.ts';
-import { periodStatistics } from '../src/periodStatistics.ts';
-import { completionMask } from '../src/habitCompletion.ts';
-import { ChangeStore } from '../src/storage/store.ts';
-import { sqliteRepository } from '../src/storage/repository.ts';
-import { replayEvents, validateChange } from '../src/storage/model.ts';
-import { encodeArchive, decodeArchive } from '../src/storage/archive.ts';
+} from '../packages/core/src/habitGoals.ts';
+import { completionStatistics } from '../packages/core/src/completionStatistics.ts';
+import { periodStatistics } from '../packages/core/src/periodStatistics.ts';
+import { completionMask } from '../packages/core/src/habitCompletion.ts';
+import { ChangeStore } from '../packages/core/src/storage/store.ts';
+import { sqliteRepository } from '../packages/core/src/storage/repository.ts';
+import {
+  replayEvents,
+  validateChange,
+} from '../packages/core/src/storage/model.ts';
+import {
+  encodeArchive,
+  decodeArchive,
+} from '../packages/core/src/storage/archive.ts';
 const base = {
   id: 'walk',
   name: 'Walk',

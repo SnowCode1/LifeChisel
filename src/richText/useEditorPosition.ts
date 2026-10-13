@@ -1,7 +1,7 @@
 import { useEffect, useEffectEvent, useRef, type RefObject } from 'react';
 import type { Editor } from '@tiptap/core';
 import { TextSelection } from '@tiptap/pm/state';
-import type { DescriptionPosition } from '../descriptionPosition.ts';
+import type { DescriptionPosition } from '@onpurpose/core/descriptionPosition';
 
 export function editorPosition(
   editor: Editor,

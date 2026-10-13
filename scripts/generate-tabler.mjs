@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile, writeFile, readdir } from 'node:fs/promises';
 import { resolve, join } from 'node:path';
 import { format } from 'prettier';
-import { commonTablerIcons } from '../src/commonTablerIcons.ts';
+import { commonTablerIcons } from '../packages/core/src/commonTablerIcons.ts';
 const directory = resolve(process.argv[2] ?? '.dev/tabler/package');
 const read = async (file) =>
   JSON.parse(await readFile(join(directory, file), 'utf8'));
@@ -77,7 +77,7 @@ for (const [name, source] of [
   ],
 ])
   await writeFile(
-    new URL(`../src/${name}`, import.meta.url),
+    new URL(`../packages/core/src/${name}`, import.meta.url),
     await format(header + source, { parser: 'typescript', singleQuote: true }),
   );
 await writeFile(
