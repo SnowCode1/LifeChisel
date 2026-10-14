@@ -133,7 +133,8 @@ export function AppPanel({
   if (navigation.context !== context) setNavigation({ context, page: 'index' });
   const settingsPage =
     navigation.context === context ? navigation.page : 'index';
-  // History's jump calendar; like navigation, it resets with each presentation.
+  // History's Days/Calendar view; like navigation, it resets with each
+  // presentation, starting on Days.
   const [calendar, setCalendar] = useState({ context, open: false });
   const calendarOpen = calendar.context === context && calendar.open;
   const setSettingsPage = (next: SettingsPage) =>
@@ -174,8 +175,10 @@ export function AppPanel({
               {page === 'history' && (
                 <Pressable
                   accessibilityRole="button"
-                  accessibilityLabel="Jump to a date"
-                  accessibilityState={{ expanded: calendarOpen }}
+                  accessibilityLabel={
+                    calendarOpen ? 'Show days list' : 'Show calendar'
+                  }
+                  accessibilityHint="Switches History between the list of days and a month or year calendar"
                   onPress={() => setCalendar({ context, open: !calendarOpen })}
                   style={({ pressed }) => [
                     styles.close,
@@ -183,7 +186,10 @@ export function AppPanel({
                     { opacity: pressed ? 0.55 : 1 },
                   ]}
                 >
-                  <Icon name="calendar" size={18} />
+                  <Icon
+                    name={calendarOpen ? 'reorder' : 'calendar'}
+                    size={18}
+                  />
                 </Pressable>
               )}
               <Pressable

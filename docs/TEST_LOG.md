@@ -1984,3 +1984,25 @@ from 390 to 1440 px cut a column; history loading, tap animations and grid
 sizes behaved as before. The landing page rendered in dark at 1440 px and light
 at 390 px without sideways scrolling, and its web app links pointed at the
 development server. Not checked: Safari, Firefox, touch, real hosting.
+
+### History calendar, resizable panel, brand link
+
+Automated: `npm run check` passed; `npm test` passed 365 of 365, including new
+tests for core `historyCalendar` (days made, habit order by changes, filters,
+empty range) and `addMonths`; `npm run web:build` built; Android and iOS bundles
+exported after the core and phone History changes.
+
+Headless desktop Chrome, web app with sample data: the brand linked to the
+landing page; dragging the panel edge 160 px widened it from 440 to 600 px and
+the grid refitted, arrow keys stepped it 24 px, the width was remembered and
+Enter reset it; the month view showed habit-coloured dots and "+n", today
+named its changes, month stepping stopped at the first month with changes and
+the current month, the year view drew a dot per day with changes, choosing a
+month opened it and choosing a day opened that day at the top of the list; a
+habit filter narrowed the calendar to one dot per day; at 390 px the panel
+covered the grid without the resize edge or sideways scrolling. The earlier
+History, panel and notes checks passed.
+
+Not checked: the phone calendar on iPhone or Android (typecheck, lint and both
+exports only). The Expo browser preview could not be used: it stops at start-up
+in the Skia grid drawing module (`cellPainter.ts`, unchanged here).

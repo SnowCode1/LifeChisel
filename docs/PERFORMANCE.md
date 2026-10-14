@@ -419,8 +419,8 @@ presentation update boundary, not native latency or iPhone frame rates.
 History groups only the days it shows (40 at a time, never splitting a day) and
 caches each action's local day and kind for the session, keyed by the action
 object that replay keeps between updates. Local days reuse one time-zone offset
-per quarter hour and one label per day. Only the open jump calendar scans the
-whole log. Node timing for 20,000 synthetic actions: about 7 ms uncached, 2 ms
+per quarter hour and one label per day. Only the shown History calendar scans
+the whole log. Node timing for 20,000 synthetic actions: about 7 ms uncached, 2 ms
 cached and 0.1 ms for 40 days. This is not a phone measurement; check scrolling
 and the calendar on the iPhone.
 

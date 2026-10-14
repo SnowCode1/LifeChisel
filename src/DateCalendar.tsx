@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { Text, useAppWindowDimensions } from './Typography';
 import { Icon } from './Icon';
-import { entryDay } from '@onpurpose/core/calendar';
+import { addMonths, entryDay } from '@onpurpose/core/calendar';
 import { monthDays } from '@onpurpose/core/statistics';
 import {
   weekDayOrder,
@@ -12,11 +12,6 @@ import { themedStyles, useTheme } from './ThemeContext';
 
 const weekdayLabels = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
-function shiftMonth(month: string, by: number) {
-  const date = new Date(`${month}-01T12:00:00`);
-  date.setMonth(date.getMonth() + by);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-}
 const monthLabel = (month: string, style: 'long' | 'short') =>
   new Date(`${month}-01T12:00:00`).toLocaleDateString(undefined, {
     month: style,
@@ -55,7 +50,7 @@ export function DateCalendar({
   const year = Number(month.slice(0, 4));
   const calendar = monthDays(month, weekStart);
   const cellHeight = Math.max(44, Math.ceil(42 * fontScale));
-  const step = (by: number) => setMonth((current) => shiftMonth(current, by));
+  const step = (by: number) => setMonth((current) => addMonths(current, by));
   return (
     <View>
       <View style={styles.header}>

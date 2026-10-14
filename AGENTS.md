@@ -149,8 +149,12 @@ preserve earlier icon choices/removals and raw history.
   keyed by their oldest member. Filters are unsaved view state; the floating
   Undo bar always names the newest action, even when filtered out.
   `historyDays` pages whole days and caches per-action day/kind; never rescan
-  the full log per render (only the open jump calendar does). Today/Yesterday
-  start open; `HistoryFilters.tsx` owns the chips, habit picker and calendar.
+  the full log per render (only the shown History calendar does, through core
+  `historyCalendar`). Today/Yesterday start open; `HistoryFilters.tsx` owns the
+  chips and habit picker. History has Days and Calendar views (the header
+  calendar button switches them; `HistoryCalendar.tsx` draws a month with habit
+  dots or a year of day dots); choosing a day opens it in the day list. The web
+  History panel draws the same calendar from the same summary.
 - `src/HabitName.tsx` and `src/useHabitReorder.ts` own hold/menu/drag interactions.
   Only completed drops persist. Keep cells distinct, support cancellation, and
   preserve archive entries. `src/HabitDialog.tsx` owns editor/colour drafts;

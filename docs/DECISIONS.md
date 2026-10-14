@@ -2053,3 +2053,19 @@ Status: scaffold built on the `web-app` branch; copy is a first draft.
   from the web app so it stays small and fast to load and index. It assumes the
   web app is served at `/app/` on the same site; hosting, domain and final
   brand are open. The copy only states confirmed scope.
+
+## 14 October 2026 — History calendar and resizable panel
+
+Status: implemented on the `web-app` branch; the phone calendar is not yet
+checked on a device.
+
+- Founder decisions: History (web and phone) gets a control to switch between
+  the day list and a calendar view, monthly up to yearly, with days with changes
+  shown as coloured dots. The web's docked panel is resizable, and the brand in
+  the top left links to the landing page.
+- Assistant implementation: days are the days changes were made, as in the
+  list; month days show a dot per habit changed (most changes first, up to
+  four, then "+n"), year days one dot in the most-changed habit's colour;
+  choosing a day opens it in the list, and filters apply to both views. On the
+  phone the existing header calendar button now switches the views, replacing
+  the jump-date popover. The panel width is remembered per browser.

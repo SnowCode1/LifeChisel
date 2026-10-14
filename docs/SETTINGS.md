@@ -235,8 +235,8 @@ Week starts on (Monday or Sunday) affects:
 - weekday order and week rows in the statistics calendar and weekday breakdowns;
 - where weekly chart bins and week ticks begin in statistics;
 - the alternating week shading in the grid's date headings;
-- the app's own `DateCalendar` grids: the History jump calendar and, on
-  Android, the date pickers;
+- the History calendar's month and year views, and on Android the app's own
+  `DateCalendar` date pickers;
 - the anchor suggested for a new weekly period or cycle in the Goal editor.
 
 It never changes recording dates, totals, rates or streaks. Saved goal periods

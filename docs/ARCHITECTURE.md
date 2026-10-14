@@ -95,7 +95,8 @@ Storage and History
   src/useBackupActions.ts      backup confirmations, busy guard and errors
   src/AppPanel.tsx             History/Settings/archive sheet over the grid
   src/HistoryView.tsx          day sections, burst/action rows, jumps, floating Undo bar
-  src/HistoryFilters.tsx       filter chips, habit picker and jump calendar
+  src/HistoryFilters.tsx       filter chips and habit picker
+  src/HistoryCalendar.tsx      History's month and year calendar view
   packages/core/src/history.ts               cached edit-day grouping, filters, bursts, row text
   src/useQuickUndo.ts          four-second Undo receipts (quickUndo.ts, quickEntryUndo.ts)
 
@@ -370,8 +371,13 @@ sections and bursts are built; filters are local view state. Day headings show
 counts and fold or open the day; Today and Yesterday start open (every day when
 filtered). `historyDays` groups only whole days, loading 40 more as the list
 nears its end, and caches each action's local day and kind in WeakMaps because
-replay keeps earlier action objects. Only the open jump calendar scans every
-day. Jumping opens the target day, extends the loaded days and scrolls with
+replay keeps earlier action objects. Only the shown calendar view scans every
+day: core `historyCalendar` counts each day's changes and the habits changed
+(most changes first) by the day they were made, with the same filters. The
+header's calendar button switches History between the day list and that view,
+a month with a dot per habit changed each day or a year with one dot per day in
+its most-changed habit's colour. Choosing a day opens it in the day list (kept
+mounted but hidden behind the calendar). Jumping opens the target day, extends the loaded days and scrolls with
 `scrollToLocation`, retrying from an estimated offset until two passes land,
 because rows have no fixed heights.
 

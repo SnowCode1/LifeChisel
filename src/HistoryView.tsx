@@ -19,7 +19,8 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Icon } from './Icon';
-import { FilterBar, HabitFilterMenu, JumpCalendar } from './HistoryFilters';
+import { FilterBar, HabitFilterMenu } from './HistoryFilters';
+import { HistoryCalendar } from './HistoryCalendar';
 import { calendarDay, localDateKey } from '@onpurpose/core/calendar';
 import type { WeekStart } from '@onpurpose/core/displayPreferences';
 import {
@@ -28,6 +29,7 @@ import {
   historyCountLabel,
   historyDayIndex,
   historyDayLabel,
+  historyCalendar,
   historyDays,
   historyDisplayState,
   historyPresentation,
@@ -412,7 +414,7 @@ export function HistoryView({
   snapshot: StoreSnapshot;
   backupBusy: boolean;
   weekStart: WeekStart;
-  // The jump calendar opens from the sheet header, which AppPanel owns.
+  // Days or Calendar: the switch is in the sheet header, which AppPanel owns.
   calendarOpen: boolean;
   onCalendarClose: () => void;
   onRestoreDescription: (id: string, text: string | undefined) => boolean;
@@ -431,7 +433,6 @@ export function HistoryView({
   // Days the viewer opened or folded; other days follow openByDefault.
   const [folds, setFolds] = useState<ReadonlyMap<string, boolean>>(new Map());
   const [menuOpen, setMenuOpen] = useState(false);
-  const [jumpDate, setJumpDate] = useState<string | null>(null);
   const [filtersBottom, setFiltersBottom] = useState(0);
   const [barHeight, setBarHeight] = useState(64);
   const list = useRef<SectionList<HistoryRowItem, DaySection>>(null);
@@ -480,14 +481,14 @@ export function HistoryView({
   useLayoutEffect(() => {
     latestSections.current = sections;
   });
-  // The calendar needs every day, so it scans the whole log only while open.
+  // The calendar needs every day, so it scans the whole log only while shown.
   const allDays = useMemo(
     () => (calendarOpen ? historyDays(undo, filter).days : null),
     [calendarOpen, undo, filter],
   );
-  const marked = useMemo(
-    () => new Set(allDays?.map((day) => day.date)),
-    [allDays],
+  const calendar = useMemo(
+    () => (calendarOpen ? historyCalendar(undo, filter) : null),
+    [calendarOpen, undo, filter],
   );
   const editable = !snapshot.error && !snapshot.busy && !backupBusy;
   const describe = (action: HistoryAction | undefined) => {
@@ -560,9 +561,9 @@ export function HistoryView({
     setDayLimit(dayPage);
     setMenuOpen(false);
   };
+  // Choosing a calendar day opens the day list there.
   const jump = (date: string) => {
     onCalendarClose();
-    setJumpDate(date);
     if (!allDays) return;
     const index = historyDayIndex(allDays, date);
     if (index < 0) return;
@@ -679,12 +680,9 @@ export function HistoryView({
           filter={filter}
           habitName={filterHabit?.name ?? null}
           habitColor={filterHabit?.color ?? null}
-          menuOpen={menuOpen && !calendarOpen}
+          menuOpen={menuOpen}
           onKind={(next) => choose({ ...filter, kind: next })}
-          onHabitMenu={() => {
-            onCalendarClose();
-            setMenuOpen((open) => !open || calendarOpen);
-          }}
+          onHabitMenu={() => setMenuOpen((open) => !open)}
         />
       </View>
       {descriptionAction && (
@@ -697,7 +695,24 @@ export function HistoryView({
           onClose={() => setDescriptionAction(null)}
         />
       )}
-      <View ref={listBox} style={styles.listBox}>
+      {calendar && (
+        <HistoryCalendar
+          calendar={calendar}
+          state={displayState}
+          today={today}
+          weekStart={weekStart}
+          bottomInset={barHeight + 36}
+          onChoose={jump}
+        />
+      )}
+      {/* Hidden, not unmounted, behind the calendar, so the list keeps its
+          place and a chosen day can scroll into view at once. */}
+      <View
+        ref={listBox}
+        style={[styles.listBox, calendar && styles.hidden]}
+        accessibilityElementsHidden={!!calendar}
+        importantForAccessibility={calendar ? 'no-hide-descendants' : 'auto'}
+      >
         <SectionList
           {...sheetScroll}
           ref={list}
@@ -778,7 +793,7 @@ export function HistoryView({
           setBarHeight((previous) => (previous === height ? previous : height))
         }
       />
-      {menuOpen && !calendarOpen && (
+      {menuOpen && (
         <HabitFilterMenu
           top={filtersBottom}
           state={displayState}
@@ -787,17 +802,6 @@ export function HistoryView({
           selected={filter.habitId}
           onSelect={(next) => choose({ ...filter, habitId: next })}
           onClose={() => setMenuOpen(false)}
-        />
-      )}
-      {calendarOpen && (
-        <JumpCalendar
-          top={0}
-          value={jumpDate ?? today}
-          today={today}
-          weekStart={weekStart}
-          marked={marked}
-          onChoose={jump}
-          onClose={onCalendarClose}
         />
       )}
     </View>
@@ -819,6 +823,7 @@ const useStyles = themedStyles((t) => ({
     color: t.ink(0x85),
   },
   listBox: { flex: 1 },
+  hidden: { display: 'none' },
   list: { flexGrow: 1 },
   dayHeading: {
     minHeight: 44,

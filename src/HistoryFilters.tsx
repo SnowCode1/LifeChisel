@@ -10,8 +10,6 @@ import {
 } from 'react-native';
 import { Icon } from './Icon';
 import { HabitSymbol } from './HabitSymbol';
-import { DateCalendar } from './DateCalendar';
-import type { WeekStart } from '@onpurpose/core/displayPreferences';
 import {
   historyHabits,
   type HistoryFilter,
@@ -21,7 +19,7 @@ import type { HistoryAction, StoredState } from '@onpurpose/core/storage/model';
 import { useSheetScroll } from './SheetModal';
 import { themedStyles, useTheme } from './ThemeContext';
 
-// History filter chips, the habit picker they open, and the jump calendar.
+// History filter chips and the habit picker they open.
 
 const kinds: { value: HistoryKind | 'all'; label: string; spoken: string }[] = [
   { value: 'all', label: 'All', spoken: 'All changes' },
@@ -237,47 +235,6 @@ export function HabitFilterMenu({
   );
 }
 
-export function JumpCalendar({
-  top,
-  value,
-  today,
-  weekStart,
-  marked,
-  onChoose,
-  onClose,
-}: {
-  top: number;
-  value: string;
-  today: string;
-  weekStart: WeekStart;
-  marked: ReadonlySet<string>;
-  onChoose: (date: string) => void;
-  onClose: () => void;
-}) {
-  const styles = useStyles();
-  return (
-    <Popover
-      top={top}
-      label="Close date picker"
-      style={styles.calendar}
-      onClose={onClose}
-    >
-      <DateCalendar
-        value={value}
-        today={today}
-        weekStart={weekStart}
-        marked={marked}
-        markedLabel="has changes"
-        onChange={onChoose}
-      />
-      <Text style={styles.calendarNote}>
-        Dots mark days with changes. A day without any opens the closest earlier
-        one.
-      </Text>
-    </Popover>
-  );
-}
-
 const useStyles = themedStyles((t) => ({
   filters: {
     paddingHorizontal: 20,
@@ -327,21 +284,6 @@ const useStyles = themedStyles((t) => ({
     maxWidth: 320,
     maxHeight: 380,
     paddingVertical: 6,
-  },
-  calendar: {
-    left: 16,
-    right: 16,
-    maxHeight: 560,
-    paddingHorizontal: 10,
-    paddingTop: 6,
-    paddingBottom: 12,
-  },
-  calendarNote: {
-    color: t.ink(0x85),
-    fontSize: 12,
-    lineHeight: 17,
-    marginTop: 6,
-    paddingHorizontal: 4,
   },
   menuItem: {
     minHeight: 44,

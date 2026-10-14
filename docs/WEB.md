@@ -74,6 +74,9 @@ redraws one row rather than the whole grid.
 
 ## Sidebar and shortcuts
 
+The OnPurpose brand links to the landing page (`src/config.ts`: `/` in builds,
+the landing development server in development).
+
 A quiet sidebar on the left (`Sidebar.tsx`, founder request, 14 October 2026) holds what surrounds the grid, which stays the only page: New habit;
 Habits (the current page, with a count), History (toggles the docked panel),
 Archived and Settings; then where the data is kept ("Saved in this browser",
@@ -112,6 +115,10 @@ Clicking a habit's name (or **Notes and statistics** in its menu) docks a
 panel beside the grid, which narrows to whole columns but stays usable; below
 1000 px wide the panel covers the grid instead. It opens on Notes when the
 habit has notes, otherwise on Statistics, as on the phone. Esc closes it.
+Drag the panel's edge to resize it (or focus the edge and use the arrow keys,
+Home/End, and Enter or a double click for the default 440 px); the width is
+remembered per browser (`panel/PanelResizer.tsx`), and the grid keeps at least
+420 px.
 
 - **Notes** render from core's Markdown token stream as React elements: text
   is escaped, links pass core `descriptionLink` and open in a new tab, and
@@ -134,7 +141,12 @@ active habit actions in log order, grouped by the day they were made (Today
 and Yesterday open; filtered lists open fully), neighbouring same-date
 entries within five minutes collapsed into a burst, and entries for another
 day marked "For <date>". Filters (kind chips and a habit picker) are view
-state. A date picker jumps to a day. The Undo bar always names the newest
+state and apply to both views. **Days** is that list; **Calendar** shows a
+month with a coloured dot for each habit changed each day ("+n" beyond four),
+or a year with one dot per day in its most-changed habit's colour, from core
+`historyCalendar` (`panel/HistoryCalendar.tsx`, the same calendar as the
+phone). Choosing a day opens it in the list; choosing a month in the year
+opens that month. The Undo bar always names the newest
 action, even when filtered out; Undo and Redo live there (and on Ctrl+Z /
 Ctrl+Shift+Z) rather than in the top bar.
 
