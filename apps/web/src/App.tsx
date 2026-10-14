@@ -11,8 +11,7 @@ import {
   displayDefaults,
 } from '@onpurpose/core/displayPreferences';
 import { themeFor, type Theme } from '@onpurpose/core/theme';
-import type { Habit } from '@onpurpose/core/habits';
-import { toggleCheckboxValue } from '@onpurpose/core/habitGoals';
+import { createQuickUndo } from '@onpurpose/core/quickUndo';
 import { openStore } from './storage/openStore.ts';
 import {
   HabitGrid,
@@ -20,6 +19,9 @@ import {
   type GridHandle,
 } from './HabitGrid.tsx';
 import { useToday } from './useToday.ts';
+import { useHabitActions } from './actions.ts';
+import { EntryDialog, type EntryTarget } from './entry/EntryDialog.tsx';
+import { QuickUndoToast } from './QuickUndoToast.tsx';
 
 export function App() {
   const [store, setStore] = useState<ChangeStore | null>(null);
@@ -42,6 +44,10 @@ function Tracker({ store }: { store: ChangeStore }) {
   const today = useToday();
   const prefersDark = usePrefersDark();
   const grid = useRef<GridHandle>(null);
+  const [quickUndo] = useState(() => createQuickUndo(store));
+  useEffect(() => () => quickUndo.dispose(), [quickUndo]);
+  const actions = useHabitActions(store, quickUndo);
+  const [entry, setEntry] = useState<EntryTarget | null>(null);
   const theme = themeFor(
     state.themeMode ?? displayDefaults.themeMode,
     prefersDark ? 'dark' : 'light',
@@ -78,6 +84,9 @@ function Tracker({ store }: { store: ChangeStore }) {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (!(event.ctrlKey || event.metaKey)) return;
+      // Text fields keep their own undo.
+      const target = event.target as HTMLElement;
+      if (target.closest('input, textarea, [contenteditable="true"]')) return;
       const key = event.key.toLowerCase();
       if (key === 'z' && !event.shiftKey) store.undo();
       else if (key === 'y' || (key === 'z' && event.shiftKey)) store.redo();
@@ -91,17 +100,9 @@ function Tracker({ store }: { store: ChangeStore }) {
   if (snapshot.status === 'load-error')
     return <Notice text={snapshot.error ?? 'Saved data could not open.'} />;
 
-  const toggle = (habit: Habit, date: string) => {
-    const before =
-      store.getSnapshot().replay.state.values[`${habit.id}:${date}`];
-    store.change({
-      kind: 'entry',
-      habitId: habit.id,
-      date,
-      before: before ?? null,
-      after: toggleCheckboxValue(habit, before, date),
-    });
-  };
+  // The entry editor follows the current definition (new categories appear).
+  const entryHabit =
+    entry && state.habits.find((habit) => habit.id === entry.habit.id);
   return (
     <div className="app">
       <header className="top-bar">
@@ -140,11 +141,30 @@ function Tracker({ store }: { store: ChangeStore }) {
         weekStart={state.weekStart ?? displayDefaults.weekStart}
         weekDividers={state.weekDividers ?? displayDefaults.weekDividers}
         editable={store.canEdit()}
-        onToggle={toggle}
+        onToggle={actions.toggle}
+        onOpen={(habit, date, label, anchor) =>
+          setEntry({ habit, date, label, anchor })
+        }
       />
       <footer className="hints">
-        Space ticks · Arrow keys move · Ctrl Z undoes
+        Space ticks · Enter opens a value · Arrow keys move · Ctrl Z undoes
       </footer>
+      {entry && entryHabit && (
+        <EntryDialog
+          key={`${entry.habit.id}:${entry.date}`}
+          target={{ ...entry, habit: entryHabit }}
+          value={state.values[`${entry.habit.id}:${entry.date}`]}
+          values={state.values}
+          theme={theme}
+          editable={store.canEdit()}
+          onClose={() => setEntry(null)}
+          onSave={(value) => actions.saveEntry(entryHabit, entry.date, value)}
+          onAddCategories={(added) =>
+            actions.addCategories(entryHabit.id, added)
+          }
+        />
+      )}
+      <QuickUndoToast quickUndo={quickUndo} editable={store.canEdit()} />
     </div>
   );
 }
@@ -185,6 +205,11 @@ function useThemeVariables(theme: Theme) {
     style.setProperty('--row-highlight', theme.overlay(0.05));
     style.setProperty('--accent', theme.accent);
     style.setProperty('--danger', theme.danger);
+    style.setProperty('--accent-text', theme.accentText);
+    style.setProperty('--surface', theme.ink(0x10));
+    style.setProperty('--surface-raised', theme.ink(0x1c));
+    style.setProperty('--surface-edge', theme.ink(0x2a));
+    style.setProperty('--scrim', theme.scrim(0x66));
     style.colorScheme = theme.scheme;
   }, [theme]);
 }

@@ -65,6 +65,7 @@ export function HabitGrid({
   weekDividers,
   editable,
   onToggle,
+  onOpen,
 }: {
   ref?: Ref<GridHandle>;
   habits: Habit[];
@@ -76,6 +77,12 @@ export function HabitGrid({
   weekDividers: boolean;
   editable: boolean;
   onToggle: (habit: Habit, date: string) => void;
+  onOpen: (
+    habit: Habit,
+    date: string,
+    label: string,
+    anchor: HTMLElement,
+  ) => void;
 }) {
   const days = useMemo(
     () => gridDays(today, weekStart, weekDividers),
@@ -203,6 +210,7 @@ export function HabitGrid({
                 editable={editable}
                 focusCol={row === focusRow ? focus.col : -1}
                 onToggle={onToggle}
+                onOpen={onOpen}
               />
             ))}
           </tbody>
@@ -224,6 +232,7 @@ function HabitRow({
   editable,
   focusCol,
   onToggle,
+  onOpen,
 }: {
   habit: Habit;
   row: number;
@@ -236,6 +245,12 @@ function HabitRow({
   editable: boolean;
   focusCol: number;
   onToggle: (habit: Habit, date: string) => void;
+  onOpen: (
+    habit: Habit,
+    date: string,
+    label: string,
+    anchor: HTMLElement,
+  ) => void;
 }) {
   const states = days.map((day) =>
     cellState(habit, values[`${habit.id}:${day.key}`], day.key),
@@ -353,10 +368,14 @@ function HabitRow({
                 )}
               </button>
             ) : (
-              // Number, text and category entry arrives with the cell popover.
+              // Number, text and category cells open the entry popover.
               <button
                 {...shared}
-                aria-disabled="true"
+                aria-haspopup="dialog"
+                disabled={!editable}
+                onClick={(event) =>
+                  onOpen(habit, day.key, day.label, event.currentTarget)
+                }
                 className={state.kind === 'number' ? 'mark value' : 'mark text'}
                 style={{
                   color: state.recorded ? palette.colour : palette.number,

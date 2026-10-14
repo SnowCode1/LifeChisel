@@ -180,6 +180,7 @@ test('numeric drafts stay local; Close cancels, invalid input cannot save, and D
     './Icon': { Icon: () => null },
     './ThemeContext': themeContextModule(),
     '@onpurpose/core/numericSuggestions': suggestions,
+    '@onpurpose/core/entries': entries,
     './haptics': { feedback: () => {} },
     './useKeyboardFocus': load('useKeyboardFocus.ts', {
       ...common,

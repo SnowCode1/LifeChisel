@@ -23,6 +23,22 @@ export function categorySelection(ids: readonly string[]): string[] | null {
 export function textEntry(text: string): string | null {
   return text.trim() ? text : null;
 }
+/**
+ * A typed daily total: blank clears the entry (null); otherwise a number of
+ * zero or more, accepting a comma as the decimal separator.
+ */
+export function parseDailyTotal(
+  input: string,
+): { valid: true; value: number | null } | { valid: false } {
+  const trimmed = input.trim().replace(',', '.');
+  if (trimmed === '') return { valid: true, value: null };
+  const value = Number(trimmed);
+  return /^\d+(\.\d*)?$/.test(trimmed) &&
+    Number.isFinite(value) &&
+    value <= Number.MAX_SAFE_INTEGER
+    ? { valid: true, value }
+    : { valid: false };
+}
 export function validEntryText(value: unknown): value is string {
   return (
     typeof value === 'string' &&

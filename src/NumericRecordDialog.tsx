@@ -13,7 +13,7 @@ import { Text, TextInput } from './Typography';
 import { Icon } from './Icon';
 import { useKeyboardFocus } from './useKeyboardFocus';
 import type { EntryDay } from '@onpurpose/core/calendar';
-import type { EntryValues } from '@onpurpose/core/entries';
+import { parseDailyTotal, type EntryValues } from '@onpurpose/core/entries';
 import type { Habit } from '@onpurpose/core/habits';
 import { checkmarkColor } from '@onpurpose/core/colors';
 import { themedStyles, useTheme } from './ThemeContext';
@@ -49,13 +49,9 @@ export function NumericRecordDialog({
   const [input, setInput] = useState(
     initialValue === null ? '' : String(initialValue),
   );
-  const trimmed = input.trim().replace(',', '.');
-  const numeric = Number(trimmed);
-  const valid =
-    trimmed === '' ||
-    (/^\d+(\.\d*)?$/.test(trimmed) &&
-      Number.isFinite(numeric) &&
-      numeric <= Number.MAX_SAFE_INTEGER);
+  const parsed = parseDailyTotal(input);
+  const valid = parsed.valid;
+  const current = parsed.valid ? parsed.value : null;
   const suggestedTotals = useMemo(
     () => recentNumericTotals(values, habit.id, day.key),
     [values, habit.id, day.key],
@@ -63,7 +59,7 @@ export function NumericRecordDialog({
   const accent = theme.colour(habit.color);
   function saveNumber() {
     if (!valid || !editable) return;
-    if (onSave(trimmed === '' ? null : numeric)) onClose();
+    if (onSave(current)) onClose();
   }
   return (
     <Modal
@@ -165,7 +161,7 @@ export function NumericRecordDialog({
                       accessibilityRole="button"
                       accessibilityLabel={`Use recent total ${total}${habit.unit ? ` ${habit.unit}` : ''}`}
                       accessibilityState={{
-                        selected: trimmed !== '' && numeric === total,
+                        selected: current === total,
                       }}
                       onPress={() => {
                         setInput(String(total));
@@ -179,9 +175,7 @@ export function NumericRecordDialog({
                         alignItems: 'center',
                         borderRadius: 10,
                         backgroundColor:
-                          trimmed !== '' && numeric === total
-                            ? `${accent}22`
-                            : theme.ink(0x1c),
+                          current === total ? `${accent}22` : theme.ink(0x1c),
                       }}
                     >
                       <Text
