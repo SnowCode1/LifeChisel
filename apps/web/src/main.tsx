@@ -8,6 +8,7 @@ import './history.css';
 import './settings.css';
 import './goals.css';
 import './notes.css';
+import './sidebar.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

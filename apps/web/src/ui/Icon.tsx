@@ -7,13 +7,17 @@ const gear = Array.from({ length: 40 }, (_, index) => {
   return `${12 + Math.cos(angle) * radius},${12 + Math.sin(angle) * radius}`;
 }).join(' ');
 
+// Web-only icons (the sidebar and its controls) beside the shared ones.
+export type WebIconName =
+  IconName | 'grid' | 'keyboard' | 'sidebar' | 'device' | 'flask';
+
 export function Icon({
   name,
   size = 20,
   color = 'currentColor',
   strokeWidth = 1.7,
 }: {
-  name: IconName;
+  name: WebIconName;
   size?: number;
   color?: string;
   strokeWidth?: number;
@@ -93,6 +97,33 @@ export function Icon({
         </>
       )}
       {name === 'plus' && <path d="M12 5v14M5 12h14" />}
+      {name === 'grid' && (
+        <>
+          <rect x={3.5} y={4} width={17} height={16} rx={3} />
+          <path d="M3.5 9.5h17M9 9.5V20M3.5 15h17" />
+        </>
+      )}
+      {name === 'keyboard' && (
+        <>
+          <rect x={2.5} y={6} width={19} height={12} rx={2.5} />
+          <path d="M6.5 10h1M10.5 10h1M14.5 10h1M8 14h8" />
+        </>
+      )}
+      {name === 'sidebar' && (
+        <>
+          <rect x={3.5} y={4.5} width={17} height={15} rx={3} />
+          <path d="M9.5 4.5v15" />
+        </>
+      )}
+      {name === 'device' && (
+        <>
+          <ellipse cx={12} cy={6} rx={7.5} ry={2.5} />
+          <path d="M4.5 6v12c0 1.4 3.4 2.5 7.5 2.5s7.5-1.1 7.5-2.5V6M4.5 12c0 1.4 3.4 2.5 7.5 2.5s7.5-1.1 7.5-2.5" />
+        </>
+      )}
+      {name === 'flask' && (
+        <path d="M9.5 3.5h5M10.5 3.5v6L5 18.5A1.6 1.6 0 0 0 6.4 21h11.2a1.6 1.6 0 0 0 1.4-2.5l-5.5-9v-6M7.5 15h9" />
+      )}
       {name === 'info' && (
         <>
           <circle cx={12} cy={12} r={9} />

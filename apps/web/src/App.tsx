@@ -39,6 +39,9 @@ import { Settings } from './settings/Settings.tsx';
 import { useHabitActions, MAX_HABITS } from './actions.ts';
 import { EntryDialog, type EntryTarget } from './entry/EntryDialog.tsx';
 import { QuickUndoToast } from './QuickUndoToast.tsx';
+import { Sidebar } from './Sidebar.tsx';
+import { Shortcuts } from './Shortcuts.tsx';
+import type { SettingsPage } from './settings/Settings.tsx';
 
 export function App() {
   const [store, setStore] = useState<ChangeStore | null>(null);
@@ -50,12 +53,71 @@ export function App() {
       ),
     );
   }, []);
+  const sample = useSampleData();
   if (openError) return <Notice text={openError} />;
   if (!store) return <Notice text="Opening…" />;
-  return <Tracker store={store} />;
+  if (sample.enabled && !sample.store)
+    return <Notice text={sample.error ?? 'Preparing sample history…'} />;
+  return (
+    <Tracker
+      key={sample.enabled ? 'sample' : 'real'}
+      store={sample.enabled ? sample.store! : store}
+      sampleData={sample.enabled}
+      onSampleData={sample.available ? sample.setEnabled : undefined}
+    />
+  );
 }
 
-function Tracker({ store }: { store: ChangeStore }) {
+/**
+ * Development only: six months of fictional history in a separate in-memory
+ * store (the phone's sample data), so the grid and statistics can be tried
+ * without touching saved data. `?sample` in the address turns it on.
+ * Production builds drop this code, since import.meta.env.DEV is false.
+ */
+function useSampleData() {
+  const available = import.meta.env.DEV;
+  const [enabled, setEnabledState] = useState(
+    () => available && new URLSearchParams(location.search).has('sample'),
+  );
+  const [store, setStore] = useState<ChangeStore | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    if (!available || !enabled || store) return;
+    let active = true;
+    import('@onpurpose/core/dev/sampleData')
+      .then(({ createSampleStore }) =>
+        createSampleStore(localDateKey(new Date())),
+      )
+      .then(
+        (value) => active && setStore(value),
+        () => active && setError('Sample data could not be opened.'),
+      );
+    return () => {
+      active = false;
+    };
+  }, [available, enabled, store]);
+  const setEnabled = (value: boolean) => {
+    const url = new URL(location.href);
+    if (value) url.searchParams.set('sample', '');
+    else url.searchParams.delete('sample');
+    history.replaceState(null, '', url.toString().replace('sample=', 'sample'));
+    // Each visit starts the sample history afresh.
+    if (!value) setStore(null);
+    setError(null);
+    setEnabledState(value);
+  };
+  return { available, enabled, store, error, setEnabled };
+}
+
+function Tracker({
+  store,
+  sampleData,
+  onSampleData,
+}: {
+  store: ChangeStore;
+  sampleData: boolean;
+  onSampleData?: (value: boolean) => void;
+}) {
   const snapshot = useSyncExternalStore(store.subscribe, store.getSnapshot);
   const state = snapshot.replay.state;
   const today = useToday();
@@ -79,6 +141,17 @@ function Tracker({ store }: { store: ChangeStore }) {
     | { kind: 'history' }
     | null
   >(null);
+  const newHabit = () =>
+    setEditor({
+      habit: {
+        id: crypto.randomUUID(),
+        name: '',
+        color: '#82E6BC',
+        type: 'checkbox',
+        startDate: localDateKey(new Date()),
+      },
+      creating: true,
+    });
   const openHabit = (habit: Habit) =>
     setPanel({
       kind: 'habit',
@@ -98,17 +171,7 @@ function Tracker({ store }: { store: ChangeStore }) {
         setEntry({ habit, date, label, anchor }),
       openMenu: (habit, anchor) => setMenu({ habit, anchor }),
       reorder: (ids) => void actions.reorder(ids),
-      add: () =>
-        setEditor({
-          habit: {
-            id: crypto.randomUUID(),
-            name: '',
-            color: '#82E6BC',
-            type: 'checkbox',
-            startDate: localDateKey(new Date()),
-          },
-          creating: true,
-        }),
+      add: newHabit,
     }),
     [actions],
   );
@@ -141,7 +204,9 @@ function Tracker({ store }: { store: ChangeStore }) {
         : habits,
     [habits, hiddenKey],
   );
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsPage, setSettingsPage] = useState<SettingsPage | null>(null);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+  const [collapsed, setCollapsed] = useStoredFlag('onpurpose.sidebarCollapsed');
   const [goalHabitId, setGoalHabitId] = useState<string | null>(null);
   const [notesHabitId, setNotesHabitId] = useState<string | null>(null);
   const [noteAction, setNoteAction] = useState<HistoryAction | null>(null);
@@ -167,15 +232,35 @@ function Tracker({ store }: { store: ChangeStore }) {
       cell.connectorThickness,
     ],
   );
+  // Global keys. Text fields keep their own undo and typing; single-letter
+  // keys work only while no dialog is open.
+  const toggleHistory = () =>
+    setPanel((current) =>
+      current?.kind === 'history' ? null : { kind: 'history' },
+    );
+  const keys = useRef({ newHabit, toggleHistory });
+  useEffect(() => {
+    keys.current = { newHabit, toggleHistory };
+  });
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (!(event.ctrlKey || event.metaKey)) return;
-      // Text fields keep their own undo.
       const target = event.target as HTMLElement;
-      if (target.closest('input, textarea, [contenteditable="true"]')) return;
+      if (target.closest('input, textarea, select, [contenteditable="true"]'))
+        return;
       const key = event.key.toLowerCase();
-      if (key === 'z' && !event.shiftKey) store.undo();
-      else if (key === 'y' || (key === 'z' && event.shiftKey)) store.redo();
+      if (event.ctrlKey || event.metaKey) {
+        if (key === 'z' && !event.shiftKey) store.undo();
+        else if (key === 'y' || (key === 'z' && event.shiftKey)) store.redo();
+        else return;
+        event.preventDefault();
+        return;
+      }
+      if (event.altKey || document.querySelector('dialog[open]')) return;
+      if (key === 't') grid.current?.showToday();
+      else if (key === 'n') {
+        if (store.canEdit()) keys.current.newHabit();
+      } else if (key === 'h') keys.current.toggleHistory();
+      else if (event.key === '?') setShortcutsOpen(true);
       else return;
       event.preventDefault();
     };
@@ -238,88 +323,105 @@ function Tracker({ store }: { store: ChangeStore }) {
   };
   return (
     <div className="app">
-      <header className="top-bar">
-        <span className="wordmark">OnPurpose</span>
-        <button className="today" onClick={() => grid.current?.showToday()}>
-          Today
-        </button>
-        <span className="actions">
-          <button
-            aria-pressed={panel?.kind === 'history'}
-            onClick={() =>
-              setPanel(panel?.kind === 'history' ? null : { kind: 'history' })
-            }
-          >
-            <Icon name="history" size={19} />
-            <span className="label">History</span>
+      <Sidebar
+        collapsed={collapsed}
+        habitCount={habits.length}
+        archivedCount={state.habits.length - habits.length}
+        historyOpen={panel?.kind === 'history'}
+        canAdd={store.canEdit() && state.habits.length < MAX_HABITS}
+        saveError={!!snapshot.error}
+        sampleData={sampleData}
+        onSampleData={onSampleData}
+        onToggleCollapsed={() => setCollapsed(!collapsed)}
+        onAdd={newHabit}
+        onHistory={toggleHistory}
+        onArchived={() => setSettingsPage('archived')}
+        onSettings={() => setSettingsPage('appearance')}
+        onBackups={() => setSettingsPage('backups')}
+        onShortcuts={() => setShortcutsOpen(true)}
+      />
+      <main className="main">
+        <header className="top-bar">
+          <span className="wordmark">
+            {sampleData ? 'Sample data' : 'OnPurpose'}
+          </span>
+          <button className="today" onClick={() => grid.current?.showToday()}>
+            Today
           </button>
-          <button
-            aria-haspopup="dialog"
-            aria-label="Settings"
-            onClick={() => setSettingsOpen(true)}
-          >
-            <Icon name="settings" size={19} />
-            <span className="label">Settings</span>
-          </button>
-        </span>
-      </header>
-      {snapshot.error && (
-        <div className="save-error" role="alert">
-          {snapshot.error}
-          <button onClick={store.retry}>Retry</button>
-        </div>
-      )}
-      <div className="workspace">
-        <HabitGrid
-          ref={grid}
-          habits={rows}
-          values={state.values}
-          today={today}
-          theme={theme}
-          look={look}
-          weekStart={state.weekStart ?? displayDefaults.weekStart}
-          weekDividers={state.weekDividers ?? displayDefaults.weekDividers}
-          editable={store.canEdit()}
-          canAdd={state.habits.length < MAX_HABITS}
-          on={handlers}
-        />
-        {panel?.kind === 'history' && (
-          <HistoryPanel
-            snapshot={snapshot}
-            today={today}
-            theme={theme}
-            editable={store.canEdit()}
-            onUndo={store.undo}
-            onRedo={store.redo}
-            onClose={() => setPanel(null)}
-            onOpenNote={setNoteAction}
-          />
+          <span className="actions">
+            <button
+              aria-pressed={panel?.kind === 'history'}
+              onClick={toggleHistory}
+            >
+              <Icon name="history" size={19} />
+              <span className="label">History</span>
+            </button>
+            <button
+              aria-haspopup="dialog"
+              aria-label="Settings"
+              onClick={() => setSettingsPage('appearance')}
+            >
+              <Icon name="settings" size={19} />
+              <span className="label">Settings</span>
+            </button>
+          </span>
+        </header>
+        {snapshot.error && (
+          <div className="save-error" role="alert">
+            {snapshot.error}
+            <button onClick={store.retry}>Retry</button>
+          </div>
         )}
-        {panel?.kind === 'habit' && panelHabit && (
-          <HabitPanel
-            habit={panelHabit}
-            tab={panel.tab}
+        <div className="workspace">
+          <HabitGrid
+            ref={grid}
+            habits={rows}
             values={state.values}
-            events={snapshot.events}
-            actions={snapshot.replay.undo}
             today={today}
-            weekStart={state.weekStart ?? displayDefaults.weekStart}
             theme={theme}
+            look={look}
+            weekStart={state.weekStart ?? displayDefaults.weekStart}
+            weekDividers={state.weekDividers ?? displayDefaults.weekDividers}
             editable={store.canEdit()}
-            onTab={(tab) =>
-              setPanel({ kind: 'habit', habitId: panelHabit.id, tab })
-            }
-            onEdit={() => setEditor({ habit: panelHabit, creating: false })}
-            onClose={() => setPanel(null)}
-            onDay={panelDay}
-            onEditGoal={() => setGoalHabitId(panelHabit.id)}
-            onEditNotes={() => setNotesHabitId(panelHabit.id)}
+            canAdd={state.habits.length < MAX_HABITS}
+            on={handlers}
           />
-        )}
-      </div>
-      <footer className="hints">
+          {panel?.kind === 'history' && (
+            <HistoryPanel
+              snapshot={snapshot}
+              today={today}
+              theme={theme}
+              editable={store.canEdit()}
+              onUndo={store.undo}
+              onRedo={store.redo}
+              onClose={() => setPanel(null)}
+              onOpenNote={setNoteAction}
+            />
+          )}
+          {panel?.kind === 'habit' && panelHabit && (
+            <HabitPanel
+              habit={panelHabit}
+              tab={panel.tab}
+              values={state.values}
+              events={snapshot.events}
+              actions={snapshot.replay.undo}
+              today={today}
+              weekStart={state.weekStart ?? displayDefaults.weekStart}
+              theme={theme}
+              editable={store.canEdit()}
+              onTab={(tab) =>
+                setPanel({ kind: 'habit', habitId: panelHabit.id, tab })
+              }
+              onEdit={() => setEditor({ habit: panelHabit, creating: false })}
+              onClose={() => setPanel(null)}
+              onDay={panelDay}
+              onEditGoal={() => setGoalHabitId(panelHabit.id)}
+              onEditNotes={() => setNotesHabitId(panelHabit.id)}
+            />
+          )}
+        </div>
         {hideCompleted && (hidden.size > 0 || showCompleted) && (
-          <span className="completed-toggle">
+          <footer className="hints">
             {showCompleted
               ? 'Showing completed habits'
               : `${hidden.size} completed today hidden`}{' '}
@@ -330,12 +432,9 @@ function Tracker({ store }: { store: ChangeStore }) {
             >
               {showCompleted ? 'Hide' : 'Show'}
             </button>
-            {' · '}
-          </span>
+          </footer>
         )}
-        Space ticks · Enter opens a value · Arrow keys move · Alt ↑↓ reorders ·
-        Ctrl Z undoes
-      </footer>
+      </main>
       {entry && entryHabit && (
         <EntryDialog
           key={`${entry.habit.id}:${entry.date}`}
@@ -425,8 +524,11 @@ function Tracker({ store }: { store: ChangeStore }) {
           }
         />
       )}
-      {settingsOpen && (
+      {shortcutsOpen && <Shortcuts onClose={() => setShortcutsOpen(false)} />}
+      {settingsPage && (
         <Settings
+          initialPage={settingsPage}
+          sampleData={sampleData}
           store={store}
           snapshot={snapshot}
           theme={theme}
@@ -435,12 +537,32 @@ function Tracker({ store }: { store: ChangeStore }) {
           today={today}
           editable={store.canEdit()}
           actions={actions}
-          onClose={() => setSettingsOpen(false)}
+          onClose={() => setSettingsPage(null)}
         />
       )}
       <QuickUndoToast quickUndo={quickUndo} editable={store.canEdit()} />
     </div>
   );
+}
+
+// A per-browser convenience (like a remembered tab), never app data.
+function useStoredFlag(key: string) {
+  const [value, setValue] = useState(() => {
+    try {
+      return localStorage.getItem(key) === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const set = (next: boolean) => {
+    setValue(next);
+    try {
+      localStorage.setItem(key, String(next));
+    } catch {
+      // Private windows may refuse storage; the choice lasts this visit.
+    }
+  };
+  return [value, set] as const;
 }
 
 function Notice({ text }: { text: string }) {
@@ -476,11 +598,14 @@ function useThemeVariables(theme: Theme) {
     style.setProperty('--today-pill', theme.ink(0x19));
     style.setProperty('--today-edge', theme.ink(0x26));
     style.setProperty('--week-shade', theme.ink(0x0c));
-    style.setProperty('--row-highlight', theme.overlay(0.05));
+    style.setProperty('--row-highlight', theme.overlay(0x0d));
     style.setProperty('--accent', theme.accent);
     style.setProperty('--danger', theme.danger);
     style.setProperty('--accent-text', theme.accentText);
     style.setProperty('--surface', theme.ink(0x10));
+    style.setProperty('--sidebar', theme.ink(0x07));
+    style.setProperty('--scroll-thumb', theme.overlay(0x38));
+    style.setProperty('--scroll-thumb-active', theme.overlay(0x70));
     style.setProperty('--surface-raised', theme.ink(0x1c));
     style.setProperty('--surface-edge', theme.ink(0x2a));
     style.setProperty('--scrim', theme.scrim(0x66));

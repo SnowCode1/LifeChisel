@@ -22,6 +22,7 @@ import {
 import { createGridPalette } from '@onpurpose/core/gridAppearance';
 import type { Theme } from '@onpurpose/core/theme';
 import { HabitRow } from './HabitRow.tsx';
+import { GridScrollbars } from './Scrollbars.tsx';
 import type { CellLookStyle, Day, GridHandlers } from './types.ts';
 
 export type { CellLookStyle, GridHandlers } from './types.ts';
@@ -122,22 +123,23 @@ export function HabitGrid({
         element.scrollWidth - element.clientWidth - element.scrollLeft < 2;
     };
     // Size the grid to whole day columns (at most VISIBLE_DAYS), so no column
-    // is ever left half hidden behind the names.
+    // is ever left half hidden behind the names. The overlay scrollbars take
+    // no width.
     const fit = () => {
       const container = area.current;
+      const frame = element.parentElement;
       const corner = element.querySelector<HTMLElement>('.corner');
       const day = element.querySelector<HTMLElement>('.day');
-      if (!container || !corner || !day) return;
-      const padding = parseFloat(getComputedStyle(container).paddingLeft) * 2;
-      const scrollbar = element.offsetWidth - element.clientWidth;
-      const available =
-        container.clientWidth - padding - corner.offsetWidth - scrollbar;
+      if (!container || !frame || !corner || !day) return;
+      const padding =
+        parseFloat(getComputedStyle(container).paddingLeft) +
+        parseFloat(getComputedStyle(container).paddingRight);
+      const available = container.clientWidth - padding - corner.offsetWidth;
       const days = Math.max(
         1,
         Math.min(VISIBLE_DAYS, Math.floor(available / day.offsetWidth)),
       );
-      element.style.width = `${corner.offsetWidth + days * day.offsetWidth + scrollbar}px`;
-      element.style.maxWidth = '100%';
+      frame.style.width = `${corner.offsetWidth + days * day.offsetWidth}px`;
     };
     fit();
     pin();
@@ -145,7 +147,6 @@ export function HabitGrid({
       fit();
       pin();
     });
-    observer.observe(element);
     if (area.current) observer.observe(area.current);
     element.addEventListener('scroll', track, { passive: true });
     return () => {
@@ -297,91 +298,96 @@ export function HabitGrid({
   return (
     <div className="grid-area" ref={area}>
       <div
-        className={drag ? 'grid-scroller dragging-rows' : 'grid-scroller'}
-        ref={scroller}
+        className="grid-frame"
         style={{ '--visible-days': VISIBLE_DAYS } as CSSProperties}
       >
-        <table className="grid" onKeyDown={onKeyDown} onFocus={onFocus}>
-          <thead>
-            <tr>
-              <th className="corner" scope="col">
-                {month}
-              </th>
-              {days.map((day) => (
-                <th
-                  key={day.key}
-                  scope="col"
-                  className={
-                    day.ago === 0
-                      ? 'day today'
-                      : day.shaded
-                        ? 'day shaded'
-                        : 'day'
-                  }
-                  aria-label={day.label}
-                >
-                  <span className="weekday">
-                    {day.ago === 0 ? 'Today' : day.weekday}
-                  </span>
-                  <span className="number">{day.number}</span>
+        <div
+          className={drag ? 'grid-scroller dragging-rows' : 'grid-scroller'}
+          ref={scroller}
+        >
+          <table className="grid" onKeyDown={onKeyDown} onFocus={onFocus}>
+            <thead>
+              <tr>
+                <th className="corner" scope="col">
+                  {month}
                 </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {habits.map((habit, row) => (
-              <HabitRow
-                key={habit.id}
-                habit={habit}
-                row={row}
-                days={days}
-                values={values}
-                today={today}
-                todayOrdinal={todayOrdinal}
-                palette={createGridPalette(habit.color, theme)}
-                look={look}
-                editable={editable}
-                focusCol={row === focusRow ? focus.col : -1}
-                on={on}
-                dragStyle={dragStyle(row)}
-                dragging={drag?.from === row}
-                onHandleDown={startDrag(row)}
-              />
-            ))}
-          </tbody>
-          <tfoot>
-            <tr>
-              <th scope="row" className="name add-row">
-                <button
-                  type="button"
-                  className="add-habit"
-                  disabled={!editable || !canAdd}
-                  onClick={on.add}
-                >
-                  <svg
-                    width="18"
-                    height="18"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.7"
-                    strokeLinecap="round"
-                    aria-hidden="true"
+                {days.map((day) => (
+                  <th
+                    key={day.key}
+                    scope="col"
+                    className={
+                      day.ago === 0
+                        ? 'day today'
+                        : day.shaded
+                          ? 'day shaded'
+                          : 'day'
+                    }
+                    aria-label={day.label}
                   >
-                    <path d="M12 5v14M5 12h14" />
-                  </svg>
-                  Add habit
-                </button>
-              </th>
-              <td colSpan={DAYS} />
-            </tr>
-          </tfoot>
-        </table>
-        {habits.length === 0 && (
-          <p className="empty-grid">
-            No habits yet. Add one to start tracking.
-          </p>
-        )}
+                    <span className="weekday">
+                      {day.ago === 0 ? 'Today' : day.weekday}
+                    </span>
+                    <span className="number">{day.number}</span>
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {habits.map((habit, row) => (
+                <HabitRow
+                  key={habit.id}
+                  habit={habit}
+                  row={row}
+                  days={days}
+                  values={values}
+                  today={today}
+                  todayOrdinal={todayOrdinal}
+                  palette={createGridPalette(habit.color, theme)}
+                  look={look}
+                  editable={editable}
+                  focusCol={row === focusRow ? focus.col : -1}
+                  on={on}
+                  dragStyle={dragStyle(row)}
+                  dragging={drag?.from === row}
+                  onHandleDown={startDrag(row)}
+                />
+              ))}
+            </tbody>
+            <tfoot>
+              <tr>
+                <th scope="row" className="name add-row">
+                  <button
+                    type="button"
+                    className="add-habit"
+                    disabled={!editable || !canAdd}
+                    onClick={on.add}
+                  >
+                    <svg
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.7"
+                      strokeLinecap="round"
+                      aria-hidden="true"
+                    >
+                      <path d="M12 5v14M5 12h14" />
+                    </svg>
+                    Add habit
+                  </button>
+                </th>
+                <td colSpan={DAYS} />
+              </tr>
+            </tfoot>
+          </table>
+          {habits.length === 0 && (
+            <p className="empty-grid">
+              No habits yet. Add one to start tracking.
+            </p>
+          )}
+        </div>
+        <GridScrollbars scroller={scroller} />
       </div>
     </div>
   );

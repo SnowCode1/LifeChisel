@@ -31,7 +31,9 @@ import type { CellLookStyle, GridHandlers } from '../grid/types.ts';
 import type { HabitActions, WebPreference } from '../actions.ts';
 import { exportBackup, readBackup } from '../storage/backups.ts';
 
-type Page = 'appearance' | 'tracking' | 'backups' | 'archived' | 'about';
+export type SettingsPage =
+  'appearance' | 'tracking' | 'backups' | 'archived' | 'about';
+type Page = SettingsPage;
 const PAGES: { id: Page; label: string }[] = [
   { id: 'appearance', label: 'Appearance' },
   { id: 'tracking', label: 'Daily tracking' },
@@ -44,6 +46,8 @@ type Shape = 'squares' | 'circles' | 'marks';
 // Settings apply immediately (the grid and the preview update together) and
 // stay outside History and Undo, as on the phone.
 export function Settings({
+  initialPage = 'appearance',
+  sampleData = false,
   store,
   snapshot,
   theme,
@@ -54,6 +58,8 @@ export function Settings({
   actions,
   onClose,
 }: {
+  initialPage?: Page;
+  sampleData?: boolean;
   store: ChangeStore;
   snapshot: StoreSnapshot;
   theme: Theme;
@@ -65,7 +71,7 @@ export function Settings({
   onClose: () => void;
 }) {
   const titleId = useId();
-  const [page, setPage] = useState<Page>('appearance');
+  const [page, setPage] = useState<Page>(initialPage);
   const state = snapshot.replay.state;
   const set = <K extends WebPreference>(kind: K, value: StoredState[K]) =>
     actions.setPreference(kind, value);
@@ -151,7 +157,12 @@ export function Settings({
             </>
           )}
           {page === 'backups' && (
-            <Backups store={store} snapshot={snapshot} editable={editable} />
+            <Backups
+              store={store}
+              snapshot={snapshot}
+              editable={editable && !sampleData}
+              sampleData={sampleData}
+            />
           )}
           {page === 'archived' && (
             <Archived
@@ -500,10 +511,12 @@ function Backups({
   store,
   snapshot,
   editable,
+  sampleData,
 }: {
   store: ChangeStore;
   snapshot: StoreSnapshot;
   editable: boolean;
+  sampleData: boolean;
 }) {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{
@@ -628,6 +641,12 @@ function Backups({
           </div>
         )}
       </Group>
+      {sampleData && (
+        <p className="hint">
+          Backups are off while sample data is shown. Turn off Sample data in
+          the sidebar to back up or restore your own habits.
+        </p>
+      )}
       {message && (
         <p className={message.error ? 'hint error' : 'hint'} role="status">
           {message.text}

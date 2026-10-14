@@ -25,6 +25,9 @@
   --accent-text: #9bdbbe;
   --danger: #d99090;
   --surface: #101010;
+  --sidebar: #070707;
+  --scroll-thumb: #ffffff33;
+  --scroll-thumb-active: #ffffff66;
   --surface-raised: #1c1c1c;
   --surface-edge: #2a2a2a;
   --scrim: #00000066;
@@ -66,13 +69,8 @@ button[aria-disabled='true'] {
   outline-offset: 2px;
 }
 
-/* The page never scrolls; the grid scrolls inside its own area. */
-.app {
-  display: flex;
-  flex-direction: column;
-  height: 100dvh;
-  overflow: hidden;
-}
+/* The page never scrolls; the grid scrolls inside its own area (the app
+   and main column layout is in sidebar.css). */
 .notice {
   margin: 4rem auto;
   max-width: 28rem;
@@ -137,19 +135,101 @@ button[aria-disabled='true'] {
   justify-content: center;
   padding: 0 16px;
 }
-.grid-scroller {
-  width: 100%;
+.grid-frame {
+  position: relative;
+  /* As tall as its rows, up to the space available; the bars then sit right
+     under the last row instead of at the bottom of the window. */
+  align-self: flex-start;
+  max-height: 100%;
+  max-width: 100%;
   /* Before the first measurement: about three weeks; HabitGrid then sets an
      exact width of whole columns. */
-  max-width: calc(
-    var(--name-width) + var(--column) * var(--visible-days) + 24px
-  );
+  width: calc(var(--name-width) + var(--column) * var(--visible-days));
+  display: flex;
+}
+.grid-scroller {
+  flex: 1;
+  min-width: 0;
   overflow: auto;
   overscroll-behavior: contain;
+  /* The browser's bars would span the sticky headings and names; thin
+     overlay bars (Scrollbars.tsx) cover only the scrolling area. */
+  scrollbar-width: none;
   /* Horizontal scrolling stops on whole days (see the fit in HabitGrid). */
   scroll-snap-type: x mandatory;
   /* Keyboard focus scrolls cells clear of the sticky headings and names. */
   scroll-padding: calc(var(--row) + 8px) 0 0 var(--name-width);
+}
+.grid-scroller::-webkit-scrollbar {
+  display: none;
+}
+.grid-scrollbar {
+  position: absolute;
+  z-index: 5;
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+.grid-scrollbar[hidden] {
+  display: none;
+}
+.grid-scrollbar.y {
+  right: 0;
+  bottom: 12px;
+  width: 12px;
+}
+.grid-scrollbar.x {
+  right: 12px;
+  bottom: 0;
+  height: 12px;
+}
+.grid-scrollbar .thumb {
+  position: absolute;
+  border-radius: 99px;
+  background-color: var(--scroll-thumb);
+  transition:
+    width 120ms ease,
+    height 120ms ease,
+    background-color 120ms ease;
+}
+.grid-scrollbar.y .thumb {
+  top: 0;
+  right: 3px;
+  width: 5px;
+}
+.grid-scrollbar.x .thumb {
+  left: 0;
+  bottom: 3px;
+  height: 5px;
+}
+/* Shown while scrolling or when the pointer is over the grid; thicker and
+   brighter under the pointer. */
+.grid-frame:hover .grid-scrollbar,
+.grid-frame.scrolling .grid-scrollbar,
+.grid-scrollbar.dragging {
+  opacity: 1;
+}
+.grid-scrollbar:hover .thumb,
+.grid-scrollbar.dragging .thumb {
+  background-color: var(--scroll-thumb-active);
+}
+.grid-scrollbar.y:hover .thumb,
+.grid-scrollbar.y.dragging .thumb {
+  width: 8px;
+}
+.grid-scrollbar.x:hover .thumb,
+.grid-scrollbar.x.dragging .thumb {
+  height: 8px;
+}
+@media (hover: none) {
+  .grid-scrollbar {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .grid-scrollbar,
+  .grid-scrollbar .thumb {
+    transition: none;
+  }
 }
 .grid {
   border-collapse: separate;
