@@ -216,8 +216,7 @@ export function HabitGrid({
       }
     };
     // Size the grid to whole day columns (at most VISIBLE_DAYS), so no column
-    // is ever left half hidden behind the names. The overlay scrollbars take
-    // no width.
+    // is ever left half hidden behind the names, plus the scrollbar gutter.
     const fit = () => {
       const container = area.current;
       const frame = element.parentElement;
@@ -225,16 +224,18 @@ export function HabitGrid({
       const day = element.querySelector<HTMLElement>('.day');
       if (!container || !frame || !corner || !day) return;
       const style = getComputedStyle(container);
+      const gutter = parseFloat(getComputedStyle(frame).paddingRight) || 0;
       const available =
         container.clientWidth -
         parseFloat(style.paddingLeft) -
         parseFloat(style.paddingRight) -
+        gutter -
         corner.offsetWidth;
       const days = Math.max(
         1,
         Math.min(VISIBLE_DAYS, Math.floor(available / day.offsetWidth)),
       );
-      frame.style.width = `${corner.offsetWidth + days * day.offsetWidth}px`;
+      frame.style.width = `${corner.offsetWidth + days * day.offsetWidth + gutter}px`;
     };
     fit();
     pin();

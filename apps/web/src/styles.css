@@ -33,8 +33,11 @@
   --scrim: #00000066;
   /* Grid geometry: names, about three weeks of columns, and rows. */
   --name-width: 15rem;
-  --column: 46px;
+  /* Automatic days are as wide as the rows are tall: square cells. */
+  --column: 56px;
   --row: 56px;
+  /* The gutter outside the grid that holds its scrollbars. */
+  --scroll-gutter: 12px;
   --box: 26px;
   /* Lines of text in text and category cells (the phone's rule). */
   --text-lines: 3;
@@ -146,8 +149,13 @@ button[aria-disabled='true'] {
   max-width: 100%;
   /* Before the first measurement: about three weeks; HabitGrid then sets an
      exact width of whole columns. */
-  width: calc(var(--name-width) + var(--column) * var(--visible-days));
+  width: calc(
+    var(--name-width) + var(--column) * var(--visible-days) +
+      var(--scroll-gutter)
+  );
   display: flex;
+  /* The scrollbars live in this gutter, outside the cells. */
+  padding: 0 var(--scroll-gutter) var(--scroll-gutter) 0;
 }
 .grid-scroller {
   flex: 1;
@@ -155,7 +163,8 @@ button[aria-disabled='true'] {
   overflow: auto;
   overscroll-behavior: contain;
   /* The browser's bars would span the sticky headings and names; thin
-     overlay bars (Scrollbars.tsx) cover only the scrolling area. */
+     bars (Scrollbars.tsx) sit outside the grid, beside and below only the
+     scrolling area. */
   scrollbar-width: none;
   /* Horizontal scrolling stops on whole days (see the fit in HabitGrid). */
   scroll-snap-type: x mandatory;
@@ -176,13 +185,13 @@ button[aria-disabled='true'] {
 }
 .grid-scrollbar.y {
   right: 0;
-  bottom: 12px;
-  width: 12px;
+  bottom: var(--scroll-gutter);
+  width: var(--scroll-gutter);
 }
 .grid-scrollbar.x {
-  right: 12px;
+  right: var(--scroll-gutter);
   bottom: 0;
-  height: 12px;
+  height: var(--scroll-gutter);
 }
 .grid-scrollbar .thumb {
   position: absolute;
@@ -223,6 +232,9 @@ button[aria-disabled='true'] {
   height: 8px;
 }
 @media (hover: none) {
+  :root {
+    --scroll-gutter: 0px;
+  }
   .grid-scrollbar {
     display: none;
   }
@@ -486,8 +498,8 @@ button[aria-disabled='true'] {
   :root {
     /* 40% of the screen between 120 and 180 pixels, like the phone app. */
     --name-width: clamp(120px, 40vw, 180px);
-    --column: 40px;
-    --row: 50px;
+    --column: 46px;
+    --row: 46px;
     --box: 24px;
     --text-lines: 2;
   }

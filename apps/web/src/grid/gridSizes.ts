@@ -9,7 +9,8 @@ import type { GridSizeKind, GridSizing } from '@onpurpose/core/gridSizing';
  */
 export const automaticSizes: Record<GridSizeKind, number> = {
   gridNameWidth: 225,
-  gridColumnWidth: 46,
+  // Square cells: as wide as the rows are tall.
+  gridColumnWidth: 56,
   gridRowHeight: 56,
 };
 export type WebGridSizes = Record<GridSizeKind, number | null>;

@@ -17,7 +17,7 @@ sidebar holds everything around the grid. Sync is not built yet.
 The founder chose this layout from mockups (see DECISIONS.md, 13 October 2026).
 
 - **Today stays near the names.** The grid is centred and about three weeks
-  wide (`VISIBLE_DAYS` in `HabitGrid.tsx`) with 46 px columns, instead of
+  wide (`VISIBLE_DAYS` in `HabitGrid.tsx`) with square 56 px cells (46 px at phone width), instead of
   filling a wide screen. Oldest days are on the left and Today on the right,
   as on the phone. 120 days are rendered at first; nearing the oldest one
   loads another 120 (up to about ten years) without moving the days in view.
@@ -30,11 +30,12 @@ The founder chose this layout from mockups (see DECISIONS.md, 13 October 2026).
 - **Rows highlight** under the pointer or keyboard focus, and the hovered
   day's heading lights up. The corner names the months in view ("September –
   October 2026").
-- **Scrollbars cover only what scrolls.** The browser's own bars would run
+- **Scrollbars sit outside the grid.** The browser's own bars would run
   beside the pinned headings and under the pinned names, so they are hidden
-  and `grid/Scrollbars.tsx` draws thin overlay bars: the vertical one starts
-  below the headings, the horizontal one right of the names, and both sit
-  just under the last row. They appear while scrolling or under the pointer,
+  and `grid/Scrollbars.tsx` draws thin bars in a 12 px gutter outside the
+  cells (`--scroll-gutter`): the vertical one to the right, starting below
+  the headings, the horizontal one just under the last row, starting right
+  of the names. They appear while scrolling or under the pointer,
   can be dragged or clicked to page, and are hidden on touch screens. Wheel,
   touch, keyboard and focus scrolling stay native, and positions are written
   to the DOM directly, so scrolling never re-renders React.
@@ -175,7 +176,8 @@ and Undo, with the phone's before-value rules (newer kinds start from null).
   fitted at display time), checkbox style (Squares, Circles, Ticks & crosses),
   streak numbers, joined checkboxes with connector thickness (saved on
   release), missed day crosses, week dividers and tap animations.
-- **Grid size:** name column, day columns and rows, each Automatic or a
+- **Grid size:** name column, day columns and rows (Automatic: square 56 px
+  cells), each Automatic or a
   slider in the phone's v18 steps. The grid and preview follow the slider;
   the size saves on release. These are the phone's saved preferences (CSS
   pixels here, points there), so they travel with backups; Automatic keeps
@@ -292,7 +294,7 @@ WebAssembly in memory (Node has no OPFS).
 
 - OPFS persistence, the tab lock and the grid were checked in desktop Chrome
   only. Safari (including iPhone Safari) and Firefox are untested, and so are
-  the overlay scrollbars with a real mouse, trackpad and touch.
+  the custom scrollbars with a real mouse, trackpad and touch.
 - Every loaded row and day is in the DOM. Twelve to fourteen habits over
   several hundred days are fine in Chrome; hundreds of habits may need only
   the visible rows rendered.
