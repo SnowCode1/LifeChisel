@@ -2088,3 +2088,13 @@ Status: implemented on the `web-app` branch (web only).
   per habit without tabs: an overview column (summary, notes card, how it
   works) beside statistics cards, time charts at full width and other
   sections in two flowing columns; the dialog fits its content.
+- Founder feedback (same day): charts must not stretch across the dialog,
+  card outlines were uneven, the range selector needed rethinking, and the
+  History calendar wanted its date centred, the month/year control placed
+  better and the explanation below the calendar under a separator. Assistant
+  implementation: range tabs and the period stepper moved to a toolbar under
+  the title; the dialog is capped at 1160 px and all chart cards flow in two
+  columns (about 360 px each); cards share one edge token and raised tiles;
+  the calendar's month title sits between the arrows and opens the year (the
+  date picker's pattern), replacing the Month/Year switch on web and phone,
+  with the explanation behind an InfoNote row below.

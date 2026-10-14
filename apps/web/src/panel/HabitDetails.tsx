@@ -52,6 +52,9 @@ export function HabitDetails({
 }) {
   const titleId = useId();
   const colour = theme.colour(habit.color);
+  // The range tabs and period stepper live in the dialog's toolbar; the
+  // statistics view renders them there once it exists.
+  const [toolbar, setToolbar] = useState<HTMLDivElement | null>(null);
   return (
     <Modal
       titleId={titleId}
@@ -86,29 +89,35 @@ export function HabitDetails({
           Edit habit
         </button>
       }
+      toolbar={<div ref={setToolbar} className="details-toolbar" />}
       onClose={onClose}
     >
-      <StatsView
-        key={habit.id}
-        habit={habit}
-        values={values}
-        events={events}
-        actions={actions}
-        today={today}
-        weekStart={weekStart}
-        theme={theme}
-        editable={editable}
-        onDay={onDay}
-        onEditGoal={onEditGoal}
-        aside={
-          <NotesCard
-            habit={habit}
-            theme={theme}
-            editable={editable}
-            onEdit={onEditNotes}
-          />
-        }
-      />
+      {/* Focus lands on the page itself, so keys scroll it without drawing
+          a focus ring on a control. */}
+      <div className="details-page" tabIndex={-1} data-autofocus>
+        <StatsView
+          key={habit.id}
+          toolbarHost={toolbar}
+          habit={habit}
+          values={values}
+          events={events}
+          actions={actions}
+          today={today}
+          weekStart={weekStart}
+          theme={theme}
+          editable={editable}
+          onDay={onDay}
+          onEditGoal={onEditGoal}
+          aside={
+            <NotesCard
+              habit={habit}
+              theme={theme}
+              editable={editable}
+              onEdit={onEditNotes}
+            />
+          }
+        />
+      </div>
     </Modal>
   );
 }

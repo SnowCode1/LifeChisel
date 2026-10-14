@@ -1,4 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import {
   weekDayOrder,
   type WeekStart,
@@ -72,9 +73,12 @@ export function StatsView({
   onDay,
   onEditGoal,
   aside,
+  toolbarHost,
 }: {
   /** Shown in the overview column below the summary (the habit's notes). */
   aside?: ReactNode;
+  /** Where the range tabs and period stepper render (the dialog's toolbar). */
+  toolbarHost?: HTMLElement | null;
   habit: Habit;
   values: EntryValues;
   events: StoredEvent[];
@@ -293,54 +297,63 @@ export function StatsView({
   );
   const eligible = habitStats ? habitStats.eligible : recordStats!.eligible;
 
+  // Range tabs and the period stepper: in the dialog's toolbar when it
+  // has one, above the overview otherwise.
+  const rangeBar = (
+    <div className="range-bar">
+      <div className="segmented range-tabs" role="tablist" aria-label="Range">
+        {RANGES.map((option) => (
+          <button
+            key={String(option.value)}
+            type="button"
+            role="tab"
+            aria-selected={range === option.value}
+            onClick={() => {
+              setRange(option.value);
+              setOffset(0);
+            }}
+          >
+            {option.label}
+          </button>
+        ))}
+      </div>
+      <div className="period-navigator">
+        <button
+          type="button"
+          className="icon-button"
+          aria-label="Earlier period"
+          disabled={!window.canGoBack}
+          onClick={() => setOffset((value) => value + 1)}
+        >
+          ‹
+        </button>
+        <span>
+          {eligible
+            ? statisticSpanLabel(dateKey(from), end, today)
+            : `Starts ${statisticDateLabel(trackingStart, true)}`}
+        </span>
+        <button
+          type="button"
+          className="icon-button"
+          aria-label="Later period"
+          disabled={!window.canGoForward}
+          onClick={() => setOffset((value) => Math.max(0, value - 1))}
+        >
+          ›
+        </button>
+      </div>
+    </div>
+  );
+
   return (
-    // An overview column (summary card, notes, how it works) beside a grid of
-    // section cards; it stacks when narrow (container queries in panel.css).
+    // An overview column (summary card, notes, how it works) beside cards of
+    // statistics flowing in two columns; it stacks when narrow (container
+    // queries in panel.css).
     <div className="stats">
+      {toolbarHost ? createPortal(rangeBar, toolbarHost) : rangeBar}
       <div className="stats-summary">
         <div className="stats-card overview-card">
-          <div className="segmented" role="tablist" aria-label="Range">
-            {RANGES.map((option) => (
-              <button
-                key={String(option.value)}
-                type="button"
-                role="tab"
-                aria-selected={range === option.value}
-                onClick={() => {
-                  setRange(option.value);
-                  setOffset(0);
-                }}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
           <div className="stats-overview">
-            <div className="period-navigator">
-              <button
-                type="button"
-                className="icon-button"
-                aria-label="Earlier period"
-                disabled={!window.canGoBack}
-                onClick={() => setOffset((value) => value + 1)}
-              >
-                ‹
-              </button>
-              <span>
-                {eligible
-                  ? statisticSpanLabel(dateKey(from), end, today)
-                  : `Starts ${statisticDateLabel(trackingStart, true)}`}
-              </span>
-              <button
-                type="button"
-                className="icon-button"
-                aria-label="Later period"
-                disabled={!window.canGoForward}
-                onClick={() => setOffset((value) => Math.max(0, value - 1))}
-              >
-                ›
-              </button>
-            </div>
             <p className="stats-headline">{headline}</p>
             <p className="muted">{note}</p>
           </div>
@@ -386,97 +399,93 @@ export function StatsView({
         </details>
       </div>
       <div className="stats-sections">
-        {numeric && habitStats && (
+        <div className="stats-columns">
+          {numeric && habitStats && (
+            <Section
+              title={
+                valueUnit(span) === 'day' ? 'Daily totals' : 'Average per day'
+              }
+              subtitle={
+                habitStats.recorded ? null : 'Nothing recorded in this period'
+              }
+              info={
+                valueUnit(span) === 'day'
+                  ? 'Each bar is one day’s total. Bright bars met that day’s goal, faded bars missed it, and grey bars were on days off. The dashed line is the goal.'
+                  : `Each bar is the average per day for a ${valueUnit(span)}, counting blank days as zero, so it compares with the daily goal line.`
+              }
+            >
+              <ValueChart
+                key={`${range}:${offset}`}
+                habit={habit}
+                colour={colour}
+                theme={theme}
+                bins={binSeries(habit, days, valueUnit(span), weekStart)}
+                unit={valueUnit(span)}
+                from={from}
+                to={window.to}
+                today={today}
+                weekStart={weekStart}
+              />
+            </Section>
+          )}
           <Section
-            wide
-            title={
-              valueUnit(span) === 'day' ? 'Daily totals' : 'Average per day'
-            }
+            title={mode === 'recording' ? 'Days recorded' : 'Success over time'}
             subtitle={
-              habitStats.recorded ? null : 'Nothing recorded in this period'
+              trendNow === undefined || trendNow === null
+                ? null
+                : `Trend ${Math.round(trendNow * 100)}%${offset ? ` on ${statisticDateLabel(end)}` : ''}`
             }
             info={
-              valueUnit(span) === 'day'
-                ? 'Each bar is one day’s total. Bright bars met that day’s goal, faded bars missed it, and grey bars were on days off. The dashed line is the goal.'
-                : `Each bar is the average per day for a ${valueUnit(span)}, counting blank days as zero, so it compares with the daily goal line.`
+              mode === 'period'
+                ? `Columns show whether each finished period met its target. The line smooths success over about two ${periodNoun} either side; rest periods and the current period don’t count.`
+                : mode === 'recording'
+                  ? 'Columns show the share of days with an entry. The line smooths that share over about two weeks either side. Today counts once it’s recorded.'
+                  : 'Columns show the share of scheduled days that met the goal. The line smooths success over about two weeks either side. Days off don’t count, and today counts once it’s done.'
             }
           >
-            <ValueChart
+            <SuccessChart
               key={`${range}:${offset}`}
-              habit={habit}
               colour={colour}
               theme={theme}
-              bins={binSeries(habit, days, valueUnit(span), weekStart)}
-              unit={valueUnit(span)}
+              bins={binSeries(habit, days, successUnit(span), weekStart)}
+              unit={successUnit(span)}
+              observations={observed}
+              trend={trend}
+              mode={mode}
+              periodNoun={periodNoun}
               from={from}
               to={window.to}
               today={today}
               weekStart={weekStart}
             />
           </Section>
-        )}
-        <Section
-          wide
-          title={mode === 'recording' ? 'Days recorded' : 'Success over time'}
-          subtitle={
-            trendNow === undefined || trendNow === null
-              ? null
-              : `Trend ${Math.round(trendNow * 100)}%${offset ? ` on ${statisticDateLabel(end)}` : ''}`
-          }
-          info={
-            mode === 'period'
-              ? `Columns show whether each finished period met its target. The line smooths success over about two ${periodNoun} either side; rest periods and the current period don’t count.`
-              : mode === 'recording'
-                ? 'Columns show the share of days with an entry. The line smooths that share over about two weeks either side. Today counts once it’s recorded.'
-                : 'Columns show the share of scheduled days that met the goal. The line smooths success over about two weeks either side. Days off don’t count, and today counts once it’s done.'
-          }
-        >
-          <SuccessChart
-            key={`${range}:${offset}`}
-            colour={colour}
-            theme={theme}
-            bins={binSeries(habit, days, successUnit(span), weekStart)}
-            unit={successUnit(span)}
-            observations={observed}
-            trend={trend}
-            mode={mode}
-            periodNoun={periodNoun}
-            from={from}
-            to={window.to}
-            today={today}
-            weekStart={weekStart}
-          />
-        </Section>
-        <Section
-          wide
-          title="Streaks"
-          subtitle={
-            longestRun
-              ? `Longest here: ${plural(longestRun.length, mode === 'period' ? periodNoun.replace(/s$/, '') : 'day')}, ${statisticSpanLabel(dateKey(longestRun.from), dateKey(longestRun.to), today)}`
-              : 'No streak in this period'
-          }
-          info={
-            mode === 'period'
-              ? 'Each bar is a streak of finished periods in a row that met their target; rest periods hold it and a missed period breaks it.'
-              : mode === 'recording'
-                ? 'Each bar is a streak of days in a row with an entry; a day without one breaks it, and an unfinished today keeps it.'
-                : 'Each bar is a streak of successful scheduled days in a row, carried across days off; a missed day breaks it, and an unfinished today keeps it.'
-          }
-        >
-          <StreakChart
-            key={`${range}:${offset}`}
-            colour={colour}
-            theme={theme}
-            runs={runs}
-            noun={mode === 'period' ? periodNoun : 'days'}
-            from={from}
-            to={window.to}
-            today={today}
-            weekStart={weekStart}
-          />
-        </Section>
-        {/* Half-width sections flow in two columns on wide screens. */}
-        <div className="stats-columns">
+          <Section
+            title="Streaks"
+            subtitle={
+              longestRun
+                ? `Longest here: ${plural(longestRun.length, mode === 'period' ? periodNoun.replace(/s$/, '') : 'day')}, ${statisticSpanLabel(dateKey(longestRun.from), dateKey(longestRun.to), today)}`
+                : 'No streak in this period'
+            }
+            info={
+              mode === 'period'
+                ? 'Each bar is a streak of finished periods in a row that met their target; rest periods hold it and a missed period breaks it.'
+                : mode === 'recording'
+                  ? 'Each bar is a streak of days in a row with an entry; a day without one breaks it, and an unfinished today keeps it.'
+                  : 'Each bar is a streak of successful scheduled days in a row, carried across days off; a missed day breaks it, and an unfinished today keeps it.'
+            }
+          >
+            <StreakChart
+              key={`${range}:${offset}`}
+              colour={colour}
+              theme={theme}
+              runs={runs}
+              noun={mode === 'period' ? periodNoun : 'days'}
+              from={from}
+              to={window.to}
+              today={today}
+              weekStart={weekStart}
+            />
+          </Section>
           {habitType(habit) === 'categorical' && (
             <Section
               title="Categories"
@@ -571,18 +580,15 @@ function Section({
   title,
   subtitle,
   info,
-  wide = false,
   children,
 }: {
-  /** Time charts span the whole grid; other sections take half on wide screens. */
-  wide?: boolean;
   title: string;
   subtitle?: string | null;
   info: string;
   children: ReactNode;
 }) {
   return (
-    <section className={wide ? 'stats-section wide' : 'stats-section'}>
+    <section className="stats-section">
       <header>
         <h3>{title}</h3>
         <details className="info">
@@ -707,7 +713,7 @@ function Entries({
     months.set(key, [...(months.get(key) ?? []), item]);
   }
   return (
-    <section className="stats-section wide">
+    <section className="stats-section journal">
       <header>
         <h3>Entries</h3>
       </header>

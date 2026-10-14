@@ -101,6 +101,14 @@ input[type='date'].text-input {
 .modal-trailing {
   justify-self: end;
 }
+.modal-toolbar {
+  display: flex;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--rule);
+}
+.modal-toolbar > * {
+  flex: 1;
+}
 .modal-body {
   flex: 1;
   min-height: 0;

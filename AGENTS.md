@@ -153,8 +153,9 @@ preserve earlier icon choices/removals and raw history.
   `historyCalendar`). Today/Yesterday start open; `HistoryFilters.tsx` owns the
   chips and habit picker. History has Days and Calendar views (the header
   calendar button switches them; `HistoryCalendar.tsx` draws a month with habit
-  dots or a year of day dots); choosing a day opens it in the day list. The web
-  History panel draws the same calendar from the same summary.
+  dots, its title opens the year of day dots, and `InfoNote` explains the dots
+  below a separator); choosing a day opens it in the day list. The web History
+  panel draws the same calendar from the same summary.
 - `src/HabitName.tsx` and `src/useHabitReorder.ts` own hold/menu/drag interactions.
   Only completed drops persist. Keep cells distinct, support cancellation, and
   preserve archive entries. `src/HabitDialog.tsx` owns editor/colour drafts;

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { Text, useAppWindowDimensions } from './Typography';
 import { Icon } from './Icon';
+import { InfoNote } from './InfoNote';
 import { addMonths, entryDay } from '@onpurpose/core/calendar';
 import {
   weekDayOrder,
@@ -15,8 +16,6 @@ import {
 } from '@onpurpose/core/history';
 import { monthDays } from '@onpurpose/core/statistics';
 import type { StoredState } from '@onpurpose/core/storage/model';
-import Animated from 'react-native-reanimated';
-import { appear } from './motion';
 import { useSheetScroll } from './SheetModal';
 import { themedStyles, useTheme } from './ThemeContext';
 
@@ -32,10 +31,11 @@ const monthLabel = (month: string, style: 'long' | 'short') =>
 
 /**
  * History as a calendar: a month with a coloured dot for each habit changed
- * that day, or a whole year with one dot per day in the colour of its
- * most-changed habit. Days are the days changes were made, as in the day
- * list; choosing one opens it there. The web app draws the same calendar
- * from the same core summary (`historyCalendar`).
+ * that day, or, after tapping the month's title, the whole year with one dot
+ * per day in the colour of its most-changed habit (DateCalendar switches the
+ * same way). Days are the days changes were made, as in the day list;
+ * choosing one opens it there. The web app draws the same calendar from the
+ * same core summary (`historyCalendar`).
  */
 export function HistoryCalendar({
   calendar,
@@ -60,8 +60,6 @@ export function HistoryCalendar({
   const [scale, setScale] = useState<Scale>('month');
   const thisMonth = today.slice(0, 7);
   const [month, setMonth] = useState(thisMonth);
-  // The explanation stays behind the info button, as in Statistics.
-  const [explained, setExplained] = useState(false);
   const colours = useMemo(
     () =>
       new Map(
@@ -75,11 +73,12 @@ export function HistoryCalendar({
   );
   const firstMonth = calendar.first?.slice(0, 7) ?? thisMonth;
   const year = month.slice(0, 4);
-  const step = scale === 'month' ? 1 : 12;
-  const canBack =
-    scale === 'month' ? month > firstMonth : year > firstMonth.slice(0, 4);
-  const canForward =
-    scale === 'month' ? month < thisMonth : year < thisMonth.slice(0, 4);
+  const yearView = scale === 'year';
+  const step = yearView ? 12 : 1;
+  const canBack = yearView ? year > firstMonth.slice(0, 4) : month > firstMonth;
+  const canForward = yearView
+    ? year < thisMonth.slice(0, 4)
+    : month < thisMonth;
   const spoken = (day: HistoryCalendarDay | undefined, date: string) => {
     const name = `${entryDay(date).fullLabel}${date === today ? ', today' : ''}`;
     if (!day) return `${name}, no changes`;
@@ -95,95 +94,128 @@ export function HistoryCalendar({
       contentContainerStyle={[styles.content, { paddingBottom: bottomInset }]}
       showsVerticalScrollIndicator={false}
     >
-      <View style={styles.bar}>
-        <View accessibilityRole="tablist" style={styles.segmented}>
-          {(['month', 'year'] as const).map((value) => {
-            const selected = scale === value;
+      <View style={styles.nav}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={yearView ? 'Previous year' : 'Previous month'}
+          accessibilityState={{ disabled: !canBack }}
+          disabled={!canBack}
+          onPress={() => setMonth(addMonths(month, -step))}
+          style={[styles.arrow, !canBack && styles.arrowDisabled]}
+        >
+          <View style={{ transform: [{ rotate: '90deg' }] }}>
+            <Icon name="chevron" size={18} color={theme.ink(0xd0)} />
+          </View>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={
+            yearView
+              ? `${year}, show its months`
+              : `${monthLabel(month, 'long')}, show the whole year`
+          }
+          accessibilityState={{ expanded: yearView }}
+          onPress={() => setScale(yearView ? 'month' : 'year')}
+          style={({ pressed }) => [
+            styles.title,
+            { opacity: pressed ? 0.6 : 1 },
+          ]}
+        >
+          <Text numberOfLines={1} style={styles.titleText}>
+            {yearView ? year : monthLabel(month, 'long')}
+          </Text>
+          <View style={yearView && styles.chevronOpen}>
+            <Icon
+              name="chevron"
+              size={Math.round(14 * Math.max(1, fontScale))}
+              strokeWidth={2.2}
+              color={theme.ink(0x9c)}
+            />
+          </View>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={yearView ? 'Next year' : 'Next month'}
+          accessibilityState={{ disabled: !canForward }}
+          disabled={!canForward}
+          onPress={() => {
+            const next = addMonths(month, step);
+            setMonth(next > thisMonth ? thisMonth : next);
+          }}
+          style={[styles.arrow, !canForward && styles.arrowDisabled]}
+        >
+          <View style={{ transform: [{ rotate: '-90deg' }] }}>
+            <Icon name="chevron" size={18} color={theme.ink(0xd0)} />
+          </View>
+        </Pressable>
+      </View>
+
+      {yearView ? (
+        <View style={styles.year}>
+          {Array.from({ length: 12 }, (_, index) => {
+            const shownMonth = `${year}-${String(index + 1).padStart(2, '0')}`;
+            const future = shownMonth > thisMonth;
+            const { padding, days } = monthDays(shownMonth, weekStart);
             return (
-              <Pressable
-                key={value}
-                accessibilityRole="tab"
-                accessibilityState={{ selected }}
-                aria-selected={selected}
-                onPress={() => setScale(value)}
-                style={[styles.segment, selected && styles.segmentSelected]}
-              >
-                <Text
-                  style={[
-                    styles.segmentText,
-                    selected && styles.segmentTextSelected,
-                  ]}
+              <View key={shownMonth} style={styles.miniMonth}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`${monthLabel(shownMonth, 'long')}, show month`}
+                  accessibilityState={{ disabled: future }}
+                  disabled={future}
+                  onPress={() => {
+                    setMonth(shownMonth);
+                    setScale('month');
+                  }}
+                  hitSlop={{ top: 6, bottom: 6 }}
                 >
-                  {value === 'month' ? 'Month' : 'Year'}
-                </Text>
-              </Pressable>
+                  <Text style={[styles.miniTitle, future && styles.dateQuiet]}>
+                    {monthLabel(shownMonth, 'short')}
+                  </Text>
+                </Pressable>
+                <View style={styles.miniGrid}>
+                  {Array.from({ length: padding }, (_, blank) => (
+                    <View key={`blank-${blank}`} style={styles.miniCell} />
+                  ))}
+                  {days.map((date) => {
+                    const day = calendar.days.get(date);
+                    const top = day?.habits[0];
+                    return (
+                      <Pressable
+                        key={date}
+                        accessibilityRole="button"
+                        accessibilityLabel={spoken(day, date)}
+                        accessibilityState={{ disabled: !day }}
+                        disabled={!day}
+                        onPress={() => onChoose(date)}
+                        style={[
+                          styles.miniCell,
+                          date === today && styles.miniToday,
+                        ]}
+                      >
+                        <View
+                          style={
+                            day
+                              ? [
+                                  styles.miniDot,
+                                  {
+                                    backgroundColor: top
+                                      ? (colours.get(top.id) ?? neutral)
+                                      : neutral,
+                                  },
+                                ]
+                              : styles.miniEmpty
+                          }
+                        />
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
             );
           })}
         </View>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="About the calendar"
-          accessibilityState={{ expanded: explained }}
-          onPress={() => setExplained((value) => !value)}
-          hitSlop={4}
-          style={({ pressed }) => [
-            styles.infoButton,
-            { opacity: pressed ? 0.5 : 1 },
-          ]}
-        >
-          <Icon
-            name="info"
-            size={18}
-            color={explained ? theme.ink(0xd0) : theme.ink(0x7a)}
-          />
-        </Pressable>
-        <View style={styles.stepper}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={
-              scale === 'month' ? 'Previous month' : 'Previous year'
-            }
-            accessibilityState={{ disabled: !canBack }}
-            disabled={!canBack}
-            onPress={() => setMonth(addMonths(month, -step))}
-            style={[styles.nav, !canBack && styles.navDisabled]}
-          >
-            <View style={{ transform: [{ rotate: '90deg' }] }}>
-              <Icon name="chevron" size={18} color={theme.ink(0xd0)} />
-            </View>
-          </Pressable>
-          <Text
-            accessibilityRole="header"
-            accessibilityLiveRegion="polite"
-            numberOfLines={1}
-            style={styles.title}
-          >
-            {scale === 'month' ? monthLabel(month, 'long') : year}
-          </Text>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel={scale === 'month' ? 'Next month' : 'Next year'}
-            accessibilityState={{ disabled: !canForward }}
-            disabled={!canForward}
-            onPress={() => {
-              const next = addMonths(month, step);
-              setMonth(next > thisMonth ? thisMonth : next);
-            }}
-            style={[styles.nav, !canForward && styles.navDisabled]}
-          >
-            <View style={{ transform: [{ rotate: '-90deg' }] }}>
-              <Icon name="chevron" size={18} color={theme.ink(0xd0)} />
-            </View>
-          </Pressable>
-        </View>
-      </View>
-
-      {explained && (
-        <Animated.View entering={appear} style={styles.info}>
-          <Text style={styles.infoText}>{historyCalendarInfo[scale]}</Text>
-        </Animated.View>
-      )}
-      {scale === 'month' ? (
+      ) : (
         <View style={styles.grid}>
           {weekDayOrder(weekStart).map((day) => (
             <Text
@@ -262,131 +294,48 @@ export function HistoryCalendar({
             ];
           })()}
         </View>
-      ) : (
-        <View style={styles.year}>
-          {Array.from({ length: 12 }, (_, index) => {
-            const shownMonth = `${year}-${String(index + 1).padStart(2, '0')}`;
-            const future = shownMonth > thisMonth;
-            const { padding, days } = monthDays(shownMonth, weekStart);
-            return (
-              <View key={shownMonth} style={styles.miniMonth}>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`${monthLabel(shownMonth, 'long')}, show month`}
-                  accessibilityState={{ disabled: future }}
-                  disabled={future}
-                  onPress={() => {
-                    setMonth(shownMonth);
-                    setScale('month');
-                  }}
-                  hitSlop={{ top: 6, bottom: 6 }}
-                >
-                  <Text style={[styles.miniTitle, future && styles.dateQuiet]}>
-                    {monthLabel(shownMonth, 'short')}
-                  </Text>
-                </Pressable>
-                <View style={styles.miniGrid}>
-                  {Array.from({ length: padding }, (_, blank) => (
-                    <View key={`blank-${blank}`} style={styles.miniCell} />
-                  ))}
-                  {days.map((date) => {
-                    const day = calendar.days.get(date);
-                    const top = day?.habits[0];
-                    return (
-                      <Pressable
-                        key={date}
-                        accessibilityRole="button"
-                        accessibilityLabel={spoken(day, date)}
-                        accessibilityState={{ disabled: !day }}
-                        disabled={!day}
-                        onPress={() => onChoose(date)}
-                        style={[
-                          styles.miniCell,
-                          date === today && styles.miniToday,
-                        ]}
-                      >
-                        <View
-                          style={
-                            day
-                              ? [
-                                  styles.miniDot,
-                                  {
-                                    backgroundColor: top
-                                      ? (colours.get(top.id) ?? neutral)
-                                      : neutral,
-                                  },
-                                ]
-                              : styles.miniEmpty
-                          }
-                        />
-                      </Pressable>
-                    );
-                  })}
-                </View>
-              </View>
-            );
-          })}
-        </View>
       )}
       {!calendar.days.size && (
         <Text style={styles.note}>No changes to show.</Text>
       )}
+      {/* The explanation sits below the calendar, behind the (i) row that the
+          rest of the app uses. */}
+      <View style={styles.foot}>
+        <InfoNote
+          label="What the dots mean"
+          text={historyCalendarInfo[scale]}
+        />
+      </View>
     </ScrollView>
   );
 }
 
 const useStyles = themedStyles((t) => ({
-  content: { paddingHorizontal: 16, paddingTop: 6 },
-  bar: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    gap: 4,
-    marginBottom: 10,
-  },
-  segmented: {
-    flexDirection: 'row',
-    padding: 3,
-    borderRadius: 10,
-    backgroundColor: t.ink(0x1c),
-  },
-  segment: {
-    minHeight: 32,
-    paddingHorizontal: 14,
-    borderRadius: 8,
-    justifyContent: 'center',
-  },
-  segmentSelected: { backgroundColor: t.ink(0x30) },
-  segmentText: { color: t.ink(0x9c), fontSize: 13, fontWeight: '600' },
-  segmentTextSelected: { color: t.ink(0xf0) },
-  stepper: { flexDirection: 'row', alignItems: 'center', marginLeft: 'auto' },
-  infoButton: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  info: {
-    padding: 12,
-    marginBottom: 10,
-    borderRadius: 12,
-    backgroundColor: t.ink(0x12),
-  },
-  infoText: { color: t.ink(0xad), fontSize: 13, lineHeight: 19 },
+  content: { paddingHorizontal: 16, paddingTop: 2 },
   nav: {
-    width: 40,
-    height: 40,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  arrow: {
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  navDisabled: { opacity: 0.3 },
+  arrowDisabled: { opacity: 0.3 },
   title: {
-    minWidth: 120,
-    textAlign: 'center',
-    color: t.ink(0xee),
-    fontSize: 16,
-    fontWeight: '700',
+    minWidth: 160,
+    minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
   },
+  titleText: { color: t.ink(0xee), fontSize: 17, fontWeight: '700' },
+  chevronOpen: { transform: [{ rotate: '180deg' }] },
   grid: { flexDirection: 'row', flexWrap: 'wrap' },
   weekday: {
     width: '14.2857%',
@@ -447,4 +396,5 @@ const useStyles = themedStyles((t) => ({
     marginTop: 14,
     paddingHorizontal: 4,
   },
+  foot: { marginTop: 12 },
 }));

@@ -612,6 +612,7 @@ function useThemeVariables(theme: Theme) {
     style.setProperty('--scroll-thumb-active', theme.overlay(0x70));
     style.setProperty('--surface-raised', theme.ink(0x1c));
     style.setProperty('--surface-edge', theme.ink(0x2a));
+    style.setProperty('--card-edge', theme.ink(0x20));
     style.setProperty('--scrim', theme.scrim(0x66));
     style.colorScheme = theme.scheme;
   }, [theme]);

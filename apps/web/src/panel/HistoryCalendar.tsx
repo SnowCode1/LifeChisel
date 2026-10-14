@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { addMonths } from '@onpurpose/core/calendar';
 import {
   weekDayOrder,
@@ -14,6 +14,7 @@ import { monthDays } from '@onpurpose/core/statistics';
 import type { StoredState } from '@onpurpose/core/storage/model';
 import type { Theme } from '@onpurpose/core/theme';
 import { Icon } from '../ui/Icon.tsx';
+import { InfoNote } from '../ui/InfoNote.tsx';
 
 export type CalendarScale = 'month' | 'year';
 // Dots per day in the month view; more habits show as "+n".
@@ -44,9 +45,10 @@ const dayName = (date: string) =>
 
 /**
  * History as a calendar: a month with a coloured dot for each habit changed
- * that day, or a whole year with one dot per day in the colour of its
- * most-changed habit. Days are the days the changes were made, as in the day
- * list; choosing one opens it there.
+ * that day, or, after choosing the month's title, the whole year with one dot
+ * per day in the colour of its most-changed habit (the app's date picker
+ * switches the same way). Days are the days the changes were made, as in the
+ * day list; choosing one opens it there.
  */
 export function HistoryCalendar({
   calendar,
@@ -78,140 +80,70 @@ export function HistoryCalendar({
   const names = new Map(state.habits.map((habit) => [habit.id, habit.name]));
   const thisMonth = today.slice(0, 7);
   const firstMonth = calendar.first?.slice(0, 7) ?? thisMonth;
-  const step = scale === 'month' ? 1 : 12;
+  const yearView = scale === 'year';
+  const step = yearView ? 12 : 1;
   const year = month.slice(0, 4);
-  const canBack =
-    scale === 'month' ? month > firstMonth : year > firstMonth.slice(0, 4);
-  const canForward =
-    scale === 'month' ? month < thisMonth : year < thisMonth.slice(0, 4);
+  const canBack = yearView ? year > firstMonth.slice(0, 4) : month > firstMonth;
+  const canForward = yearView
+    ? year < thisMonth.slice(0, 4)
+    : month < thisMonth;
   const label = (day: HistoryCalendarDay | undefined, date: string) => {
     if (!day) return `${dayName(date)}, no changes`;
     const habits = day.habits.map((habit) => names.get(habit.id) ?? 'Habit');
     return `${dayName(date)}, ${historyCountLabel(day.counts)}${habits.length ? `: ${habits.join(', ')}` : ''}`;
   };
   const weekdays = weekDayOrder(weekStart);
-  // The explanation stays behind the info button, as elsewhere in the app.
-  const [explained, setExplained] = useState(false);
 
   return (
     <div className="history-calendar">
-      <div className="calendar-bar">
-        <div className="segmented small" role="tablist" aria-label="Show">
-          {(['month', 'year'] as const).map((value) => (
-            <button
-              key={value}
-              type="button"
-              role="tab"
-              aria-selected={scale === value}
-              onClick={() => onScale(value)}
-            >
-              {value === 'month' ? 'Month' : 'Year'}
-            </button>
-          ))}
-        </div>
+      <div className="calendar-nav">
         <button
           type="button"
-          className="info-button"
-          aria-label="About the calendar"
-          aria-expanded={explained}
-          onClick={() => setExplained((value) => !value)}
+          className="icon-button"
+          aria-label={yearView ? 'Previous year' : 'Previous month'}
+          disabled={!canBack}
+          onClick={() => onMonth(addMonths(month, -step))}
         >
-          <Icon name="info" size={17} />
+          <span className="chevron-left">
+            <Icon name="chevron" size={16} />
+          </span>
         </button>
-        <div className="calendar-step">
-          <button
-            type="button"
-            className="icon-button"
-            aria-label={scale === 'month' ? 'Previous month' : 'Previous year'}
-            disabled={!canBack}
-            onClick={() => onMonth(addMonths(month, -step))}
-          >
-            <span className="chevron-left">
-              <Icon name="chevron" size={16} />
-            </span>
-          </button>
-          <h3 aria-live="polite">
-            {scale === 'month' ? monthName(month, 'long') : year}
-          </h3>
-          <button
-            type="button"
-            className="icon-button"
-            aria-label={scale === 'month' ? 'Next month' : 'Next year'}
-            disabled={!canForward}
-            onClick={() =>
-              onMonth(
-                addMonths(month, step) > thisMonth
-                  ? thisMonth
-                  : addMonths(month, step),
-              )
-            }
-          >
-            <span className="chevron-right">
-              <Icon name="chevron" size={16} />
-            </span>
-          </button>
-        </div>
+        <button
+          type="button"
+          className="calendar-title"
+          aria-expanded={yearView}
+          aria-label={
+            yearView
+              ? `${year}, show its months`
+              : `${monthName(month, 'long')}, show the whole year`
+          }
+          onClick={() => onScale(yearView ? 'month' : 'year')}
+        >
+          {yearView ? year : monthName(month, 'long')}
+          <span className="chevron">
+            <Icon name="chevron" size={14} />
+          </span>
+        </button>
+        <button
+          type="button"
+          className="icon-button"
+          aria-label={yearView ? 'Next year' : 'Next month'}
+          disabled={!canForward}
+          onClick={() =>
+            onMonth(
+              addMonths(month, step) > thisMonth
+                ? thisMonth
+                : addMonths(month, step),
+            )
+          }
+        >
+          <span className="chevron-right">
+            <Icon name="chevron" size={16} />
+          </span>
+        </button>
       </div>
 
-      {explained && (
-        <p className="calendar-explanation">{historyCalendarInfo[scale]}</p>
-      )}
-      {scale === 'month' ? (
-        <div className="month-view">
-          <div className="weekdays" aria-hidden="true">
-            {weekdays.map((day) => (
-              <span key={day}>{weekdayNames[day]}</span>
-            ))}
-          </div>
-          <MonthGrid
-            month={month}
-            weekStart={weekStart}
-            className="month-days"
-            render={(date) => {
-              const day = calendar.days.get(date);
-              const shown = day?.habits.slice(0, DOTS) ?? [];
-              const extra =
-                (day?.habits.length ?? 0) - shown.length + (day?.other ? 1 : 0);
-              return (
-                <button
-                  key={date}
-                  type="button"
-                  className={date === today ? 'day today' : 'day'}
-                  disabled={!day}
-                  aria-label={label(day, date)}
-                  title={day ? label(day, date) : undefined}
-                  onClick={() => onChoose(date)}
-                >
-                  <span className="date">{Number(date.slice(8))}</span>
-                  {day && (
-                    <span className="dots" aria-hidden="true">
-                      {shown.map((habit) => (
-                        <span
-                          key={habit.id}
-                          className="dot"
-                          style={{
-                            backgroundColor:
-                              colours.get(habit.id) ?? theme.ink(0x97),
-                          }}
-                        />
-                      ))}
-                      {!shown.length && day.other > 0 && (
-                        <span
-                          className="dot"
-                          style={{ backgroundColor: theme.ink(0x97) }}
-                        />
-                      )}
-                      {extra > 0 && shown.length > 0 && (
-                        <span className="more">+{extra}</span>
-                      )}
-                    </span>
-                  )}
-                </button>
-              );
-            }}
-          />
-        </div>
-      ) : (
+      {yearView ? (
         <div className="year-view">
           {Array.from({ length: 12 }, (_, index) => {
             const shownMonth = `${year}-${String(index + 1).padStart(2, '0')}`;
@@ -266,10 +198,71 @@ export function HistoryCalendar({
             );
           })}
         </div>
+      ) : (
+        <div className="month-view">
+          <div className="weekdays" aria-hidden="true">
+            {weekdays.map((day) => (
+              <span key={day}>{weekdayNames[day]}</span>
+            ))}
+          </div>
+          <MonthGrid
+            month={month}
+            weekStart={weekStart}
+            className="month-days"
+            render={(date) => {
+              const day = calendar.days.get(date);
+              const shown = day?.habits.slice(0, DOTS) ?? [];
+              const extra =
+                (day?.habits.length ?? 0) - shown.length + (day?.other ? 1 : 0);
+              return (
+                <button
+                  key={date}
+                  type="button"
+                  className={date === today ? 'day today' : 'day'}
+                  disabled={!day}
+                  aria-label={label(day, date)}
+                  title={day ? label(day, date) : undefined}
+                  onClick={() => onChoose(date)}
+                >
+                  <span className="date">{Number(date.slice(8))}</span>
+                  {day && (
+                    <span className="dots" aria-hidden="true">
+                      {shown.map((habit) => (
+                        <span
+                          key={habit.id}
+                          className="dot"
+                          style={{
+                            backgroundColor:
+                              colours.get(habit.id) ?? theme.ink(0x97),
+                          }}
+                        />
+                      ))}
+                      {!shown.length && day.other > 0 && (
+                        <span
+                          className="dot"
+                          style={{ backgroundColor: theme.ink(0x97) }}
+                        />
+                      )}
+                      {extra > 0 && shown.length > 0 && (
+                        <span className="more">+{extra}</span>
+                      )}
+                    </span>
+                  )}
+                </button>
+              );
+            }}
+          />
+        </div>
       )}
       {!calendar.days.size && (
         <p className="hint calendar-hint">No changes to show.</p>
       )}
+      <div className="calendar-foot">
+        <InfoNote
+          label="What the dots mean"
+          text={historyCalendarInfo[scale]}
+        />
+      </div>
     </div>
   );
 }

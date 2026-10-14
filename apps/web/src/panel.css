@@ -115,14 +115,18 @@
 }
 
 /* A habit's page: a wide dialog (full screen on phones) that is only as tall
-   as its content needs, up to the window. */
+   as its content needs, up to the window. Charts stay about 360 px wide:
+   the dialog is capped and the cards flow in two columns. */
 .modal.habit-details {
-  width: min(1240px, calc(100vw - 48px));
+  width: min(1160px, calc(100vw - 48px));
   max-height: calc(100dvh - 48px);
 }
 .modal.habit-details .modal-body {
   container: details / inline-size;
   padding: 20px 24px 28px;
+}
+.details-page:focus {
+  outline: none;
 }
 @media (max-width: 600px) {
   .modal.habit-details {
@@ -158,11 +162,63 @@
   color: var(--ink-quiet);
 }
 
-/* Cards: the overview, notes and every statistics section. */
+/* The toolbar under the title: range tabs, then the period stepper. */
+.range-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+.range-tabs {
+  padding: 2px;
+}
+.range-tabs button {
+  flex: none;
+  height: 30px;
+  padding: 0 12px;
+  font-size: 13px;
+}
+.period-navigator {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 14px;
+  color: var(--ink-soft);
+}
+.period-navigator span {
+  min-width: 9em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.period-navigator .icon-button {
+  width: 32px;
+  height: 32px;
+  font-size: 20px;
+}
+.period-navigator .icon-button:disabled {
+  opacity: 0.3;
+}
+@media (max-width: 600px) {
+  .range-tabs {
+    width: 100%;
+  }
+  .range-tabs button {
+    flex: 1;
+    padding: 0;
+  }
+  .period-navigator {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+/* Cards: the overview, notes and every statistics section share one look.
+   Tiles inside a card are raised, never bordered. */
 .stats-card,
 .stats-section {
   padding: 16px 18px 18px;
-  border: 1px solid var(--rule);
+  border: 1px solid var(--card-edge);
   border-radius: 16px;
   background-color: var(--surface);
 }
@@ -170,9 +226,6 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
-}
-.overview-card .tile {
-  background-color: var(--background);
 }
 .overview-card .tile strong {
   font-size: 18px;
@@ -228,8 +281,8 @@
   padding: 0 4px;
 }
 
-/* Medium widths: overview and notes side by side above a two-column grid
-   of sections; time charts span both columns. */
+/* Medium widths: overview and notes side by side; the chart cards flow
+   down two columns, so cards of different heights leave no holes. */
 @container details (min-width: 640px) {
   .stats-summary {
     display: grid;
@@ -239,8 +292,6 @@
   .stats-summary > .info-note {
     grid-column: 1 / -1;
   }
-  /* Half-width cards flow down two columns, so cards of different
-     heights leave no holes. */
   .stats-columns {
     display: block;
     columns: 2;
@@ -254,17 +305,16 @@
     margin-bottom: 0;
   }
 }
-/* Wide: the overview column stays beside the section grid. */
-@container details (min-width: 1000px) {
+/* Wide: the overview column stays beside the cards. */
+@container details (min-width: 980px) {
   .stats {
     display: grid;
-    grid-template-columns: 300px minmax(0, 1fr);
+    grid-template-columns: 280px minmax(0, 1fr);
     align-items: start;
     gap: 16px 20px;
   }
   .stats-summary {
     display: flex;
-    align-items: stretch;
     position: sticky;
     top: 0;
   }
@@ -272,22 +322,8 @@
 .stats-overview p {
   margin: 0;
 }
-.period-navigator {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  font-size: 14px;
-  color: var(--ink-soft);
-}
-.period-navigator .icon-button {
-  font-size: 20px;
-}
-.period-navigator .icon-button:disabled {
-  opacity: 0.3;
-}
 .stats-headline {
-  margin-top: 6px !important;
+  margin: 0;
   font-size: 26px;
   font-weight: 600;
 }
@@ -301,9 +337,8 @@
   flex-direction: column;
   gap: 4px;
   padding: 12px 14px;
-  border: 1px solid var(--rule);
   border-radius: 14px;
-  background-color: var(--surface);
+  background-color: var(--surface-raised);
   font-size: 12px;
 }
 .tile strong {

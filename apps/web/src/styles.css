@@ -30,6 +30,7 @@
   --scroll-thumb-active: #ffffff66;
   --surface-raised: #1c1c1c;
   --surface-edge: #2a2a2a;
+  --card-edge: #202020;
   --scrim: #00000066;
   /* Grid geometry: names, about three weeks of columns, and rows. */
   --name-width: 15rem;
@@ -549,6 +550,43 @@ button[aria-disabled='true'] {
 }
 .muted {
   color: var(--ink-quiet);
+}
+
+/* An explanation behind an (i) row, as on the phone (ui/InfoNote.tsx). */
+.info-note-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 40px;
+  font-size: 13px;
+  text-align: left;
+  color: var(--ink-quiet);
+}
+.info-note-row:hover {
+  color: var(--ink-soft);
+}
+.info-note-row .icon {
+  flex: none;
+}
+.info-note-row .chevron {
+  display: grid;
+  margin-left: auto;
+  transition: transform 160ms ease;
+}
+.info-note-row[aria-expanded='true'] .chevron {
+  transform: rotate(180deg);
+}
+.info-note-text {
+  margin: 0 0 10px 25px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+@media (prefers-reduced-motion: reduce) {
+  .info-note-row .chevron {
+    transition: none;
+  }
 }
 
 /* Popovers: beside their cell on wide screens, a bottom sheet on phones. */

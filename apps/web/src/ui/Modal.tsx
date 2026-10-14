@@ -12,6 +12,7 @@ export function Modal({
   trailing,
   className = '',
   closeOnBackdrop = false,
+  toolbar,
   onClose,
   children,
 }: {
@@ -22,6 +23,8 @@ export function Modal({
   className?: string;
   /** Read-only dialogs close on a click outside them; editors never do. */
   closeOnBackdrop?: boolean;
+  /** A row of controls under the header that stays while the body scrolls. */
+  toolbar?: ReactNode;
   onClose: () => void;
   children: ReactNode;
 }) {
@@ -71,6 +74,7 @@ export function Modal({
         <h2 id={titleId}>{title}</h2>
         <div className="modal-trailing">{trailing}</div>
       </header>
+      {toolbar && <div className="modal-toolbar">{toolbar}</div>}
       <div className="modal-body">{children}</div>
     </dialog>
   );

@@ -42,51 +42,43 @@
   gap: 12px;
   padding: 4px 16px 16px;
 }
-.calendar-bar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-.info-button {
-  width: 30px;
-  height: 30px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  color: var(--ink-quiet);
-}
-.info-button:hover,
-.info-button[aria-expanded='true'] {
-  color: var(--ink);
-  background-color: var(--surface-raised);
-}
-.calendar-explanation {
-  margin: 0;
-  padding: 10px 12px;
-  border-radius: 10px;
-  background-color: var(--surface);
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--ink-soft);
-}
-.calendar-step {
-  margin-left: auto;
+/* ‹ October 2026 ›, centred; the title opens the whole year. */
+.calendar-nav {
   display: flex;
   align-items: center;
-  gap: 2px;
+  justify-content: center;
+  gap: 4px;
 }
-.calendar-step h3 {
-  min-width: 8.5em;
-  margin: 0;
-  font-size: 15px;
-  font-weight: 600;
-  text-align: center;
-}
-.calendar-step .icon-button:disabled {
+.calendar-nav .icon-button:disabled {
   opacity: 0.3;
   cursor: default;
+}
+.calendar-title {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 11em;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+}
+.calendar-title:hover {
+  background-color: var(--surface-raised);
+}
+.calendar-title .chevron {
+  display: grid;
+  color: var(--ink-quiet);
+  transition: transform 160ms ease;
+}
+.calendar-title[aria-expanded='true'] .chevron {
+  transform: rotate(180deg);
+}
+.calendar-foot {
+  margin-top: 4px;
+  border-top: 1px solid var(--rule);
 }
 .chevron-left,
 .chevron-right {

@@ -114,22 +114,27 @@ recording join the habit only on Done. Every entry and archive shows the shared
 Clicking a habit's name (or **Notes and statistics** in its menu) opens the
 habit's page in a wide dialog over the grid (`panel/HabitDetails.tsx`; full
 screen on phones): the name with its goal line, Edit habit, and one page
-without tabs, so notes and statistics are seen together. The dialog is only
-as tall as its content, up to the window. Esc, Close or a click outside it
-closes it; editors, the goal editor and value popovers open above it.
+without tabs, so notes and statistics are seen together. A toolbar under the
+title holds the range tabs (30 days, 90 days, Year, All time) and the
+‹ period › stepper, so they stay put while the page scrolls. The dialog is
+capped at 1160 px and only as tall as its content, up to the window. Esc,
+Close or a click outside it closes it; editors, the goal editor and value
+popovers open above it. Focus lands on the page itself, so the arrow keys
+scroll it without a focus ring on a control.
 
-Everything is a card. The layout follows the dialog's own width (container
-queries):
+Everything is a card with the same edge (`--card-edge`); tiles inside a card
+are raised rather than bordered. The layout follows the dialog's own width
+(container queries):
 
-- **Wide:** an overview column (range, period, headline, tiles, goal and quota
-  progress; then the Notes card; then How statistics work) stays beside the
-  statistics. Time charts (daily totals, success over time, streaks) and the
-  entries journal span the full width; the other sections (categories,
-  calendar, weekdays, time of day) flow down two columns, so cards of
-  different heights leave no gaps.
-- **Medium:** the overview and Notes cards sit side by side above the same
-  statistics layout.
-- **Phones:** one column.
+- **Wide:** an overview column (headline, tiles, goal and quota progress; then
+  the Notes card; then How statistics work) stays beside the statistics. Every
+  chart card flows down two columns, so cards of different heights leave no
+  gaps and no chart is wider than about 360 px; only the entries journal spans
+  the full width.
+- **Medium:** the overview and Notes cards sit side by side above the same two
+  columns.
+- **Phones:** one column, with the range tabs and the stepper on their own
+  rows.
 
 The Notes card shows long notes up to about 260 px with a fade and Show all,
 and has Edit (or Add notes). This replaced the docked habit panel (founder
@@ -165,9 +170,11 @@ state and apply to both views. **Days** is that list; **Calendar** shows a
 month with a coloured dot for each habit changed each day ("+n" beyond four),
 or a year with one dot per day in its most-changed habit's colour, from core
 `historyCalendar` (`panel/HistoryCalendar.tsx`, the same calendar as the
-phone). Choosing a day opens it in the list; choosing a month in the year
-opens that month. What the dots mean is behind the (i) button beside Month
-and Year, as with explanations elsewhere. The Undo bar always names the newest
+phone). The month's title sits between the ‹ › arrows and opens the whole
+year, as the app's date picker does; choosing a month there returns to it.
+Choosing a day opens it in the day list. What the dots mean is behind a
+"What the dots mean" row below the calendar, under a separator
+(`ui/InfoNote.tsx`, the phone's InfoNote pattern). The Undo bar always names the newest
 action, even when filtered out; Undo and Redo live there (and on Ctrl+Z /
 Ctrl+Shift+Z) rather than in the top bar.
 

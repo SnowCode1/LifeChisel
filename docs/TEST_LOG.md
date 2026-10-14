@@ -2034,3 +2034,19 @@ columns of half-width cards without gaps, number, categorical and checkbox
 habits all laid out, long notes faded with Show all, medium widths put the
 overview and notes side by side, and phones showed one column. The panel,
 notes, goals and details checks passed after dropping the tabs.
+
+### Habit page toolbar and two-column charts; calendar title opens the year
+
+Automated: `npm run check` passed; `npm test` passed 365 of 365; `npm run
+web:build` built; Android and iOS bundles exported (the phone History calendar
+changed).
+
+Headless desktop Chrome with sample data at 1780, 1440, 1000 and 390 px: the
+range tabs and period stepper sat in the toolbar under the title (own rows at
+phone width), the dialog measured 1160 px and fitted its content, every chart
+card was about 340 px wide in two balanced columns, cards shared one edge and
+tiles were raised; the History calendar's title read "October 2026", opened
+"2026" when chosen and a mini month returned to it, the arrows stepped months
+or years, and "What the dots mean" below the separator opened the explanation.
+The details, calendar, panel, notes and goals checks passed. The phone
+calendar is unchecked on a device.
