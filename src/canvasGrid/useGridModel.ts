@@ -21,7 +21,7 @@ import {
 import type { GridPalette } from '@onpurpose/core/gridAppearance';
 import type { Habit } from '@onpurpose/core/habits';
 import type { ChangeStore } from '@onpurpose/core/storage/store';
-import { cellState, checkedStreak } from './cellAccessibility';
+import { cellState, checkedStreak } from '@onpurpose/core/cellAccessibility';
 import { checkboxGeometry } from './gridGeometry';
 
 /**

@@ -1931,3 +1931,22 @@ tab"; at 390-point width Today stayed pinned after a resize.
 The founder then confirmed the phone app still works on the iPhone after the
 move, and the web app works in their browser. Not yet checked: the phone app on
 Android after the move, Safari, iPhone Safari and Firefox.
+
+## 14 October 2026
+
+### Web home grid, layout A
+
+Automated: `npm run check` passed; `npm test` passed 363 of 363, including the
+new `scripts/habit-summary.test.mjs` (schedule, rule, quota progress and
+dated goal changes) and the canvas grid tests against the moved
+`cellAccessibility.ts`. `npm run web:build` built; Android and iOS bundles
+exported.
+
+Headless desktop Chrome against `npm run web:preview` at 1440×700 and 1440×900:
+the page never scrolled while the grid scrolled vertically inside its own
+area, with day headings and names pinned; Today sat at the right edge about
+930 px from the names; the Today button focused Today, arrow keys moved focus,
+Space ticked a checkbox and Ctrl+Z undid it; three consecutive ticks showed
+streak numbers 1–2–3 joined by bars. At 390 px wide the page did not scroll
+sideways and Today stayed in view. Not checked: Safari, Firefox, touch input,
+and long lists of habits beyond the 12 presets.

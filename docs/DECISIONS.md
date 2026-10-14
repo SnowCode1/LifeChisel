@@ -1986,3 +1986,35 @@ assistant proposals awaiting founder review.
   falls back to temporary storage.
 - Not decided: hosting, the web domain and brand, how the web app relates to
   pricing and the free tier, and sync. See [WEB.md](WEB.md).
+
+## 13 October 2026 — Web layout direction
+
+Status: direction agreed from the first mockups; not built yet.
+
+- Founder decisions on assistant proposals: on wide screens the habit panel
+  (Notes/Statistics) and History dock beside the grid, which narrows but stays
+  usable; numbers are entered in a small popover on the cell, and the grid is
+  keyboard-first (Space ticks, Enter opens a value, arrow keys move, Ctrl+Z
+  undoes); History and Settings show text labels at desktop width and icons
+  only at phone width.
+- Founder decision: show a quiet second line under each habit name on wide
+  screens (goal, schedule or quota progress). It needs a shared, dated rule
+  for choosing the line; the phrases already come from `ruleSummary`,
+  `timingSummary` and the period statistics in core.
+- Founder decision: keep Today close to the names instead of at the far edge
+  of a wide screen: a compact grid of about three weeks with larger cells, a
+  stronger Today column and row highlighting, with the docked panel using
+  the spare width when open. Days keep the phone's direction (oldest left,
+  Today right). Names-on-the-right and newest-first variants were mocked up
+  for comparison.
+- Founder decision (same day): use the system font for now, configurable in
+  one place (`--font-ui` in `apps/web/src/styles.css`), with tabular figures;
+  revisit with the final brand (Inter is the likely choice if one identical
+  font is wanted).
+- Founder decision (same day): build the compact layout (A). The names-on-the-
+  right and newest-first variants were rejected as confusing. The grid scrolls
+  vertically inside its own area so long habit lists never scroll the page.
+- Assistant implementation: the phone's pure cell rules (`cellState`,
+  `checkedStreak`, screen-reader labels) moved unchanged from
+  `src/canvasGrid/cellAccessibility.ts` into core so both grids share them, and
+  core `habitSummary.ts` chooses the second line under each name.

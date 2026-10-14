@@ -3,7 +3,7 @@ import { AccessibilityInfo, StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { entryDay } from '@onpurpose/core/calendar';
 import { ordinal, timingDate } from '@onpurpose/core/goalTiming';
-import { cellAccessibility } from './cellAccessibility';
+import { cellAccessibility } from '@onpurpose/core/cellAccessibility';
 import { columnX } from './gridGeometry';
 import type { CanvasGridProps } from './useCanvasGrid';
 

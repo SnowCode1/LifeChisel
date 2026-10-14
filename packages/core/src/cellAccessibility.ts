@@ -1,13 +1,9 @@
-import {
-  entryLabel,
-  cellEntryLabel,
-  type EntryValue,
-} from '@onpurpose/core/entries';
-import { checkboxChecked, evaluateGoal } from '@onpurpose/core/habitGoals';
-import { timingDate } from '@onpurpose/core/goalTiming';
-import { habitType, isNumericHabit, type Habit } from '@onpurpose/core/habits';
+import { entryLabel, cellEntryLabel, type EntryValue } from './entries.ts';
+import { checkboxChecked, evaluateGoal } from './habitGoals.ts';
+import { timingDate } from './goalTiming.ts';
+import { habitType, isNumericHabit, type Habit } from './habits.ts';
 
-/** What the canvas draws for one cell; computed on the JS thread. */
+/** What a grid draws for one cell (phone canvas and web table alike). */
 export type CellState = {
   kind: 'checkbox' | 'number' | 'text';
   checked: boolean;

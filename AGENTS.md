@@ -281,7 +281,11 @@ OPFS (`opfs-sahpool`, no special headers), so the log, schema 1 and backups matc
 the phone. One tab holds a Web Lock on the database; never fall back to a
 temporary or `localStorage` database, because unsaved data must look unsaved.
 The grid is a DOM table, not Skia: browsers scroll, zoom and announce tables
-natively. The product rules above (stable rows, immediate feedback, no backend
+natively. Keep layout A: a centred grid about three weeks wide so Today stays
+near the names, scrolling inside its own area (never the page) with sticky
+headings and names, a roving keyboard focus, and cells drawn from core
+`cellAccessibility.ts` and the saved cell look. `habitSummary.ts` (core) owns
+the line under each name. The font is set only in `--font-ui`. The product rules above (stable rows, immediate feedback, no backend
 or login without a requirement) apply to the web app too. Sync and the
 web/phone pricing link are not built.
 

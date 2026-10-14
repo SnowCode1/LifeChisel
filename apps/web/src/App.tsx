@@ -1,11 +1,24 @@
-import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react';
 import type { ChangeStore } from '@onpurpose/core/storage/store';
-import { displayDefaults } from '@onpurpose/core/displayPreferences';
+import {
+  cellLookOf,
+  displayDefaults,
+} from '@onpurpose/core/displayPreferences';
 import { themeFor, type Theme } from '@onpurpose/core/theme';
 import type { Habit } from '@onpurpose/core/habits';
 import { toggleCheckboxValue } from '@onpurpose/core/habitGoals';
 import { openStore } from './storage/openStore.ts';
-import { HabitGrid } from './HabitGrid.tsx';
+import {
+  HabitGrid,
+  type CellLookStyle,
+  type GridHandle,
+} from './HabitGrid.tsx';
 import { useToday } from './useToday.ts';
 
 export function App() {
@@ -28,6 +41,7 @@ function Tracker({ store }: { store: ChangeStore }) {
   const state = snapshot.replay.state;
   const today = useToday();
   const prefersDark = usePrefersDark();
+  const grid = useRef<GridHandle>(null);
   const theme = themeFor(
     state.themeMode ?? displayDefaults.themeMode,
     prefersDark ? 'dark' : 'light',
@@ -38,6 +52,28 @@ function Tracker({ store }: { store: ChangeStore }) {
   const habits = useMemo(
     () => state.habits.filter((habit) => !habit.archived),
     [state.habits],
+  );
+  // The same saved cell look as the phone; the last four apply to boxes only.
+  const cell = cellLookOf(state);
+  const boxes =
+    (state.checkboxStyle ?? displayDefaults.checkboxStyle) === 'boxes';
+  const look = useMemo<CellLookStyle>(
+    () => ({
+      boxes,
+      round: cell.roundCheckboxes,
+      joined: cell.joinedCheckboxes,
+      streaks: cell.streakNumbers,
+      missed: cell.missedDays,
+      connector: cell.connectorThickness / 100,
+    }),
+    [
+      boxes,
+      cell.roundCheckboxes,
+      cell.joinedCheckboxes,
+      cell.streakNumbers,
+      cell.missedDays,
+      cell.connectorThickness,
+    ],
   );
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -69,15 +105,8 @@ function Tracker({ store }: { store: ChangeStore }) {
   return (
     <div className="app">
       <header className="top-bar">
-        <span />
-        <button
-          className="today"
-          onClick={() =>
-            document
-              .querySelector('[data-today]')
-              ?.scrollIntoView({ inline: 'end', block: 'nearest' })
-          }
-        >
+        <span className="wordmark">OnPurpose</span>
+        <button className="today" onClick={() => grid.current?.showToday()}>
           Today
         </button>
         <span className="actions">
@@ -102,13 +131,20 @@ function Tracker({ store }: { store: ChangeStore }) {
         </div>
       )}
       <HabitGrid
+        ref={grid}
         habits={habits}
         values={state.values}
         today={today}
         theme={theme}
+        look={look}
+        weekStart={state.weekStart ?? displayDefaults.weekStart}
+        weekDividers={state.weekDividers ?? displayDefaults.weekDividers}
         editable={store.canEdit()}
         onToggle={toggle}
       />
+      <footer className="hints">
+        Space ticks · Arrow keys move · Ctrl Z undoes
+      </footer>
     </div>
   );
 }
@@ -138,9 +174,15 @@ function useThemeVariables(theme: Theme) {
     const style = document.documentElement.style;
     style.setProperty('--background', theme.background);
     style.setProperty('--ink', theme.ink(0xe8));
+    style.setProperty('--ink-strong', theme.ink(0xff));
+    style.setProperty('--ink-soft', theme.ink(0xb8));
     style.setProperty('--ink-quiet', theme.ink(0x97));
-    style.setProperty('--ink-faint', theme.ink(0x40));
+    style.setProperty('--ink-hint', theme.ink(0x70));
     style.setProperty('--rule', theme.ink(0x1c));
+    style.setProperty('--today-pill', theme.ink(0x19));
+    style.setProperty('--today-edge', theme.ink(0x26));
+    style.setProperty('--week-shade', theme.ink(0x0c));
+    style.setProperty('--row-highlight', theme.overlay(0.05));
     style.setProperty('--accent', theme.accent);
     style.setProperty('--danger', theme.danger);
     style.colorScheme = theme.scheme;

@@ -20,7 +20,7 @@ import {
   cellAccessibility,
   cellState,
   checkedStreak,
-} from '../src/canvasGrid/cellAccessibility.ts';
+} from '../packages/core/src/cellAccessibility.ts';
 import { ordinal, timingDate } from '../packages/core/src/goalTiming.ts';
 import { isShadedWeek } from '../packages/core/src/displayPreferences.ts';
 import { allWeekdays } from '../packages/core/src/habitGoals.ts';

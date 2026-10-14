@@ -4,11 +4,41 @@ The browser version of OnPurpose lives in `apps/web`. It is designed for
 browsers rather than copied from the phone screens, and it shares every rule and
 data format with the phone app through `@onpurpose/core`.
 
-Status: a first working slice. It shows the habit grid for the last 60 days,
-toggles checkbox habits, displays other entry types read-only, follows the saved
-theme, and supports Undo/Redo (buttons, Ctrl+Z, Ctrl+Shift+Z or Ctrl+Y). Habit
-editing, numeric/text/category entry, History, Settings, statistics, notes,
-backups and sync are not built yet.
+Status: the home grid (layout A, below) toggles checkbox habits, displays
+other entry types read-only, follows the saved theme and cell look, and
+supports Undo/Redo (buttons, Ctrl+Z, Ctrl+Shift+Z or Ctrl+Y). Habit editing,
+the number/text/category entry popover, the docked habit and History panels,
+Settings, statistics, notes, backups and sync are not built yet.
+
+## Home grid (layout A)
+
+The founder chose this layout from mockups (see DECISIONS.md, 13 October 2026).
+
+- **Today stays near the names.** The grid is centred and about three weeks
+  wide (`VISIBLE_DAYS` in `HabitGrid.tsx`) with 46 px columns, instead of
+  filling a wide screen. Oldest days are on the left and Today on the right,
+  as on the phone; 120 days are rendered and older ones scroll into view.
+- **The grid scrolls inside itself, never the page.** Day headings stick to
+  the top and names to the left, so long habit lists scroll without moving
+  the top bar. Keyboard focus scrolls cells clear of both (`scroll-padding`).
+- **Today is emphasised:** a header pill labelled "Today", a faint column with
+  hairline edges, and the Today button returns there and focuses it.
+- **Rows highlight** under the pointer or keyboard focus.
+- **Keyboard:** one roving focus moves with the arrow keys (Home/End jump to
+  the oldest day and Today); Space or Enter toggles a checkbox.
+- **Cells follow the phone's rules** from core `cellAccessibility.ts`
+  (`cellState`, `checkedStreak`, screen-reader labels) and the saved cell look
+  (Circles/Squares or Ticks & crosses, joins, streak numbers, missed-day
+  crosses, connector thickness). Background precedence is goal met > Today >
+  plain.
+- **A quiet second line** under each name comes from core `habitSummary.ts`:
+  open quota progress ("1 of 2 this week"), else the goal rule with any
+  non-daily schedule, else a plain checkbox's schedule, else "Track only".
+  It is hidden at phone width.
+
+The font is set once, as `--font-ui` at the top of `src/styles.css`: the system
+font for now (as on the phone). Grid sizes are the `--name-width`, `--column`,
+`--row` and `--box` variables beside it.
 
 ## Repository layout
 
