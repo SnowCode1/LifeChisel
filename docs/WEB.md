@@ -111,18 +111,30 @@ recording join the habit only on Done. Every entry and archive shows the shared
 
 ## Habit details
 
-Clicking a habit's name (or **Notes and statistics** in its menu) opens its
-Notes and Statistics in a wide dialog over the grid (`panel/HabitDetails.tsx`;
-full screen on phones), with Edit habit beside the title. It opens on Notes
-when the habit has notes, otherwise on Statistics, as on the phone. Esc, Close
-or a click outside it closes it. The layout follows the dialog's own width
-(container queries): on wide screens the statistics summary (range, period,
-headline, tiles, goal and quota progress) stays in a left column beside two
-columns of sections; at medium widths the summary sits above two columns; on
-phones everything is one column. Notes read at up to 68 characters a line.
-Editors, the goal editor and value popovers opened from it appear above it.
-This replaced the docked habit panel (founder decision, 14 October 2026),
-which was cramped at 440 px.
+Clicking a habit's name (or **Notes and statistics** in its menu) opens the
+habit's page in a wide dialog over the grid (`panel/HabitDetails.tsx`; full
+screen on phones): the name with its goal line, Edit habit, and one page
+without tabs, so notes and statistics are seen together. The dialog is only
+as tall as its content, up to the window. Esc, Close or a click outside it
+closes it; editors, the goal editor and value popovers open above it.
+
+Everything is a card. The layout follows the dialog's own width (container
+queries):
+
+- **Wide:** an overview column (range, period, headline, tiles, goal and quota
+  progress; then the Notes card; then How statistics work) stays beside the
+  statistics. Time charts (daily totals, success over time, streaks) and the
+  entries journal span the full width; the other sections (categories,
+  calendar, weekdays, time of day) flow down two columns, so cards of
+  different heights leave no gaps.
+- **Medium:** the overview and Notes cards sit side by side above the same
+  statistics layout.
+- **Phones:** one column.
+
+The Notes card shows long notes up to about 260 px with a fade and Show all,
+and has Edit (or Add notes). This replaced the docked habit panel (founder
+decision, 14 October 2026), which was cramped at 440 px, and then the tabbed
+dialog, whose Notes tab left most of the dialog empty.
 
 - **Notes** render from core's Markdown token stream as React elements: text
   is escaped, links pass core `descriptionLink` and open in a new tab, and

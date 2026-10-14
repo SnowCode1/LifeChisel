@@ -2024,3 +2024,13 @@ calendar's explanation appeared only after the (i) button, inline below the
 controls. The earlier panel, notes, goals, History and calendar checks
 passed after closing the dialog before using the grid. The phone calendar's
 (i) button is unchecked on a device.
+
+### Web habit page layout
+
+Headless desktop Chrome with sample data at 1780, 1440, 1000 and 390 px:
+the habit page fitted its content (no scrolling for Cook a meal at 1780 ×
+1300), the overview column sat beside full-width time charts and two flowing
+columns of half-width cards without gaps, number, categorical and checkbox
+habits all laid out, long notes faded with Show all, medium widths put the
+overview and notes side by side, and phones showed one column. The panel,
+notes, goals and details checks passed after dropping the tabs.

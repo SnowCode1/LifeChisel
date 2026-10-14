@@ -2083,3 +2083,8 @@ Status: implemented on the `web-app` branch (web only).
   dialog closes with Esc, Close or a click outside it.
 - Founder feedback: explanations stay behind an (i) button, as elsewhere in
   the app; the History calendar's explanation moved there on both platforms.
+- Founder feedback (same day): the dialog's Notes and Statistics layouts
+  needed significantly better structure. Assistant implementation: one page
+  per habit without tabs: an overview column (summary, notes card, how it
+  works) beside statistics cards, time charts at full width and other
+  sections in two flowing columns; the dialog fits its content.

@@ -32,7 +32,7 @@ import { GoalEditor } from './habits/GoalEditor.tsx';
 import { NotesEditor } from './notes/NotesEditor.tsx';
 import { NoteVersions } from './notes/NoteVersions.tsx';
 import type { HistoryAction } from '@onpurpose/core/storage/model';
-import { HabitDetails, type HabitTab } from './panel/HabitDetails.tsx';
+import { HabitDetails } from './panel/HabitDetails.tsx';
 import { HistoryPanel } from './panel/HistoryPanel.tsx';
 import { PanelResizer, usePanelWidth } from './panel/PanelResizer.tsx';
 import { Icon } from './ui/Icon.tsx';
@@ -143,10 +143,7 @@ function Tracker({
   // History docks beside the grid; a habit's Notes and Statistics open in a
   // wide dialog over it.
   const [panel, setPanel] = useState<{ kind: 'history' } | null>(null);
-  const [details, setDetails] = useState<{
-    habitId: string;
-    tab: HabitTab;
-  } | null>(null);
+  const [detailsId, setDetailsId] = useState<string | null>(null);
   const newHabit = () =>
     setEditor({
       habit: {
@@ -158,18 +155,10 @@ function Tracker({
       },
       creating: true,
     });
-  const openHabit = (habit: Habit) =>
-    setDetails({
-      habitId: habit.id,
-      tab: habit.description ? 'notes' : 'statistics',
-    });
+  const openHabit = (habit: Habit) => setDetailsId(habit.id);
   const handlers = useMemo<GridHandlers>(
     () => ({
-      openHabit: (habit) =>
-        setDetails({
-          habitId: habit.id,
-          tab: habit.description ? 'notes' : 'statistics',
-        }),
+      openHabit: (habit) => setDetailsId(habit.id),
       toggle: actions.toggle,
       openEntry: (habit, date, label, anchor) =>
         setEntry({ habit, date, label, anchor }),
@@ -303,10 +292,8 @@ function Tracker({
   const goalHabit = goalHabitId
     ? state.habits.find((habit) => habit.id === goalHabitId)
     : undefined;
-  const detailsHabit = details
-    ? state.habits.find(
-        (habit) => habit.id === details.habitId && !habit.archived,
-      )
+  const detailsHabit = detailsId
+    ? state.habits.find((habit) => habit.id === detailsId && !habit.archived)
     : undefined;
   // Calendar days in the panel tick checkboxes or open the entry popover.
   const panelDay = (
@@ -419,10 +406,9 @@ function Tracker({
               onOpenNote={setNoteAction}
             />
           )}
-          {details && detailsHabit && (
+          {detailsHabit && (
             <HabitDetails
               habit={detailsHabit}
-              tab={details.tab}
               values={state.values}
               events={snapshot.events}
               actions={snapshot.replay.undo}
@@ -430,9 +416,8 @@ function Tracker({
               weekStart={state.weekStart ?? displayDefaults.weekStart}
               theme={theme}
               editable={store.canEdit()}
-              onTab={(tab) => setDetails({ habitId: detailsHabit.id, tab })}
               onEdit={() => setEditor({ habit: detailsHabit, creating: false })}
-              onClose={() => setDetails(null)}
+              onClose={() => setDetailsId(null)}
               onDay={panelDay}
               onEditGoal={() => setGoalHabitId(detailsHabit.id)}
               onEditNotes={() => setNotesHabitId(detailsHabit.id)}

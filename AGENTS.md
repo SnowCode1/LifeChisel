@@ -293,7 +293,8 @@ the line under each name. The font is set only in `--font-ui`. Web modules:
 `grid/` (grid, rows, drag, keyboard, overlay `Scrollbars` that cover only the
 scrolling area, `gridSizes` from the shared v18 sizes), `entry/` (cell popover on `ui/AnchoredDialog`),
 `habits/` (editor, colour/icon pickers, menu, goal editor), `panel/` (the
-habit Notes/Statistics dialog `HabitDetails`, the docked and resizable History
+habit page dialog `HabitDetails` (overview, notes and statistics cards; no
+tabs), the docked and resizable History
 panel with its calendar, SVG charts in `ChartFrame`, safe Markdown),
 `notes/` (Markdown editor, Before/After), `settings/`, and `actions.ts`, which
 reads every before-value from the current store. `Sidebar.tsx` holds what
