@@ -7,8 +7,10 @@ data format with the phone app through `@onpurpose/core`.
 Status: the home grid (layout A, below) records all four entry types, follows
 the saved theme and cell look, and supports Undo/Redo (buttons, Ctrl+Z,
 Ctrl+Shift+Z or Ctrl+Y) and the four-second quick undo. Habits can be added,
-edited, reordered and archived, and each has a docked Notes/Statistics panel. History has its own panel, and Settings covers appearance, daily tracking,
-backups and archived habits. Goals and notes can be edited. Sync is not built yet.
+edited, reordered and archived, and each has a docked Notes/Statistics panel.
+History has its own panel, and Settings covers appearance, grid sizes, daily
+tracking, backups and archived habits. Goals and notes can be edited. A quiet
+sidebar holds everything around the grid. Sync is not built yet.
 
 ## Home grid (layout A)
 
@@ -17,13 +19,34 @@ The founder chose this layout from mockups (see DECISIONS.md, 13 October 2026).
 - **Today stays near the names.** The grid is centred and about three weeks
   wide (`VISIBLE_DAYS` in `HabitGrid.tsx`) with 46 px columns, instead of
   filling a wide screen. Oldest days are on the left and Today on the right,
-  as on the phone; 120 days are rendered and older ones scroll into view.
+  as on the phone. 120 days are rendered at first; nearing the oldest one
+  loads another 120 (up to about ten years) without moving the days in view.
 - **The grid scrolls inside itself, never the page.** Day headings stick to
   the top and names to the left, so long habit lists scroll without moving
   the top bar. Keyboard focus scrolls cells clear of both (`scroll-padding`).
 - **Today is emphasised:** a header pill labelled "Today", a faint column with
-  hairline edges, and the Today button returns there and focuses it.
-- **Rows highlight** under the pointer or keyboard focus.
+  hairline edges, and the Today button (or T) returns there and focuses it.
+  While scrolled back it reads "Today →".
+- **Rows highlight** under the pointer or keyboard focus, and the hovered
+  day's heading lights up. The corner names the months in view ("September –
+  October 2026").
+- **Scrollbars cover only what scrolls.** The browser's own bars would run
+  beside the pinned headings and under the pinned names, so they are hidden
+  and `grid/Scrollbars.tsx` draws thin overlay bars: the vertical one starts
+  below the headings, the horizontal one right of the names, and both sit
+  just under the last row. They appear while scrolling or under the pointer,
+  can be dragged or clicked to page, and are hidden on touch screens. Wheel,
+  touch, keyboard and focus scrolling stay native, and positions are written
+  to the DOM directly, so scrolling never re-renders React.
+- **Tap animations** (the shared v16 preference, also off under Reduce
+  Motion): a tapped box pulses (1 → 0.94 → 1); a join grows out of the
+  checked neighbour into it, half by half over 220 ms, and the box it reaches
+  bumps to 1.07; clearing retracts the join into the neighbour. Only taps in
+  the grid animate, never Undo, other edits or loading.
+- **Values:** numbers shrink to fit their column (to about 65%); text and
+  category cells use the phone's 12 px text in one to three lines from core
+  `gridEntryText.ts`, at a fixed width so columns stay equal, with the full
+  value on hover.
 - **Keyboard:** one roving focus moves with the arrow keys (Home/End jump to
   the oldest day and Today); Space or Enter toggles a checkbox.
 - **Cells follow the phone's rules** from core `cellAccessibility.ts`
@@ -38,9 +61,39 @@ The founder chose this layout from mockups (see DECISIONS.md, 13 October 2026).
 
 The font is set once, as `--font-ui` at the top of `src/styles.css`: the system
 font for now (as on the phone). Grid sizes are the `--name-width`, `--column`,
-`--row` and `--box` variables beside it. The grid measures itself to whole
-day columns and horizontal scrolling snaps to days, so no column is left half
-hidden behind the names.
+`--row` and `--box` variables beside it; `grid/gridSizes.ts` overrides them
+from the saved grid sizes. The grid measures itself to whole day columns and
+horizontal scrolling snaps to days, so no column is left half hidden behind
+the names. At phone width names take 40% of the screen and may wrap to two
+lines.
+
+Rows redraw only when their own saved values, the cell look or the visible
+days change (`HabitRow` compares a per-habit value signature), so an edit
+redraws one row rather than the whole grid.
+
+## Sidebar and shortcuts
+
+A quiet sidebar on the left (`Sidebar.tsx`, founder request, 14 October 2026) holds what surrounds the grid, which stays the only page: New habit;
+Habits (the current page, with a count), History (toggles the docked panel),
+Archived and Settings; then where the data is kept ("Saved in this browser",
+"Not saved yet" after a failed save, opening Backups), Keyboard shortcuts and
+Collapse. It narrows to icons when collapsed (remembered per browser) or below
+1100 px wide, and phones hide it and keep the compact top bar with History and
+Settings icons. On wide screens the top bar keeps only Today, centred.
+
+Keyboard shortcuts (`Shortcuts.tsx`, also on `?`): T goes to Today, N adds a
+habit, H shows or hides History, besides the grid keys and Ctrl+Z/Ctrl+Y.
+Single-letter keys work only outside text fields and dialogs.
+
+## Sample data (development)
+
+`npm run web:dev` shows a Sample data switch in the sidebar (or add `?sample`
+to the address). It opens the phone's fictional six-month history from core
+`dev/sampleData.ts`, including number, text and category habits, goals and
+notes, in a separate in-memory store; edits last only for that visit and
+backups are off. Turning it off returns to the saved data, which sample mode
+never touches. Production builds leave the sample code out
+(`import.meta.env.DEV`).
 
 ## Entering values
 
@@ -74,7 +127,7 @@ habit has notes, otherwise on Statistics, as on the phone. Esc closes it.
 
 ## History
 
-The top bar's History button docks the History panel in the same slot as
+The sidebar's History item (or H) docks the History panel in the same slot as
 the habit panel. It uses core `history.ts` exactly as the phone does:
 active habit actions in log order, grouped by the day they were made (Today
 and Yesterday open; filtered lists open fully), neighbouring same-date
@@ -112,7 +165,8 @@ ported; a shared rich editor could follow.
 
 ## Settings
 
-The top bar's Settings button opens a two-column dialog (stacked on phones).
+The sidebar's Settings item opens a two-column dialog (stacked on phones);
+the section list stays put while a page scrolls.
 Preferences save immediately as ordinary preference changes, outside History
 and Undo, with the phone's before-value rules (newer kinds start from null).
 
@@ -120,7 +174,12 @@ and Undo, with the phone's before-value rules (newer kinds start from null).
   separate drawing), theme mode, dark and light backgrounds (presets or a hex,
   fitted at display time), checkbox style (Squares, Circles, Ticks & crosses),
   streak numbers, joined checkboxes with connector thickness (saved on
-  release), missed day crosses and week dividers.
+  release), missed day crosses, week dividers and tap animations.
+- **Grid size:** name column, day columns and rows, each Automatic or a
+  slider in the phone's v18 steps. The grid and preview follow the slider;
+  the size saves on release. These are the phone's saved preferences (CSS
+  pixels here, points there), so they travel with backups; Automatic keeps
+  each app's own sizes.
 - **Daily tracking:** Hide completed today (rows meeting today's goal leave
   after 700 ms, return at once when undone, and a footer link shows them) and
   the week start.
@@ -132,8 +191,8 @@ and Undo, with the phone's before-value rules (newer kinds start from null).
 - **Archived habits:** record counts and ranges, Restore, and Delete with a
   named confirmation (core `deleteArchivedHabit`, undoable in History).
 
-Phone-only settings (grid sizes, text size, haptics, tap animations) are not
-shown on the web; browser zoom covers text size.
+Phone-only settings (text size, haptics) are not shown on the web; browser
+zoom covers text size.
 
 ## Managing habits
 
@@ -232,7 +291,11 @@ WebAssembly in memory (Node has no OPFS).
 ## Known limits
 
 - OPFS persistence, the tab lock and the grid were checked in desktop Chrome
-  only. Safari (including iPhone Safari) and Firefox are untested.
+  only. Safari (including iPhone Safari) and Firefox are untested, and so are
+  the overlay scrollbars with a real mouse, trackpad and touch.
+- Every loaded row and day is in the DOM. Twelve to fourteen habits over
+  several hundred days are fine in Chrome; hundreds of habits may need only
+  the visible rows rendered.
 - The main script is about 300 KB gzipped, mostly the habit icon catalogues
   that validation imports; SQLite adds about 400 KB gzipped. Splitting the
   catalogues out is a later optimisation.

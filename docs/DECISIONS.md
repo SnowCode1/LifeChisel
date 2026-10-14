@@ -2018,3 +2018,25 @@ Status: direction agreed from the first mockups; not built yet.
   `checkedStreak`, screen-reader labels) moved unchanged from
   `src/canvasGrid/cellAccessibility.ts` into core so both grids share them, and
   core `habitSummary.ts` chooses the second line under each name.
+
+## 14 October 2026 — Web sidebar and grid polish
+
+Status: implemented on the `web-app` branch; checked in desktop Chrome only.
+
+- Founder feedback: the grid's scrollbars were invasive and covered the
+  wrong area (they ran beside the pinned headings and under the pinned
+  names), and the app felt bare without a minimal sidebar on the left. Focus
+  next on the grid itself: polish, settings and real data, including
+  categories.
+- Assistant implementation: thin overlay scrollbars over the scrolling area
+  only; a sidebar holding New habit, Habits, History, Archived, Settings,
+  where data is kept, shortcuts and Collapse (icons only when collapsed or
+  below 1100 px, hidden on phones, which keep the top bar). The grid stays
+  the only page; the sidebar adds no new views or dashboards.
+- Assistant proposal awaiting review: the web uses the phone's saved grid
+  sizes (v18) and tap animations (v16) rather than web-only settings, so
+  they travel with backups and later sync. A size chosen on one device then
+  applies on the other; Automatic keeps each app's own sizes.
+- Assistant implementation: in development, the phone's fictional sample
+  history opens in memory (`?sample`) so number, text and category cells can
+  be judged with realistic data; production builds exclude it.

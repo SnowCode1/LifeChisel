@@ -1950,3 +1950,24 @@ Space ticked a checkbox and Ctrl+Z undid it; three consecutive ticks showed
 streak numbers 1–2–3 joined by bars. At 390 px wide the page did not scroll
 sideways and Today stayed in view. Not checked: Safari, Firefox, touch input,
 and long lists of habits beyond the 12 presets.
+
+### Web sidebar, overlay scrollbars and grid polish
+
+Automated: `npm run check` passed; `npm test` passed 363 of 363 (the moved
+`gridEntryText.ts` tests included); `npm run web:build` built without the
+sample data code; Android and iOS bundles exported after `gridEntryText.ts`
+moved to core.
+
+Headless desktop Chrome with scrollbars shown, against the development
+server with sample data and the production preview: the overlay bars began
+below the headings and right of the names; scrolling left loaded 120 older
+days while the same days stayed in view, Today read "Today →" and the corner
+named the months in view; Home and End reached the oldest loaded day and
+Today; a tick beside a checked day pulsed and grew both join halves, clearing
+retracted them, and Undo animated nothing; the Rows slider resized the grid
+live and saved on release, and Auto restored the default; `?`, `H` and `T`
+worked; switching Sample data off returned to the saved data. All columns
+measured 46 px with text cells present, and no width from 390 to 1440 px cut
+a column. The earlier entry, habits, panel, History, Settings, goals and notes
+checks passed again. Not checked: Safari, Firefox, touch, a real mouse wheel
+or trackpad, and the founder's own data.
