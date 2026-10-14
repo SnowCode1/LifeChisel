@@ -49,13 +49,36 @@
   justify-content: space-between;
   gap: 8px;
 }
+.info-button {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--ink-quiet);
+}
+.info-button:hover,
+.info-button[aria-expanded='true'] {
+  color: var(--ink);
+  background-color: var(--surface-raised);
+}
+.calendar-explanation {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background-color: var(--surface);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
 .calendar-step {
+  margin-left: auto;
   display: flex;
   align-items: center;
   gap: 2px;
 }
 .calendar-step h3 {
-  min-width: 9.5em;
+  min-width: 8.5em;
   margin: 0;
   font-size: 15px;
   font-weight: 600;

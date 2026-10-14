@@ -11,6 +11,7 @@ export function Modal({
   leading,
   trailing,
   className = '',
+  closeOnBackdrop = false,
   onClose,
   children,
 }: {
@@ -19,10 +20,13 @@ export function Modal({
   leading: ReactNode;
   trailing?: ReactNode;
   className?: string;
+  /** Read-only dialogs close on a click outside them; editors never do. */
+  closeOnBackdrop?: boolean;
   onClose: () => void;
   children: ReactNode;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
+  const pressedBackdrop = useRef(false);
   useLayoutEffect(() => {
     const element = dialog.current;
     if (!element) return;
@@ -47,6 +51,19 @@ export function Modal({
       onCancel={(event) => {
         event.preventDefault();
         onClose();
+      }}
+      onPointerDown={(event) => {
+        pressedBackdrop.current = event.target === event.currentTarget;
+      }}
+      onClick={(event) => {
+        // A press and release on the dialog element itself is on its
+        // backdrop; a drag out of the content is not.
+        if (
+          closeOnBackdrop &&
+          pressedBackdrop.current &&
+          event.target === event.currentTarget
+        )
+          onClose();
       }}
     >
       <header className="modal-header">

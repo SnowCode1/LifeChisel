@@ -162,6 +162,13 @@ export type HistoryCalendar = {
   last: string | null;
 };
 
+// What each calendar shows, behind its info button.
+export const historyCalendarInfo = {
+  month:
+    'Dots show the habits changed on each day you made changes, most changes first. Choose a day to see its changes.',
+  year: 'Each dot is a day you made changes, in the colour of the habit changed most that day. Choose a month to open it, or a day to see its changes.',
+} as const;
+
 /**
  * Every day with matching changes, for the month and year calendars. It scans
  * the whole log, so call it only while a calendar is shown.

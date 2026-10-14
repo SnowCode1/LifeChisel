@@ -32,7 +32,7 @@ import { GoalEditor } from './habits/GoalEditor.tsx';
 import { NotesEditor } from './notes/NotesEditor.tsx';
 import { NoteVersions } from './notes/NoteVersions.tsx';
 import type { HistoryAction } from '@onpurpose/core/storage/model';
-import { HabitPanel, type HabitTab } from './panel/HabitPanel.tsx';
+import { HabitDetails, type HabitTab } from './panel/HabitDetails.tsx';
 import { HistoryPanel } from './panel/HistoryPanel.tsx';
 import { PanelResizer, usePanelWidth } from './panel/PanelResizer.tsx';
 import { Icon } from './ui/Icon.tsx';
@@ -140,12 +140,13 @@ function Tracker({
     habit: Habit;
     creating: boolean;
   } | null>(null);
-  // The docked panel shows one habit or History.
-  const [panel, setPanel] = useState<
-    | { kind: 'habit'; habitId: string; tab: HabitTab }
-    | { kind: 'history' }
-    | null
-  >(null);
+  // History docks beside the grid; a habit's Notes and Statistics open in a
+  // wide dialog over it.
+  const [panel, setPanel] = useState<{ kind: 'history' } | null>(null);
+  const [details, setDetails] = useState<{
+    habitId: string;
+    tab: HabitTab;
+  } | null>(null);
   const newHabit = () =>
     setEditor({
       habit: {
@@ -158,16 +159,14 @@ function Tracker({
       creating: true,
     });
   const openHabit = (habit: Habit) =>
-    setPanel({
-      kind: 'habit',
+    setDetails({
       habitId: habit.id,
       tab: habit.description ? 'notes' : 'statistics',
     });
   const handlers = useMemo<GridHandlers>(
     () => ({
       openHabit: (habit) =>
-        setPanel({
-          kind: 'habit',
+        setDetails({
           habitId: habit.id,
           tab: habit.description ? 'notes' : 'statistics',
         }),
@@ -304,12 +303,11 @@ function Tracker({
   const goalHabit = goalHabitId
     ? state.habits.find((habit) => habit.id === goalHabitId)
     : undefined;
-  const panelHabit =
-    panel?.kind === 'habit'
-      ? state.habits.find(
-          (habit) => habit.id === panel.habitId && !habit.archived,
-        )
-      : undefined;
+  const detailsHabit = details
+    ? state.habits.find(
+        (habit) => habit.id === details.habitId && !habit.archived,
+      )
+    : undefined;
   // Calendar days in the panel tick checkboxes or open the entry popover.
   const panelDay = (
     habit: Habit,
@@ -402,7 +400,7 @@ function Tracker({
             on={handlers}
             onAwayFromToday={setAway}
           />
-          {(panel?.kind === 'history' || panelHabit) && (
+          {panel?.kind === 'history' && (
             <PanelResizer
               width={panelWidth.width}
               onWidth={panelWidth.setWidth}
@@ -421,10 +419,10 @@ function Tracker({
               onOpenNote={setNoteAction}
             />
           )}
-          {panel?.kind === 'habit' && panelHabit && (
-            <HabitPanel
-              habit={panelHabit}
-              tab={panel.tab}
+          {details && detailsHabit && (
+            <HabitDetails
+              habit={detailsHabit}
+              tab={details.tab}
               values={state.values}
               events={snapshot.events}
               actions={snapshot.replay.undo}
@@ -432,14 +430,12 @@ function Tracker({
               weekStart={state.weekStart ?? displayDefaults.weekStart}
               theme={theme}
               editable={store.canEdit()}
-              onTab={(tab) =>
-                setPanel({ kind: 'habit', habitId: panelHabit.id, tab })
-              }
-              onEdit={() => setEditor({ habit: panelHabit, creating: false })}
-              onClose={() => setPanel(null)}
+              onTab={(tab) => setDetails({ habitId: detailsHabit.id, tab })}
+              onEdit={() => setEditor({ habit: detailsHabit, creating: false })}
+              onClose={() => setDetails(null)}
               onDay={panelDay}
-              onEditGoal={() => setGoalHabitId(panelHabit.id)}
-              onEditNotes={() => setNotesHabitId(panelHabit.id)}
+              onEditGoal={() => setGoalHabitId(detailsHabit.id)}
+              onEditNotes={() => setNotesHabitId(detailsHabit.id)}
             />
           )}
         </div>

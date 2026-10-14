@@ -1992,8 +1992,8 @@ assistant proposals awaiting founder review.
 Status: direction agreed from the first mockups; not built yet.
 
 - Founder decisions on assistant proposals: on wide screens the habit panel
-  (Notes/Statistics) and History dock beside the grid, which narrows but stays
-  usable; numbers are entered in a small popover on the cell, and the grid is
+  (Notes/Statistics; superseded 14 October 2026 by a wide dialog) and History
+  dock beside the grid, which narrows but stays usable; numbers are entered in a small popover on the cell, and the grid is
   keyboard-first (Space ticks, Enter opens a value, arrow keys move, Ctrl+Z
   undoes); History and Settings show text labels at desktop width and icons
   only at phone width.
@@ -2069,3 +2069,17 @@ checked on a device.
   choosing a day opens it in the list, and filters apply to both views. On the
   phone the existing header calendar button now switches the views, replacing
   the jump-date popover. The panel width is remembered per browser.
+
+## 14 October 2026 — Habit Notes and Statistics in a dialog
+
+Status: implemented on the `web-app` branch (web only).
+
+- Founder proposal, agreed by the assistant: Notes and Statistics were too
+  constrained in the 440 px docked panel, so they open as a wide dialog
+  instead. This supersedes the docked habit panel from 13 October.
+- Assistant recommendation, adopted: History stays docked and resizable,
+  because it is a narrow list that is read beside the grid. In the dialog, the
+  statistics summary sits beside two columns of sections on wide screens; the
+  dialog closes with Esc, Close or a click outside it.
+- Founder feedback: explanations stay behind an (i) button, as elsewhere in
+  the app; the History calendar's explanation moved there on both platforms.

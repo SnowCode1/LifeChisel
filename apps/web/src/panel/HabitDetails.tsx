@@ -1,18 +1,23 @@
-import { useEffect, useId, useRef } from 'react';
+import { useId } from 'react';
 import type { WeekStart } from '@onpurpose/core/displayPreferences';
 import type { EntryValues } from '@onpurpose/core/entries';
 import type { Habit } from '@onpurpose/core/habits';
 import type { HistoryAction, StoredEvent } from '@onpurpose/core/storage/model';
 import type { Theme } from '@onpurpose/core/theme';
 import { HabitSymbol } from '../ui/HabitSymbol.tsx';
+import { Icon } from '../ui/Icon.tsx';
+import { Modal } from '../ui/Modal.tsx';
 import { Markdown } from './Markdown.tsx';
 import { StatsView } from './StatsView.tsx';
 
 export type HabitTab = 'notes' | 'statistics';
 
-// A habit's Notes and Statistics, docked beside the grid (which narrows but
-// stays usable). On narrow screens it covers the grid instead.
-export function HabitPanel({
+/**
+ * A habit's Notes and Statistics in a wide dialog (full screen on phones), so
+ * charts and calendars have room: the statistics summary sits beside two
+ * columns of sections. Esc or Close returns to the grid.
+ */
+export function HabitDetails({
   habit,
   tab,
   values,
@@ -52,61 +57,39 @@ export function HabitPanel({
 }) {
   const titleId = useId();
   const colour = theme.colour(habit.color);
-  const panel = useRef<HTMLElement>(null);
-  // Opening a habit moves focus into its panel; Esc closes it.
-  useEffect(() => {
-    panel.current?.focus();
-  }, [habit.id]);
   return (
-    <aside
-      ref={panel}
-      className="side-panel"
-      aria-labelledby={titleId}
-      tabIndex={-1}
-      onKeyDown={(event) => {
-        if (event.key === 'Escape' && !event.defaultPrevented) {
-          event.preventDefault();
-          onClose();
-        }
-      }}
-    >
-      <header className="panel-header">
-        <div className="panel-title">
+    <Modal
+      titleId={titleId}
+      className="habit-details"
+      closeOnBackdrop
+      title={
+        <span className="habit-details-title">
           <HabitSymbol icon={habit.icon} colour={colour} size={22} />
-          <h2 id={titleId} style={{ color: colour }}>
-            {habit.name}
-          </h2>
-        </div>
-        <div className="panel-actions">
-          <button
-            type="button"
-            className="text-button"
-            disabled={!editable}
-            onClick={onEdit}
-          >
-            Edit habit
-          </button>
-          <button
-            type="button"
-            className="icon-button"
-            aria-label="Close"
-            onClick={onClose}
-          >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.8"
-              strokeLinecap="round"
-              aria-hidden="true"
-            >
-              <path d="M6 6l12 12M18 6L6 18" />
-            </svg>
-          </button>
-        </div>
-      </header>
+          <span style={{ color: colour }}>{habit.name}</span>
+        </span>
+      }
+      leading={
+        <button
+          type="button"
+          className="icon-button"
+          aria-label="Close"
+          onClick={onClose}
+        >
+          <Icon name="close" size={18} />
+        </button>
+      }
+      trailing={
+        <button
+          type="button"
+          className="text-button"
+          disabled={!editable}
+          onClick={onEdit}
+        >
+          Edit habit
+        </button>
+      }
+      onClose={onClose}
+    >
       <div
         className="segmented panel-tabs"
         role="tablist"
@@ -120,6 +103,7 @@ export function HabitPanel({
             id={`${titleId}-${value}`}
             aria-selected={tab === value}
             aria-controls={`${titleId}-panel`}
+            data-autofocus={tab === value ? true : undefined}
             onClick={() => onTab(value)}
           >
             {value === 'notes' ? 'Notes' : 'Statistics'}
@@ -127,7 +111,7 @@ export function HabitPanel({
         ))}
       </div>
       <div
-        className="panel-body"
+        className="details-body"
         id={`${titleId}-panel`}
         role="tabpanel"
         aria-labelledby={`${titleId}-${tab}`}
@@ -147,7 +131,7 @@ export function HabitPanel({
             onEditGoal={onEditGoal}
           />
         ) : (
-          <>
+          <div className="details-notes">
             {habit.description ? (
               <article className="note">
                 <Markdown
@@ -172,9 +156,9 @@ export function HabitPanel({
                 {habit.description ? 'Edit notes' : 'Add notes'}
               </button>
             </div>
-          </>
+          </div>
         )}
       </div>
-    </aside>
+    </Modal>
   );
 }

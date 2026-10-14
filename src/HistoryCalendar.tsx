@@ -8,12 +8,15 @@ import {
   type WeekStart,
 } from '@onpurpose/core/displayPreferences';
 import {
+  historyCalendarInfo,
   historyCountLabel,
   type HistoryCalendar as Calendar,
   type HistoryCalendarDay,
 } from '@onpurpose/core/history';
 import { monthDays } from '@onpurpose/core/statistics';
 import type { StoredState } from '@onpurpose/core/storage/model';
+import Animated from 'react-native-reanimated';
+import { appear } from './motion';
 import { useSheetScroll } from './SheetModal';
 import { themedStyles, useTheme } from './ThemeContext';
 
@@ -57,6 +60,8 @@ export function HistoryCalendar({
   const [scale, setScale] = useState<Scale>('month');
   const thisMonth = today.slice(0, 7);
   const [month, setMonth] = useState(thisMonth);
+  // The explanation stays behind the info button, as in Statistics.
+  const [explained, setExplained] = useState(false);
   const colours = useMemo(
     () =>
       new Map(
@@ -115,6 +120,23 @@ export function HistoryCalendar({
             );
           })}
         </View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="About the calendar"
+          accessibilityState={{ expanded: explained }}
+          onPress={() => setExplained((value) => !value)}
+          hitSlop={4}
+          style={({ pressed }) => [
+            styles.infoButton,
+            { opacity: pressed ? 0.5 : 1 },
+          ]}
+        >
+          <Icon
+            name="info"
+            size={18}
+            color={explained ? theme.ink(0xd0) : theme.ink(0x7a)}
+          />
+        </Pressable>
         <View style={styles.stepper}>
           <Pressable
             accessibilityRole="button"
@@ -156,6 +178,11 @@ export function HistoryCalendar({
         </View>
       </View>
 
+      {explained && (
+        <Animated.View entering={appear} style={styles.info}>
+          <Text style={styles.infoText}>{historyCalendarInfo[scale]}</Text>
+        </Animated.View>
+      )}
       {scale === 'month' ? (
         <View style={styles.grid}>
           {weekDayOrder(weekStart).map((day) => (
@@ -301,13 +328,9 @@ export function HistoryCalendar({
           })}
         </View>
       )}
-      <Text style={styles.note}>
-        {calendar.days.size
-          ? scale === 'month'
-            ? 'Dots show the habits changed each day. Tap a day to see its changes.'
-            : 'Each dot is a day with changes, in the colour of its most-changed habit. Tap a month or a day.'
-          : 'No changes to show.'}
-      </Text>
+      {!calendar.days.size && (
+        <Text style={styles.note}>No changes to show.</Text>
+      )}
     </ScrollView>
   );
 }
@@ -318,8 +341,7 @@ const useStyles = themedStyles((t) => ({
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 8,
+    gap: 4,
     marginBottom: 10,
   },
   segmented: {
@@ -337,7 +359,20 @@ const useStyles = themedStyles((t) => ({
   segmentSelected: { backgroundColor: t.ink(0x30) },
   segmentText: { color: t.ink(0x9c), fontSize: 13, fontWeight: '600' },
   segmentTextSelected: { color: t.ink(0xf0) },
-  stepper: { flexDirection: 'row', alignItems: 'center' },
+  stepper: { flexDirection: 'row', alignItems: 'center', marginLeft: 'auto' },
+  infoButton: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  info: {
+    padding: 12,
+    marginBottom: 10,
+    borderRadius: 12,
+    backgroundColor: t.ink(0x12),
+  },
+  infoText: { color: t.ink(0xad), fontSize: 13, lineHeight: 19 },
   nav: {
     width: 40,
     height: 40,

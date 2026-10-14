@@ -105,10 +105,80 @@
 }
 
 /* Statistics. */
-.stats {
+.stats,
+.stats-summary,
+.stats-sections {
   display: flex;
   flex-direction: column;
   gap: 18px;
+}
+
+/* A habit's Notes and Statistics: a wide dialog (full screen on phones). */
+.modal.habit-details {
+  width: min(1180px, calc(100vw - 48px));
+  height: min(920px, calc(100dvh - 48px));
+}
+.modal.habit-details .modal-body {
+  padding: 16px 28px 32px;
+}
+@media (max-width: 600px) {
+  .modal.habit-details {
+    width: 100vw;
+    height: 100dvh;
+  }
+  .modal.habit-details .modal-body {
+    padding: 12px 16px 24px;
+  }
+}
+.habit-details-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.habit-details-title > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.habit-details .panel-tabs {
+  max-width: 320px;
+  margin: 0 auto 22px;
+}
+.details-body {
+  container: details / inline-size;
+}
+.details-notes {
+  max-width: 68ch;
+  margin: 0 auto;
+}
+/* Sections flow in two columns once there is room... */
+@container details (min-width: 640px) {
+  .stats-sections {
+    display: block;
+    columns: 2;
+    column-gap: 36px;
+  }
+  .stats-sections > * {
+    break-inside: avoid;
+    margin-bottom: 26px;
+  }
+}
+/* ...and on wide screens the summary stays beside them. */
+@container details (min-width: 960px) {
+  .stats {
+    display: grid;
+    grid-template-columns: 300px minmax(0, 1fr);
+    align-items: start;
+    gap: 22px 40px;
+  }
+  .stats-summary {
+    position: sticky;
+    top: 0;
+  }
+  .stats > .info-note {
+    grid-column: 2;
+  }
 }
 .stats-overview p {
   margin: 0;

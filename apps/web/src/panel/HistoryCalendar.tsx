@@ -1,10 +1,11 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { addMonths } from '@onpurpose/core/calendar';
 import {
   weekDayOrder,
   type WeekStart,
 } from '@onpurpose/core/displayPreferences';
 import {
+  historyCalendarInfo,
   historyCountLabel,
   type HistoryCalendar as Calendar,
   type HistoryCalendarDay,
@@ -89,6 +90,8 @@ export function HistoryCalendar({
     return `${dayName(date)}, ${historyCountLabel(day.counts)}${habits.length ? `: ${habits.join(', ')}` : ''}`;
   };
   const weekdays = weekDayOrder(weekStart);
+  // The explanation stays behind the info button, as elsewhere in the app.
+  const [explained, setExplained] = useState(false);
 
   return (
     <div className="history-calendar">
@@ -106,6 +109,15 @@ export function HistoryCalendar({
             </button>
           ))}
         </div>
+        <button
+          type="button"
+          className="info-button"
+          aria-label="About the calendar"
+          aria-expanded={explained}
+          onClick={() => setExplained((value) => !value)}
+        >
+          <Icon name="info" size={17} />
+        </button>
         <div className="calendar-step">
           <button
             type="button"
@@ -141,6 +153,9 @@ export function HistoryCalendar({
         </div>
       </div>
 
+      {explained && (
+        <p className="calendar-explanation">{historyCalendarInfo[scale]}</p>
+      )}
       {scale === 'month' ? (
         <div className="month-view">
           <div className="weekdays" aria-hidden="true">
@@ -252,13 +267,9 @@ export function HistoryCalendar({
           })}
         </div>
       )}
-      <p className="hint calendar-hint">
-        {calendar.days.size
-          ? scale === 'month'
-            ? 'Dots show the habits changed each day. Choose a day to see its changes.'
-            : 'Each dot is a day with changes, in the colour of its most-changed habit. Choose a month or a day.'
-          : 'No changes to show.'}
-      </p>
+      {!calendar.days.size && (
+        <p className="hint calendar-hint">No changes to show.</p>
+      )}
     </div>
   );
 }

@@ -2006,3 +2006,21 @@ History, panel and notes checks passed.
 Not checked: the phone calendar on iPhone or Android (typecheck, lint and both
 exports only). The Expo browser preview could not be used: it stops at start-up
 in the Skia grid drawing module (`cellPainter.ts`, unchanged here).
+
+### Web habit details dialog; calendar explanation behind (i)
+
+Automated: `npm run check` passed; `npm test` passed; `npm run web:build`
+built; Android and iOS bundles exported (core gained the calendar's
+explanation text).
+
+Headless desktop Chrome with sample data: a habit's name opened a 1180 px
+dialog on Notes with History still docked behind it; on Statistics the
+300 px summary sat beside two columns of sections, charts widened to the
+columns, a calendar day changed its value from inside the dialog, Edit habit
+opened above it and returned to it, and Esc, Close or a click outside closed
+it while a click inside did not. At 900 px wide the summary sat above two
+columns; at 390 px the dialog was full screen with one column. The History
+calendar's explanation appeared only after the (i) button, inline below the
+controls. The earlier panel, notes, goals, History and calendar checks
+passed after closing the dialog before using the grid. The phone calendar's
+(i) button is unchecked on a device.

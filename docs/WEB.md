@@ -7,7 +7,7 @@ data format with the phone app through `@onpurpose/core`.
 Status: the home grid (layout A, below) records all four entry types, follows
 the saved theme and cell look, and supports Undo/Redo (buttons, Ctrl+Z,
 Ctrl+Shift+Z or Ctrl+Y) and the four-second quick undo. Habits can be added,
-edited, reordered and archived, and each has a docked Notes/Statistics panel.
+edited, reordered and archived, and each has a Notes/Statistics dialog.
 History has its own panel, and Settings covers appearance, grid sizes, daily
 tracking, backups and archived habits. Goals and notes can be edited. A quiet
 sidebar holds everything around the grid. Sync is not built yet.
@@ -78,7 +78,7 @@ The OnPurpose brand links to the landing page (`src/config.ts`: `/` in builds,
 the landing development server in development).
 
 A quiet sidebar on the left (`Sidebar.tsx`, founder request, 14 October 2026) holds what surrounds the grid, which stays the only page: New habit;
-Habits (the current page, with a count), History (toggles the docked panel),
+Habits (the current page, with a count), History (toggles the docked History panel),
 Archived and Settings; then where the data is kept ("Saved in this browser",
 "Not saved yet" after a failed save, opening Backups), Keyboard shortcuts and
 Collapse. It narrows to icons when collapsed (remembered per browser) or below
@@ -109,16 +109,20 @@ and `recentNumericTotals`, exactly as the phone does. Categories created while
 recording join the habit only on Done. Every entry and archive shows the shared
 `quickUndo` receipt for four seconds.
 
-## Habit panel
+## Habit details
 
-Clicking a habit's name (or **Notes and statistics** in its menu) docks a
-panel beside the grid, which narrows to whole columns but stays usable; below
-1000 px wide the panel covers the grid instead. It opens on Notes when the
-habit has notes, otherwise on Statistics, as on the phone. Esc closes it.
-Drag the panel's edge to resize it (or focus the edge and use the arrow keys,
-Home/End, and Enter or a double click for the default 440 px); the width is
-remembered per browser (`panel/PanelResizer.tsx`), and the grid keeps at least
-420 px.
+Clicking a habit's name (or **Notes and statistics** in its menu) opens its
+Notes and Statistics in a wide dialog over the grid (`panel/HabitDetails.tsx`;
+full screen on phones), with Edit habit beside the title. It opens on Notes
+when the habit has notes, otherwise on Statistics, as on the phone. Esc, Close
+or a click outside it closes it. The layout follows the dialog's own width
+(container queries): on wide screens the statistics summary (range, period,
+headline, tiles, goal and quota progress) stays in a left column beside two
+columns of sections; at medium widths the summary sits above two columns; on
+phones everything is one column. Notes read at up to 68 characters a line.
+Editors, the goal editor and value popovers opened from it appear above it.
+This replaced the docked habit panel (founder decision, 14 October 2026),
+which was cramped at 440 px.
 
 - **Notes** render from core's Markdown token stream as React elements: text
   is escaped, links pass core `descriptionLink` and open in a new tab, and
@@ -135,8 +139,12 @@ remembered per browser (`panel/PanelResizer.tsx`), and the grid keeps at least
 
 ## History
 
-The sidebar's History item (or H) docks the History panel in the same slot as
-the habit panel. It uses core `history.ts` exactly as the phone does:
+The sidebar's History item (or H) docks the History panel beside the grid,
+which narrows to whole columns; below 1000 px wide the panel covers the grid
+instead. Drag the panel's edge to resize it (or focus the edge and use the
+arrow keys, Home/End, and Enter or a double click for the default 440 px); the
+width is remembered per browser (`panel/PanelResizer.tsx`), and the grid keeps
+at least 420 px. A habit's details can open over it. History uses core `history.ts` exactly as the phone does:
 active habit actions in log order, grouped by the day they were made (Today
 and Yesterday open; filtered lists open fully), neighbouring same-date
 entries within five minutes collapsed into a burst, and entries for another
@@ -146,7 +154,8 @@ month with a coloured dot for each habit changed each day ("+n" beyond four),
 or a year with one dot per day in its most-changed habit's colour, from core
 `historyCalendar` (`panel/HistoryCalendar.tsx`, the same calendar as the
 phone). Choosing a day opens it in the list; choosing a month in the year
-opens that month. The Undo bar always names the newest
+opens that month. What the dots mean is behind the (i) button beside Month
+and Year, as with explanations elsewhere. The Undo bar always names the newest
 action, even when filtered out; Undo and Redo live there (and on Ctrl+Z /
 Ctrl+Shift+Z) rather than in the top bar.
 
