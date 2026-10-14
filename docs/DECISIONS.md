@@ -2040,3 +2040,16 @@ Status: implemented on the `web-app` branch; checked in desktop Chrome only.
 - Assistant implementation: in development, the phone's fictional sample
   history opens in memory (`?sample`) so number, text and category cells can
   be judged with realistic data; production builds exclude it.
+
+## 14 October 2026 — Landing page scaffold
+
+Status: scaffold built on the `web-app` branch; copy is a first draft.
+
+- Founder decisions: put the day-grid scrollbars outside the cells, and make
+  automatic cells square (day columns as wide as the rows are tall). Then set
+  up a basic landing page scaffold.
+- Assistant proposal awaiting review: the landing page is its own static site
+  in `apps/landing` (plain HTML and CSS through Vite, no framework), separate
+  from the web app so it stays small and fast to load and index. It assumes the
+  web app is served at `/app/` on the same site; hosting, domain and final
+  brand are open. The copy only states confirmed scope.

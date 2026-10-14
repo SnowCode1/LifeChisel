@@ -1971,3 +1971,16 @@ measured 46 px with text cells present, and no width from 390 to 1440 px cut
 a column. The earlier entry, habits, panel, History, Settings, goals and notes
 checks passed again. Not checked: Safari, Firefox, touch, a real mouse wheel
 or trackpad, and the founder's own data.
+
+### Web grid scrollbars outside the cells; landing page scaffold
+
+Automated: `npm run check` passed (now typechecking `apps/landing` too);
+`npm run web:build` and `npm run landing:build` built.
+
+Headless desktop Chrome: automatic cells measured 56 × 56 px (46 × 46 px at
+390 px wide); the vertical scrollbar sat in the gutter right of the cells and
+the horizontal one below the last row, neither overlapping a cell; no width
+from 390 to 1440 px cut a column; history loading, tap animations and grid
+sizes behaved as before. The landing page rendered in dark at 1440 px and light
+at 390 px without sideways scrolling, and its web app links pointed at the
+development server. Not checked: Safari, Firefox, touch, real hosting.

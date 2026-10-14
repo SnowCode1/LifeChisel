@@ -75,6 +75,8 @@ No env file is needed to run the app. `.env.local` only holds the
   Use a physical iPhone, and EAS for iOS builds (see [RELEASING.md](RELEASING.md)).
 - **Browser app:** `npm run web:dev` runs the separate browser app in
   `apps/web`; see [WEB.md](WEB.md).
+- **Landing page:** `npm run landing:dev` runs the static landing page in
+  `apps/landing`; see [LANDING.md](LANDING.md).
 - **Expo browser preview:** `npm run web` is a limited preview of the phone screens. It stores data in browser
   `localStorage` (`packages/core/src/storage/browserRepository.ts`), not SQLite, and shows a
   notice instead of the habit grid, because the Skia canvas grid is built for

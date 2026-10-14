@@ -300,6 +300,13 @@ the web draws them. The product rules above (stable rows, immediate feedback, no
 or login without a requirement) apply to the web app too. Sync and the
 web/phone pricing link are not built.
 
+## Landing page
+
+`apps/landing` is a static landing page (plain HTML/CSS through Vite, no
+framework); read docs/LANDING.md. Its copy may claim only confirmed scope from
+PROJECT_GOALS.md, describes store apps as coming soon until published, and
+never copies `private/` planning. `src/config.ts` holds the web app address.
+
 ## UI and accessibility
 
 Keep completed rows in place by default. Optional Hide completed today filters rows meeting their effective-dated goals at Today. Preserve Show completed and full rows when browsing other dates. Avoid gesture-only essential actions. Expose

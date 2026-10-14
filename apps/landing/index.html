@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark light" />
+    <meta
+      name="description"
+      content="A habit tracker built around one fast grid: tick today's habits in a few seconds and get on with your day."
+    />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <title>OnPurpose — habit tracking without the friction</title>
+  </head>
+  <body>
+    <!-- Scaffold: OnPurpose is a working name and this copy is a first draft.
+         Claims stay within confirmed scope (PROJECT_GOALS.md). -->
+    <header class="site-header">
+      <a class="brand" href="/" aria-label="OnPurpose home">
+        <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true">
+          <rect width="24" height="24" rx="7" fill="var(--accent)" />
+          <path
+            d="m7 12.5 3.2 3.2L17 9"
+            fill="none"
+            stroke="var(--on-accent)"
+            stroke-width="2.4"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          />
+        </svg>
+        OnPurpose
+      </a>
+      <nav aria-label="Sections">
+        <a href="#features">Features</a>
+        <a href="#pricing">Pricing</a>
+        <a href="https://github.com/SnowCode1/OnPurpose">Source</a>
+      </nav>
+      <a class="button small" data-app-link href="/app/">Open the web app</a>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="hero-text">
+          <h1>Track your habits in seconds, then get on with your day.</h1>
+          <p class="lede">
+            OnPurpose puts every habit and day in one grid. Open it, tap the
+            same familiar spots, and you are done: no menus, no celebrations,
+            nothing to read first.
+          </p>
+          <div class="actions">
+            <a class="button" data-app-link href="/app/">Open the web app</a>
+            <span class="note">iPhone and Android apps coming soon</span>
+          </div>
+        </div>
+        <figure class="hero-figure" aria-hidden="true">
+          <div class="device">
+            <table class="demo-grid">
+              <thead>
+                <tr>
+                  <th>October</th>
+                  <th><span>Thu</span>8</th>
+                  <th><span>Fri</span>9</th>
+                  <th><span>Sat</span>10</th>
+                  <th><span>Sun</span>11</th>
+                  <th><span>Mon</span>12</th>
+                  <th><span>Tue</span>13</th>
+                  <th class="today"><span>Today</span>14</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr style="--habit: #82e6bc">
+                  <th><b>Go for a walk</b><small>Every day</small></th>
+                  <td class="join-r"><span class="box on"></span></td>
+                  <td class="join-l join-r"><span class="box on"></span></td>
+                  <td class="join-l join-r"><span class="box on"></span></td>
+                  <td class="join-l"><span class="box on"></span></td>
+                  <td><span class="box"></span></td>
+                  <td class="join-r"><span class="box on"></span></td>
+                  <td class="today join-l"><span class="box on"></span></td>
+                </tr>
+                <tr style="--habit: #bda5ff">
+                  <th><b>Read</b><small>At least 20 minutes</small></th>
+                  <td class="met"><span class="num">30</span></td>
+                  <td class="met"><span class="num">45</span></td>
+                  <td><span class="num">—</span></td>
+                  <td class="met"><span class="num">20</span></td>
+                  <td class="met"><span class="num">35</span></td>
+                  <td class="met"><span class="num">40</span></td>
+                  <td class="today met"><span class="num">25</span></td>
+                </tr>
+                <tr style="--habit: #ffb38a">
+                  <th><b>Stretch</b><small>Every day</small></th>
+                  <td><span class="box"></span></td>
+                  <td class="join-r"><span class="box on"></span></td>
+                  <td class="join-l join-r"><span class="box on"></span></td>
+                  <td class="join-l"><span class="box on"></span></td>
+                  <td><span class="box"></span></td>
+                  <td class="join-r"><span class="box on"></span></td>
+                  <td class="today join-l"><span class="box on"></span></td>
+                </tr>
+                <tr style="--habit: #c5e788">
+                  <th><b>Workout</b><small>Run, gym or swim</small></th>
+                  <td><span class="word">Run</span></td>
+                  <td><span class="word">Rest</span></td>
+                  <td><span class="word">Gym</span></td>
+                  <td><span class="word">Run</span></td>
+                  <td><span class="word">—</span></td>
+                  <td><span class="word">Swim</span></td>
+                  <td class="today"><span class="word">Run</span></td>
+                </tr>
+                <tr style="--habit: #7dddd9">
+                  <th><b>Wind down</b><small>Every evening</small></th>
+                  <td class="join-r"><span class="box on"></span></td>
+                  <td class="join-l"><span class="box on"></span></td>
+                  <td><span class="box"></span></td>
+                  <td class="join-r"><span class="box on"></span></td>
+                  <td class="join-l join-r"><span class="box on"></span></td>
+                  <td class="join-l"><span class="box on"></span></td>
+                  <td class="today"><span class="box"></span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </figure>
+      </section>
+
+      <section id="features" class="features" aria-labelledby="features-title">
+        <h2 id="features-title">Built to stay out of your way</h2>
+        <ul>
+          <li>
+            <h3>One grid, every habit</h3>
+            <p>
+              Habits down the side, days across the top, in the order you
+              choose. Rows never jump around, so your hand learns where to tap.
+            </p>
+          </li>
+          <li>
+            <h3>More than checkboxes</h3>
+            <p>
+              Tick a box, count minutes or glasses, pick a category like Run or
+              Gym, or jot a line of text, all in the same grid.
+            </p>
+          </li>
+          <li>
+            <h3>Goals that fit real weeks</h3>
+            <p>
+              Every day, chosen weekdays, or three times a week. Change a goal
+              from a date onwards and earlier results stay as they were.
+            </p>
+          </li>
+          <li>
+            <h3>Statistics when you want them</h3>
+            <p>
+              Streaks, trends, a calendar, the days and times you do best. They
+              are one tap away and never in the way of tracking.
+            </p>
+          </li>
+          <li>
+            <h3>Nothing is ever lost</h3>
+            <p>
+              Every change is recorded in History and can be undone. Export a
+              full backup whenever you like and open it on another device.
+            </p>
+          </li>
+          <li>
+            <h3>No account needed</h3>
+            <p>
+              Your habits are saved on your device. The source is open under the
+              GPL, so anyone can check how it works.
+            </p>
+          </li>
+        </ul>
+      </section>
+
+      <section id="pricing" class="pricing" aria-labelledby="pricing-title">
+        <h2 id="pricing-title">Simple pricing</h2>
+        <div class="plans">
+          <article class="plan">
+            <h3>Free</h3>
+            <p class="price">US$0</p>
+            <p>Up to five active habits, with every feature.</p>
+          </article>
+          <article class="plan featured">
+            <h3>Unlimited</h3>
+            <p class="price">US$9.99 <small>once</small></p>
+            <p>As many habits as you like. One payment, no subscription.</p>
+          </article>
+        </div>
+        <p class="note">
+          Archived habits never count towards the limit, and your records,
+          History, exports and backups are never locked.
+        </p>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>
+        © <span data-year>2026</span> Daniel Adams. OnPurpose is free software
+        under the GNU GPL, version 3 or later.
+      </p>
+      <p>
+        <a href="https://github.com/SnowCode1/OnPurpose">Source code</a>
+      </p>
+    </footer>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

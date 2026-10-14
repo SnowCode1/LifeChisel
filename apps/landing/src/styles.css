@@ -1,0 +1,418 @@
+/*
+ * The page font, in one place: the system font, like the apps. Colours are
+ * tokens below, dark by default (the apps' default theme) with a light
+ * version on warm Paper.
+ */
+:root {
+  --font-ui:
+    system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', sans-serif;
+  --background: #000000;
+  --surface: #0f0f0f;
+  --edge: #262626;
+  --ink: #e8e8e8;
+  --ink-strong: #ffffff;
+  --ink-soft: #b4b4b4;
+  --ink-quiet: #8c8c8c;
+  --accent: #82e6bc;
+  --on-accent: #04130d;
+  --page: 1120px;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    --background: #f6f3ec;
+    --surface: #fffdf8;
+    --edge: #e2ddd1;
+    --ink: #24221e;
+    --ink-strong: #000000;
+    --ink-soft: #4d4a43;
+    --ink-quiet: #6f6b62;
+    --accent: #1f7a5a;
+    --on-accent: #ffffff;
+    color-scheme: light;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+html {
+  scroll-behavior: smooth;
+}
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+body {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: 17px;
+  line-height: 1.55;
+  color: var(--ink);
+  background-color: var(--background);
+}
+a {
+  color: inherit;
+}
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+h1,
+h2,
+h3 {
+  color: var(--ink-strong);
+  line-height: 1.15;
+  letter-spacing: -0.015em;
+}
+
+/* Header. */
+.site-header {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  max-width: var(--page);
+  margin: 0 auto;
+  padding: 20px 24px;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 650;
+  text-decoration: none;
+  color: var(--ink-strong);
+}
+.site-header nav {
+  display: flex;
+  gap: 22px;
+  margin-left: auto;
+  font-size: 15px;
+}
+.site-header nav a {
+  text-decoration: none;
+  color: var(--ink-soft);
+}
+.site-header nav a:hover {
+  color: var(--ink-strong);
+}
+
+/* Buttons. */
+.button {
+  display: inline-flex;
+  align-items: center;
+  height: 48px;
+  padding: 0 22px;
+  border-radius: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  color: var(--on-accent);
+  background-color: var(--accent);
+}
+.button:hover {
+  filter: brightness(1.08);
+}
+.button.small {
+  height: 38px;
+  padding: 0 16px;
+  font-size: 15px;
+}
+.note {
+  font-size: 14px;
+  color: var(--ink-quiet);
+}
+
+/* Hero: the promise beside a picture of the grid. */
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+  align-items: center;
+  gap: 56px;
+  max-width: var(--page);
+  margin: 0 auto;
+  padding: 56px 24px 88px;
+}
+.hero h1 {
+  margin: 0 0 20px;
+  font-size: clamp(36px, 5vw, 56px);
+}
+.lede {
+  margin: 0 0 32px;
+  max-width: 34em;
+  font-size: 19px;
+  color: var(--ink-soft);
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px 20px;
+}
+.hero-figure {
+  margin: 0;
+  min-width: 0;
+}
+
+/* The grid picture is always dark, like the apps' default theme. */
+.device {
+  overflow: hidden;
+  padding: 10px 6px 6px 0;
+  border: 1px solid #262626;
+  border-radius: 22px;
+  background-color: #000000;
+  box-shadow: 0 30px 80px rgb(0 0 0 / 0.35);
+  color: #e8e8e8;
+}
+.demo-grid {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  table-layout: fixed;
+}
+.demo-grid th,
+.demo-grid td {
+  padding: 0;
+  font-weight: inherit;
+}
+.demo-grid thead th {
+  height: 52px;
+  font-size: 17px;
+  font-weight: 600;
+  text-align: center;
+  border-bottom: 1px solid #1c1c1c;
+}
+.demo-grid thead th span {
+  display: block;
+  font-size: 10px;
+  font-weight: 500;
+  color: #979797;
+}
+.demo-grid thead th:first-child {
+  width: 34%;
+  padding: 0 0 8px 16px;
+  vertical-align: bottom;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 400;
+  color: #979797;
+}
+.demo-grid thead th.today {
+  border-radius: 10px 10px 0 0;
+  background-color: #191919;
+}
+.demo-grid thead th.today span {
+  color: #ffffff;
+}
+.demo-grid tbody th {
+  height: 52px;
+  padding: 0 8px 0 16px;
+  text-align: left;
+  border-bottom: 1px solid #1c1c1c;
+  border-right: 1px solid #1c1c1c;
+}
+.demo-grid tbody th b,
+.demo-grid tbody th small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.demo-grid tbody th b {
+  font-weight: 600;
+  color: var(--habit);
+}
+.demo-grid tbody th small {
+  font-size: 11px;
+  color: #979797;
+}
+.demo-grid td {
+  position: relative;
+  text-align: center;
+  border-bottom: 1px solid #1c1c1c;
+}
+.demo-grid tbody tr:last-child > * {
+  border-bottom: 0;
+}
+.demo-grid td.today {
+  background-color: #090909;
+  box-shadow:
+    inset 1px 0 #262626,
+    inset -1px 0 #262626;
+}
+.demo-grid td.met {
+  background-color: color-mix(in srgb, var(--habit) 14%, #000000);
+}
+.demo-grid .box {
+  position: relative;
+  z-index: 1;
+  display: inline-block;
+  width: 22px;
+  height: 22px;
+  vertical-align: middle;
+  border: 1.5px solid color-mix(in srgb, var(--habit) 55%, #000000);
+  border-radius: 50%;
+}
+.demo-grid .box.on {
+  border-color: var(--habit);
+  background: var(--habit)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5' fill='none' stroke='%23000' stroke-width='2.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+    center / 16px no-repeat;
+}
+/* Checked neighbours join, as in the apps. */
+.demo-grid td.join-l::before,
+.demo-grid td.join-r::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 50%;
+  height: 12px;
+  transform: translateY(-50%);
+  background-color: var(--habit);
+}
+.demo-grid td.join-l::before {
+  left: 0;
+}
+.demo-grid td.join-r::after {
+  right: 0;
+}
+.demo-grid .num {
+  font-weight: 600;
+  color: var(--habit);
+}
+.demo-grid .word {
+  font-size: 11px;
+  color: var(--habit);
+}
+
+/* Features. */
+.features,
+.pricing {
+  max-width: var(--page);
+  margin: 0 auto;
+  padding: 72px 24px;
+  border-top: 1px solid var(--edge);
+}
+.features h2,
+.pricing h2 {
+  margin: 0 0 36px;
+  font-size: clamp(28px, 3.4vw, 38px);
+}
+.features ul {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 36px 40px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.features h3 {
+  margin: 0 0 8px;
+  font-size: 19px;
+}
+.features p {
+  margin: 0;
+  color: var(--ink-soft);
+}
+
+/* Pricing. */
+.plans {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 320px));
+  gap: 20px;
+}
+.plan {
+  padding: 26px 28px;
+  border: 1px solid var(--edge);
+  border-radius: 18px;
+  background-color: var(--surface);
+}
+.plan.featured {
+  border-color: var(--accent);
+}
+.plan h3 {
+  margin: 0;
+  font-size: 17px;
+  color: var(--ink-soft);
+}
+.plan .price {
+  margin: 6px 0 10px;
+  font-size: 34px;
+  font-weight: 650;
+  color: var(--ink-strong);
+}
+.plan .price small {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ink-quiet);
+}
+.plan p:last-child {
+  margin: 0;
+  color: var(--ink-soft);
+}
+.pricing > .note {
+  max-width: 40em;
+  margin: 24px 0 0;
+}
+
+/* Footer. */
+.site-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 24px;
+  max-width: var(--page);
+  margin: 0 auto;
+  padding: 32px 24px 48px;
+  border-top: 1px solid var(--edge);
+  font-size: 14px;
+  color: var(--ink-quiet);
+}
+.site-footer p {
+  margin: 0;
+}
+
+/* Narrower screens: one column, the picture under the promise. */
+@media (max-width: 900px) {
+  .hero {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 40px;
+    padding-top: 32px;
+  }
+  .features ul {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 600px) {
+  body {
+    font-size: 16px;
+  }
+  .site-header {
+    gap: 16px;
+    padding: 16px;
+  }
+  .site-header nav {
+    display: none;
+  }
+  .site-header .button {
+    margin-left: auto;
+  }
+  .hero,
+  .features,
+  .pricing {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .features ul,
+  .plans {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  /* The picture keeps Today and the three days before it. */
+  .demo-grid thead th:nth-child(-n + 4):not(:first-child),
+  .demo-grid tbody td:nth-child(-n + 4) {
+    display: none;
+  }
+}

@@ -56,6 +56,7 @@ Android over USB and troubleshooting, see the
 
 ```sh
 npm run web:dev         # the browser app (apps/web); see docs/WEB.md
+npm run landing:dev     # the landing page (apps/landing); see docs/LANDING.md
 npm run web             # Expo browser preview of phone screens; the grid is phones only
 npm run check           # TypeScript, lint and formatting
 npm test                # storage, replay, date, layout and other test suites
@@ -74,6 +75,7 @@ screenshot sharing, isolated sample data and grid performance diagnostics.
 - [Development setup](docs/DEVELOPMENT.md) and [testing](docs/TESTING.md)
 - [Architecture](docs/ARCHITECTURE.md) and [storage design](docs/STORAGE.md)
 - [Web app](docs/WEB.md) and the shared core package
+- [Landing page](docs/LANDING.md)
 - [Decision log](docs/DECISIONS.md)
 - [Contributing](CONTRIBUTING.md)
 - [Instructions for AI coding assistants](AGENTS.md) (also loaded through

@@ -11,6 +11,7 @@ confirmed requirements and open questions.
 | [ARCHITECTURE.md](ARCHITECTURE.md) | How the app is structured, subsystem responsibilities, known limits                   |
 | [STORAGE.md](STORAGE.md)           | Event log, replay, Undo, versions, backup format                                      |
 | [WEB.md](WEB.md)                   | The browser app, the shared core package, web storage and commands                    |
+| [LANDING.md](LANDING.md)           | The static landing page scaffold, its content rules and commands                      |
 | [PERFORMANCE.md](PERFORMANCE.md)   | Grid rendering design, diagnostics and investigation log                              |
 | [TESTING.md](TESTING.md)           | Automated checks, phone regression checklist, usability study                         |
 | [RELEASING.md](RELEASING.md)       | Internal builds, TestFlight, the in-app unlock and the path to the App Store          |
