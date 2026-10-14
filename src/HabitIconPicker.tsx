@@ -5,6 +5,7 @@ import {
   habitIconLabel,
   habitIconPackLabel,
   isSingleEmoji,
+  commonHabitEmoji as emojiChoices,
   type HabitIcon,
 } from '@onpurpose/core/habitIcons';
 import {
@@ -14,40 +15,6 @@ import {
 import { HabitSymbol } from './HabitSymbol';
 import { themedStyles, useTheme } from './ThemeContext';
 
-const emojiChoices = [
-  '🚶',
-  '🏃',
-  '🏋️',
-  '🚴',
-  '🧘',
-  '💧',
-  '☕',
-  '🥗',
-  '🍎',
-  '💊',
-  '🪥',
-  '🛏️',
-  '🌙',
-  '☀️',
-  '🌿',
-  '📖',
-  '✍️',
-  '📓',
-  '🎓',
-  '🧠',
-  '🎵',
-  '🎹',
-  '🎨',
-  '💻',
-  '🎯',
-  '🧹',
-  '🏠',
-  '📞',
-  '💬',
-  '❤️',
-  '🐾',
-  '💰',
-];
 type Choice = { value: HabitIcon; label: string };
 export function HabitIconPicker({
   icon,

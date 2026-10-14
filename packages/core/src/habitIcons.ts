@@ -35,3 +35,38 @@ export function habitIconPackLabel(icon?: HabitIcon): string {
   if (icon?.startsWith('tabler:')) return 'Tabler';
   return icon ? 'Emoji' : 'None';
 }
+// Suggested emoji for habits, shown before the person types their own.
+export const commonHabitEmoji = [
+  '🚶',
+  '🏃',
+  '🏋️',
+  '🚴',
+  '🧘',
+  '💧',
+  '☕',
+  '🥗',
+  '🍎',
+  '💊',
+  '🪥',
+  '🛏️',
+  '🌙',
+  '☀️',
+  '🌿',
+  '📖',
+  '✍️',
+  '📓',
+  '🎓',
+  '🧠',
+  '🎵',
+  '🎹',
+  '🎨',
+  '💻',
+  '🎯',
+  '🧹',
+  '🏠',
+  '📞',
+  '💬',
+  '❤️',
+  '🐾',
+  '💰',
+];

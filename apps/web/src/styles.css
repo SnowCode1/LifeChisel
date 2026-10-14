@@ -139,11 +139,15 @@ button[aria-disabled='true'] {
 }
 .grid-scroller {
   width: 100%;
+  /* Before the first measurement: about three weeks; HabitGrid then sets an
+     exact width of whole columns. */
   max-width: calc(
-    var(--name-width) + var(--column) * var(--visible-days) + 12px
+    var(--name-width) + var(--column) * var(--visible-days) + 24px
   );
   overflow: auto;
   overscroll-behavior: contain;
+  /* Horizontal scrolling stops on whole days (see the fit in HabitGrid). */
+  scroll-snap-type: x mandatory;
   /* Keyboard focus scrolls cells clear of the sticky headings and names. */
   scroll-padding: calc(var(--row) + 8px) 0 0 var(--name-width);
 }
@@ -185,6 +189,7 @@ button[aria-disabled='true'] {
   border-bottom: 1px solid var(--rule);
 }
 .grid .day {
+  scroll-snap-align: end;
   width: var(--column);
   min-width: var(--column);
   height: 60px;

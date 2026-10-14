@@ -12,14 +12,21 @@ import {
 } from '@onpurpose/core/displayPreferences';
 import { themeFor, type Theme } from '@onpurpose/core/theme';
 import { createQuickUndo } from '@onpurpose/core/quickUndo';
+import { localDateKey } from '@onpurpose/core/calendar';
 import { openStore } from './storage/openStore.ts';
 import {
   HabitGrid,
   type CellLookStyle,
   type GridHandle,
-} from './HabitGrid.tsx';
+  type GridHandlers,
+} from './grid/HabitGrid.tsx';
+import type { Habit } from '@onpurpose/core/habits';
+import { moveHabit } from '@onpurpose/core/habitOrdering';
+import { habitTrackingStart } from '@onpurpose/core/statistics';
+import { HabitMenu, type HabitMenuAction } from './habits/HabitMenu.tsx';
+import { HabitEditor } from './habits/HabitEditor.tsx';
 import { useToday } from './useToday.ts';
-import { useHabitActions } from './actions.ts';
+import { useHabitActions, MAX_HABITS } from './actions.ts';
 import { EntryDialog, type EntryTarget } from './entry/EntryDialog.tsx';
 import { QuickUndoToast } from './QuickUndoToast.tsx';
 
@@ -48,6 +55,35 @@ function Tracker({ store }: { store: ChangeStore }) {
   useEffect(() => () => quickUndo.dispose(), [quickUndo]);
   const actions = useHabitActions(store, quickUndo);
   const [entry, setEntry] = useState<EntryTarget | null>(null);
+  const [menu, setMenu] = useState<{
+    habit: Habit;
+    anchor: HTMLElement;
+  } | null>(null);
+  const [editor, setEditor] = useState<{
+    habit: Habit;
+    creating: boolean;
+  } | null>(null);
+  const handlers = useMemo<GridHandlers>(
+    () => ({
+      toggle: actions.toggle,
+      openEntry: (habit, date, label, anchor) =>
+        setEntry({ habit, date, label, anchor }),
+      openMenu: (habit, anchor) => setMenu({ habit, anchor }),
+      reorder: (ids) => void actions.reorder(ids),
+      add: () =>
+        setEditor({
+          habit: {
+            id: crypto.randomUUID(),
+            name: '',
+            color: '#82E6BC',
+            type: 'checkbox',
+            startDate: localDateKey(new Date()),
+          },
+          creating: true,
+        }),
+    }),
+    [actions],
+  );
   const theme = themeFor(
     state.themeMode ?? displayDefaults.themeMode,
     prefersDark ? 'dark' : 'light',
@@ -103,6 +139,20 @@ function Tracker({ store }: { store: ChangeStore }) {
   // The entry editor follows the current definition (new categories appear).
   const entryHabit =
     entry && state.habits.find((habit) => habit.id === entry.habit.id);
+  const menuIndex = menu
+    ? habits.findIndex((habit) => habit.id === menu.habit.id)
+    : -1;
+  const menuAction = (habit: Habit, action: HabitMenuAction) => {
+    if (action === 'edit') setEditor({ habit, creating: false });
+    else if (action === 'archive')
+      actions.saveHabit({ ...habit, archived: true });
+    else {
+      const ids = habits.map((item) => item.id);
+      const target = ids.indexOf(habit.id) + (action === 'moveUp' ? -1 : 1);
+      grid.current?.focusHabit(habit.id);
+      actions.reorder(moveHabit(ids, habit.id, target));
+    }
+  };
   return (
     <div className="app">
       <header className="top-bar">
@@ -141,13 +191,12 @@ function Tracker({ store }: { store: ChangeStore }) {
         weekStart={state.weekStart ?? displayDefaults.weekStart}
         weekDividers={state.weekDividers ?? displayDefaults.weekDividers}
         editable={store.canEdit()}
-        onToggle={actions.toggle}
-        onOpen={(habit, date, label, anchor) =>
-          setEntry({ habit, date, label, anchor })
-        }
+        canAdd={state.habits.length < MAX_HABITS}
+        on={handlers}
       />
       <footer className="hints">
-        Space ticks · Enter opens a value · Arrow keys move · Ctrl Z undoes
+        Space ticks · Enter opens a value · Arrow keys move · Alt ↑↓ reorders ·
+        Ctrl Z undoes
       </footer>
       {entry && entryHabit && (
         <EntryDialog
@@ -162,6 +211,35 @@ function Tracker({ store }: { store: ChangeStore }) {
           onAddCategories={(added) =>
             actions.addCategories(entryHabit.id, added)
           }
+        />
+      )}
+      {menu && menuIndex >= 0 && (
+        <HabitMenu
+          habit={menu.habit}
+          anchor={menu.anchor}
+          colour={theme.colour(menu.habit.color)}
+          first={menuIndex === 0}
+          last={menuIndex === habits.length - 1}
+          onClose={() => setMenu(null)}
+          onAction={(action) => menuAction(menu.habit, action)}
+        />
+      )}
+      {editor && (
+        <HabitEditor
+          key={editor.habit.id}
+          habit={editor.habit}
+          creating={editor.creating}
+          initialStartDate={habitTrackingStart(
+            editor.habit,
+            state.values,
+            snapshot.events,
+            today,
+          )}
+          today={today}
+          theme={theme}
+          editable={store.canEdit()}
+          onClose={() => setEditor(null)}
+          onSave={actions.saveHabit}
         />
       )}
       <QuickUndoToast quickUndo={quickUndo} editable={store.canEdit()} />

@@ -4,11 +4,11 @@ The browser version of OnPurpose lives in `apps/web`. It is designed for
 browsers rather than copied from the phone screens, and it shares every rule and
 data format with the phone app through `@onpurpose/core`.
 
-Status: the home grid (layout A, below) toggles checkbox habits, displays
-other entry types read-only, follows the saved theme and cell look, and
-supports Undo/Redo (buttons, Ctrl+Z, Ctrl+Shift+Z or Ctrl+Y). Habit editing,
-the number/text/category entry popover, the docked habit and History panels,
-Settings, statistics, notes, backups and sync are not built yet.
+Status: the home grid (layout A, below) records all four entry types, follows
+the saved theme and cell look, and supports Undo/Redo (buttons, Ctrl+Z,
+Ctrl+Shift+Z or Ctrl+Y) and the four-second quick undo. Habits can be added,
+edited, reordered and archived. The docked habit and History panels,
+Settings, statistics, notes, goal editing, backups and sync are not built yet.
 
 ## Home grid (layout A)
 
@@ -38,7 +38,35 @@ The founder chose this layout from mockups (see DECISIONS.md, 13 October 2026).
 
 The font is set once, as `--font-ui` at the top of `src/styles.css`: the system
 font for now (as on the phone). Grid sizes are the `--name-width`, `--column`,
-`--row` and `--box` variables beside it.
+`--row` and `--box` variables beside it. The grid measures itself to whole
+day columns and horizontal scrolling snaps to days, so no column is left half
+hidden behind the names.
+
+## Entering values
+
+Number, text and category cells open a popover beside the cell (a bottom
+sheet at phone width) on the native `<dialog>` element. The draft stays in the
+popover: Enter (Ctrl+Enter for text) or Done saves with a fresh before-value,
+and Esc, Close or the backdrop discard it. Numbers use core `parseDailyTotal`
+and `recentNumericTotals`, exactly as the phone does. Categories created while
+recording join the habit only on Done. Every entry and archive shows the shared
+`quickUndo` receipt for four seconds.
+
+## Managing habits
+
+- **Add habit** sits after the last row. The editor (a centred dialog, full
+  screen on phones) has the phone's fields and rules: name, type (fixed after
+  creation), categories with short labels and archiving, unit, checked by
+  default, start date, icon (Phosphor, Tabler or emoji, searchable) and colour
+  (presets or OKLCH sliders). Goals are shown but not yet editable on the web.
+- **Row actions:** hovering a name shows a drag handle and a ⋯ menu (also a
+  right-click on the name, or the context-menu key / Shift+F10 on a focused
+  cell): Edit habit, Move up, Move down, Archive.
+- **Reordering:** drag the handle (Esc cancels; only a completed drop saves),
+  use Move up/down, or press Alt+↑/↓ on a focused cell. The order is saved
+  with core `displayedHabitOrder`, so archived habits keep their slots.
+- **Archive** is immediate with a quick-undo receipt, as on the phone.
+  Restoring and deleting archived habits will live in Settings.
 
 ## Repository layout
 
