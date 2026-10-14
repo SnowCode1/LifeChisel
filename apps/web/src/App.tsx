@@ -9,7 +9,10 @@ import type { ChangeStore } from '@onpurpose/core/storage/store';
 import {
   cellLookOf,
   displayDefaults,
+  effectiveColumnSpacing,
 } from '@onpurpose/core/displayPreferences';
+import { gridSizing } from '@onpurpose/core/gridSizing';
+import { useGridSizes } from './grid/gridSizes.ts';
 import { themeFor, type Theme } from '@onpurpose/core/theme';
 import { createQuickUndo } from '@onpurpose/core/quickUndo';
 import { localDateKey } from '@onpurpose/core/calendar';
@@ -182,6 +185,8 @@ function Tracker({
     state.lightBackground ?? displayDefaults.lightBackground,
   );
   useThemeVariables(theme);
+  useGridSizes(gridSizing(state, effectiveColumnSpacing(state)));
+  const [away, setAway] = useState(false);
   const habits = useMemo(
     () => state.habits.filter((habit) => !habit.archived),
     [state.habits],
@@ -214,6 +219,7 @@ function Tracker({
   const cell = cellLookOf(state);
   const boxes =
     (state.checkboxStyle ?? displayDefaults.checkboxStyle) === 'boxes';
+  const animate = state.tapAnimations ?? displayDefaults.tapAnimations;
   const look = useMemo<CellLookStyle>(
     () => ({
       boxes,
@@ -222,8 +228,10 @@ function Tracker({
       streaks: cell.streakNumbers,
       missed: cell.missedDays,
       connector: cell.connectorThickness / 100,
+      animate: animate,
     }),
     [
+      animate,
       boxes,
       cell.roundCheckboxes,
       cell.joinedCheckboxes,
@@ -345,8 +353,12 @@ function Tracker({
           <span className="wordmark">
             {sampleData ? 'Sample data' : 'OnPurpose'}
           </span>
-          <button className="today" onClick={() => grid.current?.showToday()}>
-            Today
+          <button
+            className="today"
+            aria-label="Today"
+            onClick={() => grid.current?.showToday()}
+          >
+            {away ? 'Today →' : 'Today'}
           </button>
           <span className="actions">
             <button
@@ -385,6 +397,7 @@ function Tracker({
             editable={store.canEdit()}
             canAdd={state.habits.length < MAX_HABITS}
             on={handlers}
+            onAwayFromToday={setAway}
           />
           {panel?.kind === 'history' && (
             <HistoryPanel

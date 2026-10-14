@@ -84,7 +84,7 @@ Grid
   src/gridLayout.ts            adaptive name/day geometry with text scaling
   src/useMeasuredRowHeights.ts batched native row measurement
   packages/core/src/gridAppearance.ts        cached per-habit grid colours
-  src/gridEntryText.ts         text/category cell previews
+  packages/core/src/gridEntryText.ts         text/category cell line count (both apps)
   src/ReorderRow.tsx           RowPositions: shared row movement
   src/DateNavigationSheet.tsx  date picker sheet (src/DateCalendar.tsx on Android)
   packages/core/src/calendar.ts              local date keys and signed date arithmetic

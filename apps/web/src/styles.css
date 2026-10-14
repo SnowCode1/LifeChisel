@@ -36,6 +36,8 @@
   --column: 46px;
   --row: 56px;
   --box: 26px;
+  /* Lines of text in text and category cells (the phone's rule). */
+  --text-lines: 3;
   font-family: var(--font-ui);
   font-size: 15px;
   font-variant-numeric: tabular-nums;
@@ -314,6 +316,8 @@ button[aria-disabled='true'] {
   font-weight: 600;
 }
 .summary {
+  /* Hidden on short rows (Settings → Appearance → Grid size). */
+  display: var(--summary, block);
   margin-top: 1px;
   font-size: 12px;
   color: var(--ink-quiet);
@@ -374,32 +378,137 @@ button[aria-disabled='true'] {
 .join.newer {
   right: 0;
 }
-.value {
-  font-size: 14px;
+/* Numbers shrink to fit their column, down to about 65%. */
+.mark.value span {
+  max-width: var(--column);
+  overflow: hidden;
+  font-size: max(
+    9px,
+    min(14px, calc((var(--column) - 8px) / (var(--chars) * 0.6)))
+  );
   font-weight: 600;
+  white-space: nowrap;
 }
-.text span {
+/* Text and category cells: readable 12px text in one to three lines,
+   depending on the row height (the phone's rule), ending in an ellipsis.
+   The full value shows on hover. A fixed width keeps long words from
+   widening their column (columns must stay equal for whole-day scrolling). */
+.mark.text span {
+  width: var(--column);
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: var(--text-lines, 3);
   -webkit-box-orient: vertical;
   overflow: hidden;
-  padding: 0 3px;
-  font-size: 10.5px;
-  line-height: 12px;
-  word-break: break-word;
+  padding: 0 4px;
+  font-size: 12px;
+  line-height: 14px;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+/* The heading of the column under the pointer lights up. */
+.grid .day.hover {
+  background-image: linear-gradient(var(--row-highlight), var(--row-highlight));
+}
+.grid .day.hover .weekday {
+  color: var(--ink-strong);
+}
+
+/* Tap animations: a short pulse on the tapped box; a join grows out of the
+   neighbour (or retracts into it) over 220 ms, half by half, and the box it
+   reaches bumps. Only taps in the grid animate. */
+.glyph {
+  display: grid;
+}
+.box.pulse,
+.glyph.pulse {
+  animation: tap-pulse 180ms ease-out;
+}
+.box.pulse.reached {
+  animation:
+    tap-pulse 180ms ease-out,
+    join-bump 160ms ease-out 220ms;
+}
+.join.from-older {
+  transform-origin: left center;
+}
+.join.from-newer {
+  transform-origin: right center;
+}
+.join.grow {
+  animation: join-grow 110ms linear both;
+}
+.join.shrink {
+  animation: join-shrink 110ms linear both;
+}
+.join.second {
+  animation-delay: 110ms;
+}
+@keyframes tap-pulse {
+  50% {
+    transform: scale(0.94);
+  }
+}
+@keyframes join-bump {
+  50% {
+    transform: scale(1.07);
+  }
+}
+@keyframes join-grow {
+  from {
+    transform: translateY(-50%) scaleX(0);
+  }
+  to {
+    transform: translateY(-50%) scaleX(1);
+  }
+}
+@keyframes join-shrink {
+  from {
+    transform: translateY(-50%) scaleX(1);
+  }
+  to {
+    transform: translateY(-50%) scaleX(0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .box.pulse,
+  .glyph.pulse,
+  .join.grow {
+    animation: none;
+  }
+  .join.shrink {
+    display: none;
+  }
 }
 
 /* Phones: narrower names and columns; the summary line needs width. */
 @media (max-width: 600px) {
   :root {
-    --name-width: 8rem;
+    /* 40% of the screen between 120 and 180 pixels, like the phone app. */
+    --name-width: clamp(120px, 40vw, 180px);
     --column: 40px;
     --row: 50px;
     --box: 24px;
+    --text-lines: 2;
   }
-  .summary,
-  .hints {
+  .summary {
     display: none;
+  }
+  /* Without the summary, names may take two lines. */
+  .habit-name {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    white-space: normal;
+    line-height: 1.2;
+    overflow-wrap: break-word;
+    hyphens: auto;
+  }
+  .name-inner {
+    gap: 6px;
+  }
+  .row-menu {
+    width: 22px;
   }
   /* Keeps its grid column so Today stays centred. */
   .wordmark {

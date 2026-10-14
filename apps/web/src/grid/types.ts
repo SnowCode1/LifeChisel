@@ -9,6 +9,8 @@ export type CellLookStyle = {
   missed: boolean;
   /** Joining bar height as a fraction of the checkbox. */
   connector: number;
+  /** Tap animations (the saved preference; Reduce Motion still applies). */
+  animate: boolean;
 };
 
 export type Day = {
@@ -20,9 +22,20 @@ export type Day = {
   shaded: boolean;
 };
 
+/** A checkbox the reader just ticked or cleared in the grid. */
+export type Pulse = {
+  habitId: string;
+  date: string;
+  /** The state the tap produced. */
+  checked: boolean;
+  /** Restarts the animation on repeated taps. */
+  n: number;
+};
+
 /** Everything the grid asks its owner to do. */
 export type GridHandlers = {
-  toggle(habit: Habit, date: string): void;
+  /** Returns whether the change was accepted. */
+  toggle(habit: Habit, date: string): boolean;
   openEntry(
     habit: Habit,
     date: string,

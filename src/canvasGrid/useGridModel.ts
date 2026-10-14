@@ -17,7 +17,7 @@ import {
   GRID_ENTRY_FONT_SIZE,
   GRID_ENTRY_LINE_HEIGHT,
   gridEntryTextLines,
-} from '../gridEntryText';
+} from '@onpurpose/core/gridEntryText';
 import type { GridPalette } from '@onpurpose/core/gridAppearance';
 import type { Habit } from '@onpurpose/core/habits';
 import type { ChangeStore } from '@onpurpose/core/storage/store';

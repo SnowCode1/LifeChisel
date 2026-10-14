@@ -5,7 +5,7 @@ import ts from 'typescript';
 import {
   gridEntryTextLines,
   GRID_ENTRY_LINE_HEIGHT,
-} from '../src/gridEntryText.ts';
+} from '../packages/core/src/gridEntryText.ts';
 import { gridRowHeight } from '../packages/core/src/rowSpacing.ts';
 import { combinedTextScale } from '../packages/core/src/textSize.ts';
 

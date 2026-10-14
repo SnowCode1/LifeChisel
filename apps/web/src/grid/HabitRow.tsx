@@ -1,18 +1,50 @@
-import type { CSSProperties, PointerEvent } from 'react';
+import { memo, type CSSProperties, type PointerEvent } from 'react';
 import {
   cellAccessibility,
   cellState,
   checkedStreak,
+  type CellState,
 } from '@onpurpose/core/cellAccessibility';
 import type { EntryValues } from '@onpurpose/core/entries';
 import type { Habit } from '@onpurpose/core/habits';
 import { habitSummary } from '@onpurpose/core/habitSummary';
 import type { GridPalette } from '@onpurpose/core/gridAppearance';
 import { HabitSymbol } from '../ui/HabitSymbol.tsx';
-import type { CellLookStyle, Day, GridHandlers } from './types.ts';
+import type { CellLookStyle, Day, GridHandlers, Pulse } from './types.ts';
+
+type RowProps = {
+  habit: Habit;
+  row: number;
+  days: Day[];
+  /** Every saved value; the row reads only its own habit's. */
+  values: EntryValues;
+  /** Changes exactly when this habit's saved values change. */
+  signature: string;
+  today: string;
+  todayOrdinal: number;
+  palette: GridPalette;
+  look: CellLookStyle;
+  editable: boolean;
+  /** Days ago of the focusable cell in this row, or -1. */
+  focusAgo: number;
+  on: GridHandlers;
+  dragStyle?: CSSProperties;
+  dragging: boolean;
+  onHandleDown: (row: number, event: PointerEvent<HTMLElement>) => void;
+  /** The tap this row is animating, if any. */
+  pulse?: Pulse;
+};
 
 // One habit: its name cell (handle, icon, name, summary, ⋯) and day cells.
-export function HabitRow({
+// Rows re-render only when their own values or display inputs change, so an
+// edit redraws one row, not the whole grid.
+export const HabitRow = memo(HabitRowView, (before, after) => {
+  for (const key of Object.keys(after) as (keyof RowProps)[])
+    if (key !== 'values' && before[key] !== after[key]) return false;
+  return true;
+});
+
+function HabitRowView({
   habit,
   row,
   days,
@@ -22,32 +54,24 @@ export function HabitRow({
   palette,
   look,
   editable,
-  focusCol,
+  focusAgo,
   on,
   dragStyle,
   dragging,
   onHandleDown,
-}: {
-  habit: Habit;
-  row: number;
-  days: Day[];
-  values: EntryValues;
-  today: string;
-  todayOrdinal: number;
-  palette: GridPalette;
-  look: CellLookStyle;
-  editable: boolean;
-  focusCol: number;
-  on: GridHandlers;
-  dragStyle?: CSSProperties;
-  dragging: boolean;
-  onHandleDown: (event: PointerEvent<HTMLElement>) => void;
-}) {
+  pulse,
+}: RowProps) {
   const states = days.map((day) =>
     cellState(habit, values[`${habit.id}:${day.key}`], day.key),
   );
   const memo = new Map<string, number>();
   const box = look.boxes;
+  const joins = box && look.joined;
+  // The column of the tap being animated (joins reach its neighbours too).
+  const pulseCol =
+    pulse && look.animate
+      ? days.findIndex((day) => day.key === pulse.date)
+      : -1;
   return (
     <tr className={dragging ? 'dragging' : undefined} style={dragStyle}>
       <th
@@ -64,7 +88,7 @@ export function HabitRow({
               className="drag-handle"
               aria-hidden="true"
               title="Drag to reorder"
-              onPointerDown={onHandleDown}
+              onPointerDown={(event) => onHandleDown(row, event)}
             >
               <svg
                 width="10"
@@ -122,6 +146,7 @@ export function HabitRow({
       {days.map((day, col) => {
         const state = states[col];
         const value = values[`${habit.id}:${day.key}`];
+        // Background precedence: goal met > Today > plain.
         const background = state.met
           ? palette.completedBackground
           : day.ago === 0
@@ -141,27 +166,18 @@ export function HabitRow({
             : null;
         const a11y = cellAccessibility(habit, value, day.key, day.label);
         const shared = {
-          'data-cell': `${row}:${col}`,
-          tabIndex: col === focusCol ? 0 : -1,
+          'data-cell': `${row}:${day.ago}`,
+          tabIndex: day.ago === focusAgo ? 0 : -1,
           'aria-label': a11y.label,
         };
-        const fill = state.met ? palette.colour : palette.checkbox;
-        const joinOlder =
-          box &&
-          look.joined &&
-          state.checked &&
-          col > 0 &&
-          states[col - 1].checked;
-        const joinNewer =
-          box &&
-          look.joined &&
-          state.checked &&
-          col < days.length - 1 &&
-          states[col + 1].checked;
+        const fill = fillOf(palette, state);
+        const older = col > 0 ? states[col - 1] : undefined;
+        const newer = col < days.length - 1 ? states[col + 1] : undefined;
         const streak =
           box && look.streaks && state.checked
             ? checkedStreak(habit, day.ago, values, todayOrdinal, memo)
             : 0;
+        const tapped = pulseCol === col;
         const cross = (
           <Glyph
             path={CROSS}
@@ -173,11 +189,24 @@ export function HabitRow({
         return (
           <td
             key={day.key}
+            data-ago={day.ago}
             className={day.ago === 0 ? 'cell today' : 'cell'}
             style={{ backgroundColor: background }}
           >
-            {joinOlder && <Join side="older" colour={fill} look={look} />}
-            {joinNewer && <Join side="newer" colour={fill} look={look} />}
+            {joins && (
+              <Joins
+                col={col}
+                pulseCol={pulseCol}
+                pulse={pulse}
+                state={state}
+                older={older}
+                newer={newer}
+                fill={fill}
+                olderFill={older && fillOf(palette, older)}
+                newerFill={newer && fillOf(palette, newer)}
+                look={look}
+              />
+            )}
             {state.kind === 'checkbox' ? (
               <button
                 {...shared}
@@ -191,7 +220,16 @@ export function HabitRow({
                   cross
                 ) : missedMark === 'blank' ? null : box ? (
                   <span
-                    className="box"
+                    key={tapped ? pulse!.n : 0}
+                    className={
+                      tapped
+                        ? pulse!.checked &&
+                          joins &&
+                          (older?.checked || newer?.checked)
+                          ? 'box pulse reached'
+                          : 'box pulse'
+                        : 'box'
+                    }
                     style={{
                       borderRadius: look.round ? '50%' : '7px',
                       backgroundColor: state.checked ? fill : 'transparent',
@@ -216,12 +254,17 @@ export function HabitRow({
                     ) : null}
                   </span>
                 ) : (
-                  <Glyph
-                    path={state.checked ? TICK : CROSS}
-                    colour={state.met ? palette.colour : palette.checkbox}
-                    size={24}
-                    width={state.checked ? 2.3 : 1.8}
-                  />
+                  <span
+                    key={tapped ? pulse!.n : 0}
+                    className={tapped ? 'glyph pulse' : 'glyph'}
+                  >
+                    <Glyph
+                      path={state.checked ? TICK : CROSS}
+                      colour={state.met ? palette.colour : palette.checkbox}
+                      size={24}
+                      width={state.checked ? 2.3 : 1.8}
+                    />
+                  </span>
                 )}
               </button>
             ) : (
@@ -230,6 +273,7 @@ export function HabitRow({
                 {...shared}
                 aria-haspopup="dialog"
                 disabled={!editable}
+                title={state.recorded ? a11y.label : undefined}
                 onClick={(event) =>
                   on.openEntry(habit, day.key, day.label, event.currentTarget)
                 }
@@ -240,7 +284,14 @@ export function HabitRow({
               >
                 {missedMark === 'cross' ? (
                   cross
-                ) : missedMark === 'blank' ? null : (
+                ) : missedMark === 'blank' ? null : state.kind === 'number' ? (
+                  // Long numbers shrink to fit the column, down to 65%.
+                  <span
+                    style={{ '--chars': state.label.length } as CSSProperties}
+                  >
+                    {state.label}
+                  </span>
+                ) : (
                   <span>{state.label}</span>
                 )}
               </button>
@@ -252,25 +303,112 @@ export function HabitRow({
   );
 }
 
-// Each cell draws its own half of a join, so backgrounds never cover it.
-function Join({
-  side,
-  colour,
+/** The colour a checked box (and its half of a join) is filled with. */
+function fillOf(palette: GridPalette, state: CellState) {
+  return state.met ? palette.colour : palette.checkbox;
+}
+
+/**
+ * Each cell draws its own halves of joins to checked neighbours, so
+ * neighbouring backgrounds never cover them. A tapped join grows out of the
+ * neighbour into the tapped box, or retracts back into the neighbour, over
+ * 220 ms: the half nearer the neighbour moves first, then the other.
+ */
+function Joins({
+  col,
+  pulseCol,
+  pulse,
+  state,
+  older,
+  newer,
+  fill,
+  olderFill,
+  newerFill,
   look,
 }: {
-  side: 'older' | 'newer';
-  colour: string;
+  col: number;
+  pulseCol: number;
+  pulse?: Pulse;
+  state: CellState;
+  older?: CellState;
+  newer?: CellState;
+  fill: string;
+  olderFill?: string;
+  newerFill?: string;
   look: CellLookStyle;
 }) {
-  return (
+  const halves: {
+    side: 'older' | 'newer';
+    colour: string;
+    motion?: string;
+  }[] = [];
+  const near = pulseCol >= 0 && Math.abs(col - pulseCol) <= 1;
+  const grow = near && pulse!.checked;
+  const shrink = near && !pulse!.checked;
+  if (state.checked && older?.checked)
+    halves.push({
+      side: 'older',
+      colour: fill,
+      // From the older neighbour: second in this (tapped) cell. From the
+      // newer one, this cell is that neighbour: its half goes first.
+      motion: grow
+        ? col === pulseCol
+          ? 'grow from-older second'
+          : col === pulseCol + 1
+            ? 'grow from-newer first'
+            : undefined
+        : undefined,
+    });
+  if (state.checked && newer?.checked)
+    halves.push({
+      side: 'newer',
+      colour: fill,
+      motion: grow
+        ? col === pulseCol
+          ? 'grow from-newer second'
+          : col === pulseCol - 1
+            ? 'grow from-older first'
+            : undefined
+        : undefined,
+    });
+  // A cleared box keeps its joins briefly so they can retract.
+  if (shrink) {
+    if (col === pulseCol) {
+      if (older?.checked)
+        halves.push({
+          side: 'older',
+          colour: olderFill!,
+          motion: 'shrink from-older first',
+        });
+      if (newer?.checked)
+        halves.push({
+          side: 'newer',
+          colour: newerFill!,
+          motion: 'shrink from-newer first',
+        });
+    } else if (col === pulseCol - 1 && state.checked)
+      halves.push({
+        side: 'newer',
+        colour: fill,
+        motion: 'shrink from-older second',
+      });
+    else if (col === pulseCol + 1 && state.checked)
+      halves.push({
+        side: 'older',
+        colour: fill,
+        motion: 'shrink from-newer second',
+      });
+  }
+  return halves.map((half) => (
     <span
-      className={`join ${side}`}
+      key={`${half.side}${half.motion ? `-${pulse!.n}` : ''}`}
+      className={`join ${half.side}${half.motion ? ` ${half.motion}` : ''}`}
       style={{
-        backgroundColor: colour,
+        backgroundColor: half.colour,
         height: `calc(var(--box) * ${look.connector})`,
       }}
     />
-  );
+  ));
 }
 
 const TICK = 'M5 12.5l4.5 4.5L19 7.5';

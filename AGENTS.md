@@ -404,7 +404,7 @@ the original v7 sample fixture and real presets untouched. Text/category entries
 arrived in v10; keep older prefixes unchanged; array preconditions/grouping/inverses compare
 values rather than references. SQL stays at schema 1. Grid text/category cells
 use readable 12-point text with app/OS scaling, native tail truncation and
-geometry-based 1–3 lines from `gridEntryText.ts`. Only numeric cells may autosize;
+geometry-based 1–3 lines from core `gridEntryText.ts`. Only numeric cells may autosize;
 our iOS renderer ignores the advertised `minimumFontScale` floor.
 Do not infer native text fitting from browser captures. Comments remain deferred.
 

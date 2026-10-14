@@ -1,6 +1,7 @@
 import { useId, useRef, useState, type ReactNode } from 'react';
 import {
   displayDefaults,
+  effectiveColumnSpacing,
   weekStartOptions,
   type CellLook,
 } from '@onpurpose/core/displayPreferences';
@@ -13,6 +14,19 @@ import {
   type ThemeScheme,
 } from '@onpurpose/core/theme';
 import { normalizeHex } from '@onpurpose/core/colors';
+import {
+  gridSizeRanges,
+  gridSizing,
+  snapGridSize,
+  type GridSize,
+  type GridSizeKind,
+} from '@onpurpose/core/gridSizing';
+import {
+  applyGridSizes,
+  automaticSizes,
+  webGridSizes,
+  type WebGridSizes,
+} from '../grid/gridSizes.ts';
 import type { Habit } from '@onpurpose/core/habits';
 import {
   archivedHabitDetails,
@@ -199,6 +213,7 @@ function Appearance({
   set: <K extends WebPreference>(kind: K, value: StoredState[K]) => boolean;
 }) {
   const mode = state.themeMode ?? displayDefaults.themeMode;
+  const sizes = webGridSizes(gridSizing(state, effectiveColumnSpacing(state)));
   const style = state.checkboxStyle ?? displayDefaults.checkboxStyle;
   const shape: Shape =
     style === 'marks'
@@ -306,12 +321,32 @@ function Appearance({
           disabled={!editable}
           onChange={(value) => set('weekDividers', value)}
         />
+        <Toggle
+          label="Tap animations"
+          detail="A short pulse when you tick a box, and joins that grow between neighbours. Your system’s Reduce motion setting turns them off too."
+          value={state.tapAnimations ?? displayDefaults.tapAnimations}
+          disabled={!editable}
+          onChange={(value) => set('tapAnimations', value)}
+        />
+      </Group>
+      <Group title="Grid size">
+        {GRID_SIZES.map(({ kind, label }) => (
+          <GridSizeRow
+            key={kind}
+            kind={kind}
+            label={label}
+            sizes={sizes}
+            disabled={!editable}
+            onChange={(value) => set(kind, value)}
+          />
+        ))}
       </Group>
       <p className="hint">
         System follows your device’s light or dark mode. Text, controls and
         habit colours adjust to each background; saved habit colours never
         change. Streak numbers show each checked day’s place in its streak;
-        missed day crosses mark past scheduled days that missed their goal.
+        missed day crosses mark past scheduled days that missed their goal. Grid
+        sizes are shared with the phone app when you move a backup between them.
       </p>
     </>
   );
@@ -332,7 +367,7 @@ const PREVIEW: Habit[] = [
 const PATTERNS = ['1101110111', '0111011100', '1011101110'];
 const noop = () => {};
 const NO_HANDLERS: GridHandlers = {
-  toggle: noop,
+  toggle: () => false,
   openEntry: noop,
   openMenu: noop,
   openHabit: noop,
@@ -400,7 +435,8 @@ function Preview({
               palette={createGridPalette(habit.color, theme)}
               look={look}
               editable={false}
-              focusCol={-1}
+              signature=""
+              focusAgo={-1}
               on={NO_HANDLERS}
               dragging={false}
               onHandleDown={noop}
@@ -409,6 +445,82 @@ function Preview({
         </tbody>
       </table>
     </figure>
+  );
+}
+
+const GRID_SIZES: { kind: GridSizeKind; label: string }[] = [
+  { kind: 'gridNameWidth', label: 'Name column' },
+  { kind: 'gridColumnWidth', label: 'Day columns' },
+  { kind: 'gridRowHeight', label: 'Rows' },
+];
+// A size slider with Automatic. The grid and preview follow the slider while
+// it moves; the size is saved when it is released.
+function GridSizeRow({
+  kind,
+  label,
+  sizes,
+  disabled,
+  onChange,
+}: {
+  kind: GridSizeKind;
+  label: string;
+  sizes: WebGridSizes;
+  disabled: boolean;
+  onChange: (value: GridSize) => void;
+}) {
+  const { min, max, step } = gridSizeRanges[kind];
+  const saved = sizes[kind];
+  const [draft, setDraft] = useState<number | null>(null);
+  const shown = draft ?? saved ?? snapGridSize(kind, automaticSizes[kind]);
+  const commit = () => {
+    if (draft === null) return;
+    setDraft(null);
+    if (draft !== saved) onChange(draft);
+    else applyGridSizes(sizes);
+  };
+  return (
+    <div className="setting-row grid-size">
+      <span>
+        {label}
+        <span className="hint">
+          {saved === null ? 'Automatic' : `${saved} px`}
+        </span>
+      </span>
+      <span className="slider-value">
+        <input
+          type="range"
+          aria-label={label}
+          min={min}
+          max={max}
+          step={step}
+          value={shown}
+          disabled={disabled}
+          onChange={(event) => {
+            const value = Number(event.target.value);
+            setDraft(value);
+            applyGridSizes({ ...sizes, [kind]: value });
+          }}
+          onPointerUp={commit}
+          onKeyUp={commit}
+          onBlur={commit}
+        />
+        <label className="auto-check">
+          <input
+            type="checkbox"
+            checked={saved === null}
+            disabled={disabled}
+            onChange={(event) =>
+              onChange(
+                event.target.checked
+                  ? 'auto'
+                  : snapGridSize(kind, automaticSizes[kind]),
+              )
+            }
+          />
+          Auto
+        </label>
+      </span>
+    </div>
   );
 }
 

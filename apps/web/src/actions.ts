@@ -25,9 +25,17 @@ export type WebPreference =
   | 'missedDays'
   | 'weekStart'
   | 'weekDividers'
+  | 'tapAnimations'
+  | 'gridNameWidth'
+  | 'gridColumnWidth'
+  | 'gridRowHeight'
   | 'hideCompleted';
-// Kinds added from v19 store null as their first before-value.
+// Grid sizes (v18) and kinds added from v19 store null as their first
+// before-value.
 const NULLABLE = new Set<WebPreference>([
+  'gridNameWidth',
+  'gridColumnWidth',
+  'gridRowHeight',
   'themeMode',
   'darkBackground',
   'lightBackground',

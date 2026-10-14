@@ -349,6 +349,8 @@
 }
 .weekday-bars .value,
 .category-rows .value {
+  font-size: 14px;
+  font-weight: 600;
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
