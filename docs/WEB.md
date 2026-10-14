@@ -8,8 +8,8 @@ Status: the home grid (layout A, below) records all four entry types, follows
 the saved theme and cell look, and supports Undo/Redo (buttons, Ctrl+Z,
 Ctrl+Shift+Z or Ctrl+Y) and the four-second quick undo. Habits can be added,
 edited, reordered and archived, and each has a docked Notes/Statistics panel. History has its own panel, and Settings covers appearance, daily tracking,
-backups and archived habits. Goal and note editing and sync are not built
-yet.
+backups and archived habits. Goals can be edited. Note editing and sync are not
+built yet.
 
 ## Home grid (layout A)
 
@@ -85,6 +85,20 @@ state. A date picker jumps to a day. The Undo bar always names the newest
 action, even when filtered out; Undo and Redo live there (and on Ctrl+Z /
 Ctrl+Shift+Z) rather than in the top bar.
 
+## Goals
+
+The goal editor opens from the habit editor (staged) or the statistics Goal
+line (applied as one undoable habit change). It shows the goal timeline (each
+dated version, the current and upcoming ones marked, and the original
+default) beside a form whose four sections are all visible on wide screens:
+success condition, repeat (every day, selected days or a quota per week or
+custom period), cycle, and the date it applies from. It keeps the phone's
+rules: core `goalDraftIssue` explains incomplete input and blocks Done,
+unchanged drafts never add a version, quotas on an existing habit start at
+the next whole period, editing or removing an earlier goal asks "Update
+earlier results?", and switching versions with unapplied changes asks before
+discarding them.
+
 ## Settings
 
 The top bar's Settings button opens a two-column dialog (stacked on phones).
@@ -116,7 +130,8 @@ shown on the web; browser zoom covers text size.
   screen on phones) has the phone's fields and rules: name, type (fixed after
   creation), categories with short labels and archiving, unit, checked by
   default, start date, icon (Phosphor, Tabler or emoji, searchable) and colour
-  (presets or OKLCH sliders). Goals are shown but not yet editable on the web.
+  (presets or OKLCH sliders). Its Goal row opens the goal editor, whose result
+  is staged until the habit's Done.
 - **Row actions:** hovering a name shows a drag handle and a ⋯ menu (also a
   right-click on the name, or the context-menu key / Shift+F10 on a focused
   cell): Edit habit, Move up, Move down, Archive.

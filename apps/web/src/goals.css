@@ -1,0 +1,207 @@
+/* Goal editor: the version timeline beside the form; stacked on phones. */
+
+.modal.goal-editor {
+  width: min(920px, calc(100vw - 32px));
+  height: min(860px, calc(100dvh - 48px));
+}
+.modal.goal-editor .modal-body {
+  padding: 0;
+}
+.goal-layout {
+  display: flex;
+  flex-wrap: wrap;
+  min-height: 100%;
+}
+.goal-timeline {
+  display: flex;
+  flex: 1 1 240px;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 290px;
+  padding: 18px 14px;
+  border-right: 1px solid var(--rule);
+}
+.goal-timeline h3 {
+  margin: 0 4px 4px;
+  font-size: 17px;
+}
+.goal-timeline ol {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.goal-version {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  font-size: 13px;
+  text-align: left;
+}
+.goal-version.new {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+button.goal-version:hover:not(:disabled) {
+  background-color: var(--surface-raised);
+}
+.goal-version.selected {
+  border-color: var(--surface-edge);
+  background-color: var(--surface-raised);
+}
+.goal-version.original {
+  opacity: 0.7;
+}
+.version-dates {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+.badge {
+  padding: 1px 7px;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ink-soft);
+  background-color: var(--surface-edge);
+}
+.goal-form {
+  display: flex;
+  flex: 999 1 420px;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+  padding: 18px 22px 28px;
+}
+.goal-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 0;
+  padding: 14px 16px 16px;
+  border: 1px solid var(--rule);
+  border-radius: 14px;
+  background-color: var(--surface);
+}
+.goal-section legend {
+  padding: 0 6px;
+  font-weight: 600;
+}
+.goal-section legend .muted {
+  font-weight: 400;
+}
+.segmented.wrap {
+  flex-wrap: wrap;
+}
+.segmented.wrap button {
+  flex: 1 0 auto;
+  padding: 0 12px;
+}
+.field-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.field-row .field {
+  flex: 1 1 140px;
+}
+.field.small {
+  max-width: 260px;
+}
+.text-area {
+  min-height: 96px;
+  padding: 10px 12px;
+  border: 1px solid var(--surface-edge);
+  border-radius: 10px;
+  color: var(--ink);
+  background-color: var(--background);
+  font: inherit;
+  resize: vertical;
+}
+.chip-field {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.chip-field legend {
+  margin-bottom: 6px;
+}
+.chip-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 17px;
+  background-color: var(--surface-raised);
+  cursor: pointer;
+}
+.chip-check input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.chip-check:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.weekday-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.chip-check.day {
+  width: 38px;
+  justify-content: center;
+  padding: 0;
+}
+.goal-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.goal-actions .spacer {
+  flex: 1;
+}
+.goal-actions .text-button {
+  align-self: center;
+}
+.goal-form .chips button {
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 17px;
+  background-color: var(--surface-raised);
+}
+.goal-button {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--surface-edge);
+  border-radius: 12px;
+  text-align: left;
+}
+.goal-button:hover:not(:disabled) {
+  background-color: var(--surface-raised);
+}
+.goal-button:disabled {
+  opacity: 0.5;
+}
+@media (max-width: 600px) {
+  .modal.goal-editor {
+    width: 100vw;
+    height: 100dvh;
+  }
+  .goal-timeline {
+    max-width: none;
+    border-right: 0;
+    border-bottom: 1px solid var(--rule);
+  }
+}

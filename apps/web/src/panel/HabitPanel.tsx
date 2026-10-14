@@ -26,6 +26,7 @@ export function HabitPanel({
   onEdit,
   onClose,
   onDay,
+  onEditGoal,
 }: {
   habit: Habit;
   tab: HabitTab;
@@ -39,6 +40,7 @@ export function HabitPanel({
   onTab: (tab: HabitTab) => void;
   onEdit: () => void;
   onClose: () => void;
+  onEditGoal: () => void;
   onDay: (
     habit: Habit,
     date: string,
@@ -140,6 +142,7 @@ export function HabitPanel({
             theme={theme}
             editable={editable}
             onDay={onDay}
+            onEditGoal={onEditGoal}
           />
         ) : habit.description ? (
           <article className="note">

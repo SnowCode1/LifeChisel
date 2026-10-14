@@ -70,6 +70,7 @@ export function StatsView({
   theme,
   editable,
   onDay,
+  onEditGoal,
 }: {
   habit: Habit;
   values: EntryValues;
@@ -79,6 +80,7 @@ export function StatsView({
   weekStart: WeekStart;
   theme: Theme;
   editable: boolean;
+  onEditGoal: () => void;
   onDay: (
     habit: Habit,
     date: string,
@@ -346,7 +348,15 @@ export function StatsView({
         </div>
       )}
       <p className="goal-line">
-        <span className="muted">Goal</span> {habitSummary(habit, values, today)}
+        <span className="muted">Goal</span> {habitSummary(habit, values, today)}{' '}
+        <button
+          type="button"
+          className="link-button"
+          disabled={!editable}
+          onClick={onEditGoal}
+        >
+          Edit
+        </button>
       </p>
       {offset === 0 && <PeriodProgress data={periodGoals} colour={colour} />}
 

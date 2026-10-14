@@ -25,6 +25,7 @@ import { moveHabit } from '@onpurpose/core/habitOrdering';
 import { habitTrackingStart } from '@onpurpose/core/statistics';
 import { HabitMenu, type HabitMenuAction } from './habits/HabitMenu.tsx';
 import { HabitEditor } from './habits/HabitEditor.tsx';
+import { GoalEditor } from './habits/GoalEditor.tsx';
 import { HabitPanel, type HabitTab } from './panel/HabitPanel.tsx';
 import { HistoryPanel } from './panel/HistoryPanel.tsx';
 import { Icon } from './ui/Icon.tsx';
@@ -138,6 +139,7 @@ function Tracker({ store }: { store: ChangeStore }) {
     [habits, hiddenKey],
   );
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [goalHabitId, setGoalHabitId] = useState<string | null>(null);
   // The same saved cell look as the phone; the last four apply to boxes only.
   const cell = cellLookOf(state);
   const boxes =
@@ -185,6 +187,9 @@ function Tracker({ store }: { store: ChangeStore }) {
   const menuIndex = menu
     ? rows.findIndex((habit) => habit.id === menu.habit.id)
     : -1;
+  const goalHabit = goalHabitId
+    ? state.habits.find((habit) => habit.id === goalHabitId)
+    : undefined;
   const panelHabit =
     panel?.kind === 'habit'
       ? state.habits.find(
@@ -288,6 +293,7 @@ function Tracker({ store }: { store: ChangeStore }) {
             onEdit={() => setEditor({ habit: panelHabit, creating: false })}
             onClose={() => setPanel(null)}
             onDay={panelDay}
+            onEditGoal={() => setGoalHabitId(panelHabit.id)}
           />
         )}
       </div>
@@ -348,10 +354,26 @@ function Tracker({ store }: { store: ChangeStore }) {
             today,
           )}
           today={today}
+          weekStart={state.weekStart ?? displayDefaults.weekStart}
           theme={theme}
           editable={store.canEdit()}
           onClose={() => setEditor(null)}
           onSave={actions.saveHabit}
+        />
+      )}
+      {goalHabit && (
+        <GoalEditor
+          habit={goalHabit}
+          today={today}
+          weekStart={state.weekStart ?? displayDefaults.weekStart}
+          creating={false}
+          editable={store.canEdit()}
+          theme={theme}
+          onClose={() => setGoalHabitId(null)}
+          onApply={(goals) => {
+            const { goals: _goals, ...base } = goalHabit;
+            return actions.saveHabit({ ...base, ...(goals ? { goals } : {}) });
+          }}
         />
       )}
       {settingsOpen && (

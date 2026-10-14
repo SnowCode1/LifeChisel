@@ -29,6 +29,8 @@ import { Modal } from '../ui/Modal.tsx';
 import { HabitSymbol } from '../ui/HabitSymbol.tsx';
 import { ColourPicker } from './ColourPicker.tsx';
 import { IconPicker } from './IconPicker.tsx';
+import { GoalEditor } from './GoalEditor.tsx';
+import type { WeekStart } from '@onpurpose/core/displayPreferences';
 
 const TYPES: HabitType[] = ['checkbox', 'number', 'categorical', 'text'];
 
@@ -40,6 +42,7 @@ export function HabitEditor({
   creating,
   initialStartDate,
   today,
+  weekStart,
   theme,
   editable,
   onClose,
@@ -49,6 +52,7 @@ export function HabitEditor({
   creating: boolean;
   initialStartDate: string;
   today: string;
+  weekStart: WeekStart;
   theme: Theme;
   editable: boolean;
   onClose: () => void;
@@ -56,6 +60,7 @@ export function HabitEditor({
 }) {
   const titleId = useId();
   const [view, setView] = useState<'form' | 'colour' | 'icon'>('form');
+  const [goalsOpen, setGoalsOpen] = useState(false);
   const [name, setName] = useState(habit.name);
   const [type, setType] = useState<HabitType>(habitType(habit));
   const [unit, setUnit] = useState(habit.unit ?? '');
@@ -328,7 +333,16 @@ export function HabitEditor({
           </label>
         )}
 
-        <div className="summary-row">
+        <button
+          type="button"
+          className="summary-row goal-button"
+          disabled={
+            !editable ||
+            (type === 'categorical' &&
+              !categories.some((option) => option.label.trim()))
+          }
+          onClick={() => setGoalsOpen(true)}
+        >
           <span className="field-label">Goal</span>
           <span>
             {ruleSummary(draft, goal?.rule ?? defaultSuccessRule(draft))}
@@ -336,9 +350,9 @@ export function HabitEditor({
             {timingSummary(goal ?? { weekdays: [0, 1, 2, 3, 4, 5, 6] })}
           </span>
           <span className="hint">
-            Goals are edited on the phone for now; the web editor is next.
+            Edit the goal, schedule and dated versions
           </span>
-        </div>
+        </button>
 
         <label className="field">
           <span className="field-label">Start date</span>
@@ -394,6 +408,23 @@ export function HabitEditor({
         {/* Enter in a field submits; the visible Done button is in the header. */}
         <button type="submit" hidden />
       </form>
+      {goalsOpen && (
+        <GoalEditor
+          habit={draft}
+          today={today}
+          weekStart={weekStart}
+          creating={creating}
+          initialDate={creating ? startDate : today}
+          editable={editable}
+          theme={theme}
+          onClose={() => setGoalsOpen(false)}
+          onApply={(next) => {
+            // Staged: the habit saves them with everything else on Done.
+            setGoals(next);
+            return true;
+          }}
+        />
+      )}
     </Modal>
   );
 }
