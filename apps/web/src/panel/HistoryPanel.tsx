@@ -8,6 +8,7 @@ import {
   historyDays,
   historyDisplayState,
   historyHabits,
+  historyKind,
   historyPresentation,
   historyRows,
   burstMemberLabel,
@@ -49,6 +50,7 @@ export function HistoryPanel({
   onUndo,
   onRedo,
   onClose,
+  onOpenNote,
 }: {
   snapshot: StoreSnapshot;
   today: string;
@@ -57,6 +59,7 @@ export function HistoryPanel({
   onUndo: () => void;
   onRedo: () => void;
   onClose: () => void;
+  onOpenNote: (action: HistoryAction) => void;
 }) {
   const titleId = useId();
   const panel = useRef<HTMLElement>(null);
@@ -316,6 +319,7 @@ export function HistoryPanel({
                         theme={theme}
                         today={today}
                         nested={!!row.nested}
+                        onOpenNote={onOpenNote}
                       />
                     ),
                   )}
@@ -370,14 +374,18 @@ function HistoryRow({
   theme,
   today,
   nested,
+  onOpenNote,
 }: {
   action: HistoryAction;
   state: StoredState;
   theme: Theme;
   today: string;
   nested: boolean;
+  onOpenNote: (action: HistoryAction) => void;
 }) {
   const row = historyPresentation(action, state);
+  // Note changes open Before/After.
+  const note = historyKind(action) === 'notes';
   const colour = theme.colour(row.color);
   return (
     <li className={nested ? 'history-row nested' : 'history-row'}>
@@ -392,7 +400,17 @@ function HistoryRow({
           <span className="row-title" style={{ color: colour }}>
             {row.title}
           </span>{' '}
-          {row.summary}
+          {note ? (
+            <button
+              type="button"
+              className="link-button"
+              onClick={() => onOpenNote(action)}
+            >
+              {row.summary}
+            </button>
+          ) : (
+            row.summary
+          )}
         </span>
         {row.effectiveDate && (
           <span className="muted">

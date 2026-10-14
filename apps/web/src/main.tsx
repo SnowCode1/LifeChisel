@@ -7,6 +7,7 @@ import './panel.css';
 import './history.css';
 import './settings.css';
 import './goals.css';
+import './notes.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

@@ -8,8 +8,7 @@ Status: the home grid (layout A, below) records all four entry types, follows
 the saved theme and cell look, and supports Undo/Redo (buttons, Ctrl+Z,
 Ctrl+Shift+Z or Ctrl+Y) and the four-second quick undo. Habits can be added,
 edited, reordered and archived, and each has a docked Notes/Statistics panel. History has its own panel, and Settings covers appearance, daily tracking,
-backups and archived habits. Goals can be edited. Note editing and sync are not
-built yet.
+backups and archived habits. Goals and notes can be edited. Sync is not built yet.
 
 ## Home grid (layout A)
 
@@ -98,6 +97,18 @@ unchanged drafts never add a version, quotas on an existing habit start at
 the next whole period, editing or removing an earlier goal asks "Update
 earlier results?", and switching versions with unapplied changes asks before
 discarding them.
+
+## Notes
+
+Notes are edited as Markdown, the format the phone stores, in a dialog with a
+formatting toolbar (bold, italic, highlight, lists, quote, link; Ctrl+B,
+Ctrl+I and Ctrl+K) and a live preview beside it (tabs on narrow screens),
+within the shared 20,000-character limit. It opens from the Notes tab
+(applied as one undoable change) or the habit editor (staged); closing with
+unapplied changes asks first. Note rows in History open Before and After,
+and restoring applies only that description to the habit's current
+definition. The phone's rich-text editor and recoverable drafts are not
+ported; a shared rich editor could follow.
 
 ## Settings
 

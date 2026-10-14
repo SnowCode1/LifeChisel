@@ -26,6 +26,9 @@ import { habitTrackingStart } from '@onpurpose/core/statistics';
 import { HabitMenu, type HabitMenuAction } from './habits/HabitMenu.tsx';
 import { HabitEditor } from './habits/HabitEditor.tsx';
 import { GoalEditor } from './habits/GoalEditor.tsx';
+import { NotesEditor } from './notes/NotesEditor.tsx';
+import { NoteVersions } from './notes/NoteVersions.tsx';
+import type { HistoryAction } from '@onpurpose/core/storage/model';
 import { HabitPanel, type HabitTab } from './panel/HabitPanel.tsx';
 import { HistoryPanel } from './panel/HistoryPanel.tsx';
 import { Icon } from './ui/Icon.tsx';
@@ -140,6 +143,8 @@ function Tracker({ store }: { store: ChangeStore }) {
   );
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [goalHabitId, setGoalHabitId] = useState<string | null>(null);
+  const [notesHabitId, setNotesHabitId] = useState<string | null>(null);
+  const [noteAction, setNoteAction] = useState<HistoryAction | null>(null);
   // The same saved cell look as the phone; the last four apply to boxes only.
   const cell = cellLookOf(state);
   const boxes =
@@ -187,6 +192,19 @@ function Tracker({ store }: { store: ChangeStore }) {
   const menuIndex = menu
     ? rows.findIndex((habit) => habit.id === menu.habit.id)
     : -1;
+  // Notes change only the description of the habit's current definition.
+  const setDescription = (id: string, description: string | undefined) => {
+    const current = state.habits.find((habit) => habit.id === id);
+    if (!current) return false;
+    const { description: _description, ...rest } = current;
+    return actions.saveHabit({
+      ...rest,
+      ...(description ? { description } : {}),
+    });
+  };
+  const notesHabit = notesHabitId
+    ? state.habits.find((habit) => habit.id === notesHabitId)
+    : undefined;
   const goalHabit = goalHabitId
     ? state.habits.find((habit) => habit.id === goalHabitId)
     : undefined;
@@ -274,6 +292,7 @@ function Tracker({ store }: { store: ChangeStore }) {
             onUndo={store.undo}
             onRedo={store.redo}
             onClose={() => setPanel(null)}
+            onOpenNote={setNoteAction}
           />
         )}
         {panel?.kind === 'habit' && panelHabit && (
@@ -294,6 +313,7 @@ function Tracker({ store }: { store: ChangeStore }) {
             onClose={() => setPanel(null)}
             onDay={panelDay}
             onEditGoal={() => setGoalHabitId(panelHabit.id)}
+            onEditNotes={() => setNotesHabitId(panelHabit.id)}
           />
         )}
       </div>
@@ -374,6 +394,35 @@ function Tracker({ store }: { store: ChangeStore }) {
             const { goals: _goals, ...base } = goalHabit;
             return actions.saveHabit({ ...base, ...(goals ? { goals } : {}) });
           }}
+        />
+      )}
+      {notesHabit && (
+        <NotesEditor
+          key={notesHabit.id}
+          title={notesHabit.name}
+          colour={theme.colour(notesHabit.color)}
+          initial={notesHabit.description ?? ''}
+          theme={theme}
+          editable={store.canEdit()}
+          onClose={() => setNotesHabitId(null)}
+          onApply={(description) => setDescription(notesHabit.id, description)}
+        />
+      )}
+      {noteAction && noteAction.change.kind === 'habit' && (
+        <NoteVersions
+          action={noteAction}
+          theme={theme}
+          editable={store.canEdit()}
+          canRestore={state.habits.some(
+            (habit) =>
+              noteAction.change.kind !== 'order' &&
+              habit.id === noteAction.change.habitId,
+          )}
+          onClose={() => setNoteAction(null)}
+          onRestore={(description) =>
+            noteAction.change.kind === 'habit' &&
+            setDescription(noteAction.change.habitId, description)
+          }
         />
       )}
       {settingsOpen && (

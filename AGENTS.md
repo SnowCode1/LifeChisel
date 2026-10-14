@@ -285,7 +285,13 @@ natively. Keep layout A: a centred grid about three weeks wide so Today stays
 near the names, scrolling inside its own area (never the page) with sticky
 headings and names, a roving keyboard focus, and cells drawn from core
 `cellAccessibility.ts` and the saved cell look. `habitSummary.ts` (core) owns
-the line under each name. The font is set only in `--font-ui`. The product rules above (stable rows, immediate feedback, no backend
+the line under each name. The font is set only in `--font-ui`. Web modules:
+`grid/` (grid, rows, drag, keyboard), `entry/` (cell popover on `ui/AnchoredDialog`),
+`habits/` (editor, colour/icon pickers, menu, goal editor), `panel/` (docked
+habit Notes/Statistics and History, SVG charts in `ChartFrame`, safe Markdown),
+`notes/` (Markdown editor, Before/After), `settings/`, and `actions.ts`, which
+reads every before-value from the current store. Calculations stay in core;
+the web draws them. The product rules above (stable rows, immediate feedback, no backend
 or login without a requirement) apply to the web app too. Sync and the
 web/phone pricing link are not built.
 

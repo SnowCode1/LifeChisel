@@ -27,6 +27,7 @@ export function HabitPanel({
   onClose,
   onDay,
   onEditGoal,
+  onEditNotes,
 }: {
   habit: Habit;
   tab: HabitTab;
@@ -41,6 +42,7 @@ export function HabitPanel({
   onEdit: () => void;
   onClose: () => void;
   onEditGoal: () => void;
+  onEditNotes: () => void;
   onDay: (
     habit: Habit,
     date: string,
@@ -144,19 +146,33 @@ export function HabitPanel({
             onDay={onDay}
             onEditGoal={onEditGoal}
           />
-        ) : habit.description ? (
-          <article className="note">
-            <Markdown
-              text={habit.description}
-              scheme={theme.scheme}
-              colour={theme.link}
-            />
-          </article>
         ) : (
-          <p className="muted">
-            No notes yet. Notes can hold why this habit matters, a simple way to
-            start, or links.
-          </p>
+          <>
+            {habit.description ? (
+              <article className="note">
+                <Markdown
+                  text={habit.description}
+                  scheme={theme.scheme}
+                  colour={theme.link}
+                />
+              </article>
+            ) : (
+              <p className="muted">
+                No notes yet. Notes can hold why this habit matters, a simple
+                way to start, or links.
+              </p>
+            )}
+            <div className="note-actions">
+              <button
+                type="button"
+                className="secondary-button"
+                disabled={!editable}
+                onClick={onEditNotes}
+              >
+                {habit.description ? 'Edit notes' : 'Add notes'}
+              </button>
+            </div>
+          </>
         )}
       </div>
     </aside>
