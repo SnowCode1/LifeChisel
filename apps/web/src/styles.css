@@ -95,6 +95,7 @@ button[aria-disabled='true'] {
 .wordmark {
   font-weight: 600;
   color: var(--ink-soft);
+  text-decoration: none;
 }
 .top-bar .today {
   height: 40px;

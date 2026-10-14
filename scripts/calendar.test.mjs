@@ -105,3 +105,12 @@ test('explicit future batches cross leap days and year boundaries without changi
   const nextBatch = makeGridDays('2026-12-31', 90, 60);
   assert.deepEqual(nextBatch.slice(30), expanded);
 });
+
+test('addMonths crosses year boundaries both ways', async () => {
+  const { addMonths } = await import('../packages/core/src/calendar.ts');
+  assert.equal(addMonths('2026-10', 1), '2026-11');
+  assert.equal(addMonths('2026-12', 1), '2027-01');
+  assert.equal(addMonths('2026-01', -1), '2025-12');
+  assert.equal(addMonths('2026-10', -22), '2024-12');
+  assert.equal(addMonths('2026-10', 0), '2026-10');
+});

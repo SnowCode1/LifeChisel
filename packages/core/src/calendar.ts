@@ -82,3 +82,10 @@ export function makeGridDays(
 ): GridDay[] {
   return createGridDayCache(today)(count, futureCount);
 }
+
+/** The month (YYYY-MM) `delta` months after `month`. */
+export function addMonths(month: string, delta: number): string {
+  const [year, index] = month.split('-').map(Number);
+  const total = year * 12 + index - 1 + delta;
+  return `${Math.floor(total / 12)}-${String((total % 12) + 1).padStart(2, '0')}`;
+}

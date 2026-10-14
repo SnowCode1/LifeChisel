@@ -468,3 +468,46 @@ test('cached local days match localDateKey across daylight saving and half-hour 
     process.env.TZ = saved;
   }
 });
+
+test('the History calendar counts changes per day made, habits by changes', async () => {
+  const { historyCalendar } = await import('../packages/core/src/history.ts');
+  const entryFor = (habitId) => ({
+    kind: 'entry',
+    habitId,
+    date: '2026-10-01',
+    before: null,
+    after: 1,
+  });
+  const events = [
+    action(1, '2026-10-03T01:00:00.000Z', entryFor('walk')),
+    action(2, '2026-10-03T02:00:00.000Z', entryFor('read')),
+    action(3, '2026-10-03T03:00:00.000Z', entryFor('read')),
+    action(4, '2026-10-05T01:00:00.000Z', {
+      kind: 'order',
+      before: ['walk', 'read'],
+      after: ['read', 'walk'],
+    }),
+    action(5, '2026-10-05T02:00:00.000Z', entryFor('walk')),
+  ];
+  const calendar = historyCalendar(events);
+  assert.equal(calendar.first, '2026-10-03');
+  assert.equal(calendar.last, '2026-10-05');
+  // Grouped by the local day each change was made, not the entry's date.
+  assert.equal(calendar.days.has('2026-10-01'), false);
+  const third = calendar.days.get('2026-10-03');
+  assert.equal(third.count, 3);
+  assert.deepEqual(third.counts, { entries: 3, edits: 0, notes: 0 });
+  assert.deepEqual(third.habits, [
+    { id: 'read', count: 2 },
+    { id: 'walk', count: 1 },
+  ]);
+  const fifth = calendar.days.get('2026-10-05');
+  assert.equal(fifth.other, 1);
+  assert.deepEqual(fifth.habits, [{ id: 'walk', count: 1 }]);
+  // Filters apply, and an empty result has no range.
+  const read = historyCalendar(events, { kind: 'all', habitId: 'read' });
+  assert.deepEqual([...read.days.keys()], ['2026-10-03']);
+  const none = historyCalendar(events, { kind: 'notes', habitId: null });
+  assert.equal(none.days.size, 0);
+  assert.equal(none.first, null);
+});

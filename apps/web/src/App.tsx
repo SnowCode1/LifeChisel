@@ -34,6 +34,7 @@ import { NoteVersions } from './notes/NoteVersions.tsx';
 import type { HistoryAction } from '@onpurpose/core/storage/model';
 import { HabitPanel, type HabitTab } from './panel/HabitPanel.tsx';
 import { HistoryPanel } from './panel/HistoryPanel.tsx';
+import { PanelResizer, usePanelWidth } from './panel/PanelResizer.tsx';
 import { Icon } from './ui/Icon.tsx';
 import { habitType } from '@onpurpose/core/habits';
 import { useToday } from './useToday.ts';
@@ -43,6 +44,7 @@ import { useHabitActions, MAX_HABITS } from './actions.ts';
 import { EntryDialog, type EntryTarget } from './entry/EntryDialog.tsx';
 import { QuickUndoToast } from './QuickUndoToast.tsx';
 import { Sidebar } from './Sidebar.tsx';
+import { LANDING_URL } from './config.ts';
 import { Shortcuts } from './Shortcuts.tsx';
 import type { SettingsPage } from './settings/Settings.tsx';
 
@@ -187,6 +189,7 @@ function Tracker({
   useThemeVariables(theme);
   useGridSizes(gridSizing(state, effectiveColumnSpacing(state)));
   const [away, setAway] = useState(false);
+  const panelWidth = usePanelWidth();
   const habits = useMemo(
     () => state.habits.filter((habit) => !habit.archived),
     [state.habits],
@@ -350,9 +353,9 @@ function Tracker({
       />
       <main className="main">
         <header className="top-bar">
-          <span className="wordmark">
+          <a className="wordmark" href={LANDING_URL}>
             {sampleData ? 'Sample data' : 'OnPurpose'}
-          </span>
+          </a>
           <button
             className="today"
             aria-label="Today"
@@ -384,7 +387,7 @@ function Tracker({
             <button onClick={store.retry}>Retry</button>
           </div>
         )}
-        <div className="workspace">
+        <div className="workspace" style={panelWidth.style}>
           <HabitGrid
             ref={grid}
             habits={rows}
@@ -399,10 +402,17 @@ function Tracker({
             on={handlers}
             onAwayFromToday={setAway}
           />
+          {(panel?.kind === 'history' || panelHabit) && (
+            <PanelResizer
+              width={panelWidth.width}
+              onWidth={panelWidth.setWidth}
+            />
+          )}
           {panel?.kind === 'history' && (
             <HistoryPanel
               snapshot={snapshot}
               today={today}
+              weekStart={state.weekStart ?? displayDefaults.weekStart}
               theme={theme}
               editable={store.canEdit()}
               onUndo={store.undo}

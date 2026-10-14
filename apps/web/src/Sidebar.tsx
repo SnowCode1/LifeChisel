@@ -1,4 +1,5 @@
 import { Icon, type WebIconName } from './ui/Icon.tsx';
+import { LANDING_URL } from './config.ts';
 
 /**
  * The quiet left sidebar on wide screens: the habit list stays the only
@@ -44,7 +45,11 @@ export function Sidebar({
       className={collapsed ? 'sidebar collapsed' : 'sidebar'}
       aria-label="OnPurpose"
     >
-      <div className="sidebar-brand">
+      <a
+        className="sidebar-brand"
+        href={LANDING_URL}
+        title="OnPurpose home page"
+      >
         <svg
           className="brand-mark"
           width="24"
@@ -63,7 +68,7 @@ export function Sidebar({
           />
         </svg>
         <span className="sidebar-label wordmark">OnPurpose</span>
-      </div>
+      </a>
       <button
         type="button"
         className="sidebar-new"

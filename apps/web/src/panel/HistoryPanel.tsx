@@ -2,6 +2,7 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { calendarDay, localDateKey } from '@onpurpose/core/calendar';
 import {
   allHistory,
+  historyCalendar,
   historyCountLabel,
   historyDayIndex,
   historyDayLabel,
@@ -18,7 +19,9 @@ import {
 import type { HistoryAction, StoredState } from '@onpurpose/core/storage/model';
 import type { StoreSnapshot } from '@onpurpose/core/storage/store';
 import type { Theme } from '@onpurpose/core/theme';
+import type { WeekStart } from '@onpurpose/core/displayPreferences';
 import { Icon } from '../ui/Icon.tsx';
+import { HistoryCalendar, type CalendarScale } from './HistoryCalendar.tsx';
 
 const DAY_PAGE = 40;
 const KINDS: { value: HistoryKind | 'all'; label: string }[] = [
@@ -40,11 +43,13 @@ const shortDate = (date: string, reference: string) =>
   });
 
 // Active habit actions, newest first in log order, grouped by the day they
-// were made. Filters are view state only; the Undo bar always names the
-// newest action, even when it is filtered out.
+// were made, as a day list or a month or year calendar. Filters are view
+// state only and apply to both; the Undo bar always names the newest action,
+// even when it is filtered out.
 export function HistoryPanel({
   snapshot,
   today,
+  weekStart,
   theme,
   editable,
   onUndo,
@@ -54,6 +59,7 @@ export function HistoryPanel({
 }: {
   snapshot: StoreSnapshot;
   today: string;
+  weekStart: WeekStart;
   theme: Theme;
   editable: boolean;
   onUndo: () => void;
@@ -69,6 +75,9 @@ export function HistoryPanel({
   const [folds, setFolds] = useState<ReadonlyMap<string, boolean>>(new Map());
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
   const pendingJump = useRef<string | null>(null);
+  const [view, setView] = useState<'days' | 'calendar'>('days');
+  const [scale, setScale] = useState<CalendarScale>('month');
+  const [month, setMonth] = useState(today.slice(0, 7));
   useEffect(() => panel.current?.focus(), []);
 
   const undo = snapshot.replay.undo;
@@ -94,6 +103,11 @@ export function HistoryPanel({
   const yesterday = localDateKey(calendarDay(today, 1));
   const isOpen = (date: string) =>
     folds.get(date) ?? (filtered || date === today || date === yesterday);
+  // The calendar scans the whole log, so only while it is shown.
+  const calendar = useMemo(
+    () => (view === 'calendar' ? historyCalendar(undo, filter) : null),
+    [view, undo, filter],
+  );
   const habitsInHistory = useMemo(
     () => historyHabits(state, undo),
     [state, undo],
@@ -130,7 +144,8 @@ export function HistoryPanel({
     const loaded = all.indexOf(target) < dayLimit;
     if (loaded && isOpen(target.date) && scrollToDay(target.date)) return;
     pendingJump.current = target.date;
-    setDayLimit(Math.max(dayLimit, all.indexOf(target) + 1));
+    // Load some earlier days too, so the chosen day can reach the top.
+    setDayLimit(Math.max(dayLimit, all.indexOf(target) + 1 + DAY_PAGE / 2));
     setFolds((previous) => new Map(previous).set(target.date, true));
   };
 
@@ -152,15 +167,25 @@ export function HistoryPanel({
           <h2 id={titleId}>History</h2>
         </div>
         <div className="panel-actions">
-          <label className="jump" title="Jump to a day">
-            <Icon name="calendar" size={18} />
-            <span className="visually-hidden">Jump to a day</span>
-            <input
-              type="date"
-              max={today}
-              onChange={(event) => jump(event.target.value)}
-            />
-          </label>
+          <div className="segmented small" role="tablist" aria-label="View">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={view === 'days'}
+              onClick={() => setView('days')}
+            >
+              Days
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={view === 'calendar'}
+              onClick={() => setView('calendar')}
+            >
+              <Icon name="calendar" size={15} />
+              Calendar
+            </button>
+          </div>
           <button
             type="button"
             className="icon-button"
@@ -209,135 +234,161 @@ export function HistoryPanel({
         </select>
       </div>
 
-      <div className="panel-body history-list" ref={list}>
-        {!days.length &&
-          (filtered ? (
-            <div className="empty">
-              <p className="empty-title">No matching changes</p>
-              <button
-                type="button"
-                className="text-button"
-                onClick={() => setFilter(allHistory)}
-              >
-                Show all changes
-              </button>
-            </div>
-          ) : (
-            <div className="empty">
-              <Icon name="history" size={30} />
-              <p className="empty-title">No active changes</p>
-              <p className="muted">
-                Your habit entries and edits will appear here.
-              </p>
-            </div>
-          ))}
-        {days.map((day) => {
-          const open = isOpen(day.date);
-          return (
-            <section key={day.key} className="history-day" data-day={day.date}>
-              <h3>
+      {calendar ? (
+        <div className="panel-body">
+          <HistoryCalendar
+            calendar={calendar}
+            state={state}
+            theme={theme}
+            today={today}
+            weekStart={weekStart}
+            scale={scale}
+            month={month}
+            onScale={setScale}
+            onMonth={setMonth}
+            onChoose={(date) => {
+              setView('days');
+              jump(date);
+            }}
+          />
+        </div>
+      ) : (
+        <div className="panel-body history-list" ref={list}>
+          {!days.length &&
+            (filtered ? (
+              <div className="empty">
+                <p className="empty-title">No matching changes</p>
                 <button
                   type="button"
-                  aria-expanded={open}
-                  onClick={() =>
-                    setFolds((previous) =>
-                      new Map(previous).set(day.date, !open),
-                    )
-                  }
+                  className="text-button"
+                  onClick={() => setFilter(allHistory)}
                 >
-                  <Icon name="chevron" size={16} />
-                  <span className="day-label">
-                    {historyDayLabel(day.date, today)}
-                  </span>
-                  <span className="muted">{historyCountLabel(day.counts)}</span>
+                  Show all changes
                 </button>
-              </h3>
-              {open && (
-                <ul>
-                  {historyRows(day.actions, expanded).map((row) =>
-                    row.type === 'burst' ? (
-                      <li key={row.key} className="history-burst">
-                        <button
-                          type="button"
-                          aria-expanded={row.expanded}
-                          onClick={() =>
-                            setExpanded((previous) => {
-                              const next = new Set(previous);
-                              if (next.has(row.key)) next.delete(row.key);
-                              else next.add(row.key);
-                              return next;
-                            })
-                          }
-                        >
-                          <span className="row-icon">
-                            <Icon
-                              name="checked"
-                              size={16}
-                              color={theme.ink(0xb8)}
-                            />
-                          </span>
-                          <span className="row-text">
-                            <span>
-                              {row.actions.length} entries
-                              {row.expanded ? '' : ':'}
+              </div>
+            ) : (
+              <div className="empty">
+                <Icon name="history" size={30} />
+                <p className="empty-title">No active changes</p>
+                <p className="muted">
+                  Your habit entries and edits will appear here.
+                </p>
+              </div>
+            ))}
+          {days.map((day) => {
+            const open = isOpen(day.date);
+            return (
+              <section
+                key={day.key}
+                className="history-day"
+                data-day={day.date}
+              >
+                <h3>
+                  <button
+                    type="button"
+                    aria-expanded={open}
+                    onClick={() =>
+                      setFolds((previous) =>
+                        new Map(previous).set(day.date, !open),
+                      )
+                    }
+                  >
+                    <Icon name="chevron" size={16} />
+                    <span className="day-label">
+                      {historyDayLabel(day.date, today)}
+                    </span>
+                    <span className="muted">
+                      {historyCountLabel(day.counts)}
+                    </span>
+                  </button>
+                </h3>
+                {open && (
+                  <ul>
+                    {historyRows(day.actions, expanded).map((row) =>
+                      row.type === 'burst' ? (
+                        <li key={row.key} className="history-burst">
+                          <button
+                            type="button"
+                            aria-expanded={row.expanded}
+                            onClick={() =>
+                              setExpanded((previous) => {
+                                const next = new Set(previous);
+                                if (next.has(row.key)) next.delete(row.key);
+                                else next.add(row.key);
+                                return next;
+                              })
+                            }
+                          >
+                            <span className="row-icon">
+                              <Icon
+                                name="checked"
+                                size={16}
+                                color={theme.ink(0xb8)}
+                              />
                             </span>
-                            {!row.expanded && (
-                              <span className="burst-members">
-                                {row.actions.map((action) => {
-                                  const member = burstMemberLabel(
-                                    action,
-                                    state,
-                                  );
-                                  return (
-                                    <span
-                                      key={action.id}
-                                      style={{
-                                        color: theme.colour(member.color),
-                                      }}
-                                      className={
-                                        member.removed ? 'removed' : undefined
-                                      }
-                                    >
-                                      {member.name}
-                                      {member.value ? ` ${member.value}` : ''}
-                                    </span>
-                                  );
-                                })}
+                            <span className="row-text">
+                              <span>
+                                {row.actions.length} entries
+                                {row.expanded ? '' : ':'}
                               </span>
-                            )}
-                          </span>
-                          <span className="row-time">
-                            {time(row.actions[0].recordedAt)}
-                          </span>
-                        </button>
-                      </li>
-                    ) : (
-                      <HistoryRow
-                        key={row.key}
-                        action={row.action}
-                        state={state}
-                        theme={theme}
-                        today={today}
-                        nested={!!row.nested}
-                        onOpenNote={onOpenNote}
-                      />
-                    ),
-                  )}
-                </ul>
-              )}
-            </section>
-          );
-        })}
-        {more && (
-          <button
-            type="button"
-            className="text-button more-days"
-            onClick={() => setDayLimit((limit) => limit + DAY_PAGE)}
-          >
-            Show earlier days
-          </button>
-        )}
-      </div>
+                              {!row.expanded && (
+                                <span className="burst-members">
+                                  {row.actions.map((action) => {
+                                    const member = burstMemberLabel(
+                                      action,
+                                      state,
+                                    );
+                                    return (
+                                      <span
+                                        key={action.id}
+                                        style={{
+                                          color: theme.colour(member.color),
+                                        }}
+                                        className={
+                                          member.removed ? 'removed' : undefined
+                                        }
+                                      >
+                                        {member.name}
+                                        {member.value ? ` ${member.value}` : ''}
+                                      </span>
+                                    );
+                                  })}
+                                </span>
+                              )}
+                            </span>
+                            <span className="row-time">
+                              {time(row.actions[0].recordedAt)}
+                            </span>
+                          </button>
+                        </li>
+                      ) : (
+                        <HistoryRow
+                          key={row.key}
+                          action={row.action}
+                          state={state}
+                          theme={theme}
+                          today={today}
+                          nested={!!row.nested}
+                          onOpenNote={onOpenNote}
+                        />
+                      ),
+                    )}
+                  </ul>
+                )}
+              </section>
+            );
+          })}
+          {more && (
+            <button
+              type="button"
+              className="text-button more-days"
+              onClick={() => setDayLimit((limit) => limit + DAY_PAGE)}
+            >
+              Show earlier days
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="undo-bar" role="region" aria-label="Undo and redo">
         <button

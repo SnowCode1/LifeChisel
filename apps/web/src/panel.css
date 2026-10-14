@@ -11,7 +11,8 @@
 .side-panel {
   display: flex;
   flex-direction: column;
-  width: 440px;
+  /* Set by dragging the edge (PanelResizer.tsx). */
+  width: var(--panel-width, 440px);
   flex-shrink: 0;
   min-height: 0;
   border-left: 1px solid var(--rule);
@@ -480,7 +481,43 @@
 }
 
 /* Narrow windows: the panel covers the grid instead of docking. */
+/* The draggable edge between the grid and the panel. */
+.panel-resizer {
+  position: relative;
+  z-index: 6;
+  flex: none;
+  width: 11px;
+  margin: 0 -5px;
+  cursor: col-resize;
+  touch-action: none;
+}
+.panel-resizer::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 5px;
+  width: 1px;
+  transition: background-color 120ms ease;
+}
+.panel-resizer:hover::after,
+.panel-resizer.dragging::after,
+.panel-resizer:focus-visible::after {
+  left: 4px;
+  width: 3px;
+  background-color: var(--accent);
+}
+.panel-resizer:focus-visible {
+  outline: none;
+}
+body.resizing {
+  cursor: col-resize;
+  user-select: none;
+}
 @media (max-width: 1000px) {
+  .panel-resizer {
+    display: none;
+  }
   .side-panel {
     position: fixed;
     top: 0;

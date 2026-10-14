@@ -111,13 +111,7 @@ export function historyDays(
   filter: HistoryFilter = allHistory,
   dayLimit = Infinity,
 ): { days: HistoryDay[]; more: boolean } {
-  const current = `${Intl.DateTimeFormat().resolvedOptions().timeZone}|${new Date().getTimezoneOffset()}`;
-  if (current !== zone) {
-    zone = current;
-    days = new WeakMap();
-    offsets = new Map();
-    dayKeys = new Map();
-  }
+  syncZone();
   const result: HistoryDay[] = [];
   let day: HistoryDay | undefined;
   for (let index = actions.length - 1; index >= 0; index--) {
@@ -138,6 +132,84 @@ export function historyDays(
     day.counts[historyKind(action)]++;
   }
   return { days: keyed(result), more: false };
+}
+
+function syncZone() {
+  const current = `${Intl.DateTimeFormat().resolvedOptions().timeZone}|${new Date().getTimezoneOffset()}`;
+  if (current !== zone) {
+    zone = current;
+    days = new WeakMap();
+    offsets = new Map();
+    dayKeys = new Map();
+  }
+}
+
+// One local day in the History calendar: what changed, by the day each change
+// was made (the same grouping as the day list).
+export type HistoryCalendarDay = {
+  date: string;
+  count: number;
+  counts: HistoryCounts;
+  // Habits changed that day, most changes first (ties: most recent first).
+  habits: { id: string; count: number }[];
+  // Changes that belong to no habit (the habit order).
+  other: number;
+};
+export type HistoryCalendar = {
+  days: ReadonlyMap<string, HistoryCalendarDay>;
+  // The first and last days with changes, or null without any.
+  first: string | null;
+  last: string | null;
+};
+
+/**
+ * Every day with matching changes, for the month and year calendars. It scans
+ * the whole log, so call it only while a calendar is shown.
+ */
+export function historyCalendar(
+  actions: HistoryAction[],
+  filter: HistoryFilter = allHistory,
+): HistoryCalendar {
+  syncZone();
+  const result = new Map<string, HistoryCalendarDay>();
+  const order = new Map<string, Map<string, number>>();
+  let first: string | null = null;
+  let last: string | null = null;
+  for (let index = actions.length - 1; index >= 0; index--) {
+    const action = actions[index];
+    if (!historyMatches(action, filter)) continue;
+    const date = historyDate(action);
+    let day = result.get(date);
+    if (!day) {
+      day = {
+        date,
+        count: 0,
+        counts: { entries: 0, edits: 0, notes: 0 },
+        habits: [],
+        other: 0,
+      };
+      result.set(date, day);
+      order.set(date, new Map());
+      if (first === null || date < first) first = date;
+      if (last === null || date > last) last = date;
+    }
+    day.count++;
+    day.counts[historyKind(action)]++;
+    if (action.change.kind === 'order') {
+      day.other++;
+      continue;
+    }
+    const seen = order.get(date)!;
+    const id = action.change.habitId;
+    seen.set(id, (seen.get(id) ?? 0) + 1);
+  }
+  for (const [date, seen] of order) {
+    // Map order is first seen, which is newest first; the sort is stable.
+    result.get(date)!.habits = [...seen]
+      .map(([id, count]) => ({ id, count }))
+      .sort((a, b) => b.count - a.count);
+  }
+  return { days: result, first, last };
 }
 
 function keyed(result: HistoryDay[]): HistoryDay[] {

@@ -26,11 +26,17 @@
 }
 .sidebar-brand {
   display: flex;
+  border-radius: 9px;
+  text-decoration: none;
   align-items: center;
   gap: 10px;
   height: 40px;
   padding: 0 8px;
   margin-bottom: 10px;
+}
+.sidebar-brand:hover .wordmark {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 .brand-mark {
   flex: none;
