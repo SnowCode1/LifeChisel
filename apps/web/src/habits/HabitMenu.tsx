@@ -2,7 +2,8 @@ import { useId, type KeyboardEvent } from 'react';
 import type { Habit } from '@onpurpose/core/habits';
 import { AnchoredDialog } from '../ui/AnchoredDialog.tsx';
 
-export type HabitMenuAction = 'edit' | 'moveUp' | 'moveDown' | 'archive';
+export type HabitMenuAction =
+  'details' | 'edit' | 'moveUp' | 'moveDown' | 'archive';
 
 // The habit's actions, from its row's ⋯ button or a right-click on its name.
 // Move up/down make reordering possible without dragging.
@@ -25,6 +26,7 @@ export function HabitMenu({
 }) {
   const titleId = useId();
   const items: [HabitMenuAction, string, boolean][] = [
+    ['details', 'Notes and statistics', true],
     ['edit', 'Edit habit', true],
     ['moveUp', 'Move up', !first],
     ['moveDown', 'Move down', !last],

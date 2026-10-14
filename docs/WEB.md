@@ -7,8 +7,9 @@ data format with the phone app through `@onpurpose/core`.
 Status: the home grid (layout A, below) records all four entry types, follows
 the saved theme and cell look, and supports Undo/Redo (buttons, Ctrl+Z,
 Ctrl+Shift+Z or Ctrl+Y) and the four-second quick undo. Habits can be added,
-edited, reordered and archived. The docked habit and History panels,
-Settings, statistics, notes, goal editing, backups and sync are not built yet.
+edited, reordered and archived, and each has a docked Notes/Statistics panel.
+The History panel, Settings, goal and note editing, backups and sync are not
+built yet.
 
 ## Home grid (layout A)
 
@@ -51,6 +52,26 @@ and Esc, Close or the backdrop discard it. Numbers use core `parseDailyTotal`
 and `recentNumericTotals`, exactly as the phone does. Categories created while
 recording join the habit only on Done. Every entry and archive shows the shared
 `quickUndo` receipt for four seconds.
+
+## Habit panel
+
+Clicking a habit's name (or **Notes and statistics** in its menu) docks a
+panel beside the grid, which narrows to whole columns but stays usable; below
+1000 px wide the panel covers the grid instead. It opens on Notes when the
+habit has notes, otherwise on Statistics, as on the phone. Esc closes it.
+
+- **Notes** render from core's Markdown token stream as React elements: text
+  is escaped, links pass core `descriptionLink` and open in a new tab, and
+  images show only their alt text, so reading never loads remote content.
+- **Statistics** use the phone's core calculations (`habitStatistics`,
+  `recordStatistics`, `statsSeries`, `periodStatistics`, `timeOfDay`)
+  with the same ranges, period stepping, headline, tiles and wording. Charts
+  are SVG in a shared `ChartFrame`: hover, or focus and the arrow keys, select
+  a bar and one reading line (a live region) names it. Sections: daily totals
+  (numbers), categories (with filtering), success over time with the trend,
+  streaks, calendar, by day of the week, time of day, and an entries journal
+  for text and categories. Calendar days tick checkboxes or open the entry
+  popover.
 
 ## Managing habits
 

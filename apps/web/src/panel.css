@@ -1,0 +1,491 @@
+/* The docked side panel (habit Notes/Statistics, and later History). */
+
+.workspace {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+.workspace .grid-area {
+  min-width: 0;
+}
+.side-panel {
+  display: flex;
+  flex-direction: column;
+  width: 440px;
+  flex-shrink: 0;
+  min-height: 0;
+  border-left: 1px solid var(--rule);
+  background-color: var(--background);
+  outline: none;
+}
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px 0;
+}
+.panel-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.panel-title h2 {
+  margin: 0;
+  overflow: hidden;
+  font-size: 20px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.panel-actions .text-button {
+  align-self: center;
+}
+.panel-tabs {
+  margin: 12px 16px 0;
+}
+.panel-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 16px 16px 32px;
+}
+.name-button {
+  display: block;
+  padding: 0;
+  text-align: left;
+}
+.name-button:hover .habit-name {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Notes. */
+.note {
+  max-width: 62ch;
+  font-size: 16px;
+  line-height: 1.6;
+}
+.note > :first-child {
+  margin-top: 0;
+}
+.note blockquote {
+  margin: 0 0 1em;
+  padding-left: 14px;
+  border-left: 2px solid var(--surface-edge);
+  color: var(--ink-soft);
+}
+.note code,
+.note pre {
+  font-family: ui-monospace, monospace;
+  font-size: 0.9em;
+}
+.note pre {
+  overflow-x: auto;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background-color: var(--surface);
+}
+.note mark {
+  padding: 0 2px;
+  border-radius: 3px;
+}
+.note hr {
+  border: 0;
+  border-top: 1px solid var(--rule);
+}
+
+/* Statistics. */
+.stats {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.stats-overview p {
+  margin: 0;
+}
+.period-navigator {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--ink-soft);
+}
+.period-navigator .icon-button {
+  font-size: 20px;
+}
+.period-navigator .icon-button:disabled {
+  opacity: 0.3;
+}
+.stats-headline {
+  margin-top: 6px !important;
+  font-size: 26px;
+  font-weight: 600;
+}
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--rule);
+  border-radius: 14px;
+  background-color: var(--surface);
+  font-size: 12px;
+}
+.tile strong {
+  font-size: 20px;
+  font-weight: 600;
+}
+.goal-line {
+  margin: 0;
+  font-size: 14px;
+}
+.period-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background-color: var(--surface);
+  font-size: 14px;
+}
+.period-progress p {
+  margin: 0;
+}
+.period-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.period-progress summary {
+  cursor: pointer;
+}
+.stats-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.stats-section > header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.stats-section h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--ink-soft);
+}
+.stats-section > p {
+  margin: 0;
+  font-size: 12px;
+}
+.info {
+  position: relative;
+}
+.info summary {
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--surface-edge);
+  border-radius: 50%;
+  font-size: 11px;
+  color: var(--ink-quiet);
+  cursor: pointer;
+  list-style: none;
+}
+.info summary::-webkit-details-marker {
+  display: none;
+}
+.info p {
+  position: absolute;
+  z-index: 3;
+  top: 26px;
+  left: -40px;
+  width: min(300px, 80vw);
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--surface-edge);
+  border-radius: 10px;
+  background-color: var(--surface);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.4);
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
+.info-note summary {
+  font-size: 13px;
+  color: var(--ink-quiet);
+  cursor: pointer;
+}
+.info-note p {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-soft);
+}
+
+/* Charts. */
+.chart {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+}
+.chart-reading {
+  min-height: 18px;
+  margin: 0;
+  font-size: 12px;
+}
+.chart-body {
+  display: flex;
+  gap: 6px;
+}
+.chart-plot {
+  flex: 1;
+  min-width: 0;
+  border-radius: 4px;
+}
+.chart-plot svg {
+  display: block;
+}
+.chart-gridline {
+  stroke: var(--rule);
+  stroke-width: 1;
+}
+.chart-selection {
+  fill: var(--row-highlight);
+}
+.chart-axis {
+  position: relative;
+  width: 34px;
+  font-size: 10px;
+  color: var(--ink-hint);
+}
+.chart-axis:empty {
+  display: none;
+}
+.chart-axis span {
+  position: absolute;
+  right: 0;
+  transform: translateY(-50%);
+}
+.chart-ticks {
+  position: relative;
+  height: 14px;
+  margin-right: 40px;
+  font-size: 10px;
+  color: var(--ink-hint);
+}
+.chart-ticks:empty {
+  display: none;
+}
+.chart-ticks span {
+  position: absolute;
+  white-space: nowrap;
+}
+.streak-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.streak-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.streak-row > .chart {
+  flex: 1;
+  min-width: 0;
+}
+.streak-label {
+  width: 30px;
+  padding-top: 20px;
+  font-size: 11px;
+  color: var(--ink-quiet);
+}
+.weekday-bars,
+.category-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.weekday-bars li {
+  display: grid;
+  grid-template-columns: 36px 1fr 52px;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+.weekday-bars .track {
+  height: 6px;
+  border-radius: 3px;
+  background-color: var(--surface-raised);
+  overflow: hidden;
+}
+.weekday-bars .track span {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+}
+.weekday-bars .value,
+.category-rows .value {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.category-rows button {
+  display: grid;
+  grid-template-columns: 96px 1fr 32px;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 32px;
+  padding: 0 4px;
+  border-radius: 8px;
+  font-size: 13px;
+  text-align: left;
+}
+.category-rows button:hover,
+.category-rows button[aria-pressed='true'] {
+  background-color: var(--surface);
+}
+.category-rows .dimmed {
+  opacity: 0.45;
+}
+.category-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.category-marks {
+  width: 100%;
+  height: 10px;
+  border-radius: 3px;
+  background-color: var(--surface-raised);
+}
+
+/* Statistics calendar. */
+.calendar {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+.calendar-grid.headings span {
+  text-align: center;
+  font-size: 11px;
+  color: var(--ink-hint);
+}
+.calendar-day {
+  position: relative;
+  display: grid;
+  place-items: center;
+  height: 40px;
+}
+.calendar-day.join-left::before,
+.calendar-day.join-right::after {
+  content: '';
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  width: 50%;
+  background-color: var(--join);
+}
+.calendar-day.join-left::before {
+  left: 0;
+}
+.calendar-day.join-right::after {
+  right: 0;
+}
+.calendar-day button {
+  position: relative;
+  z-index: 1;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.calendar-day.today button {
+  box-shadow: 0 0 0 1.5px var(--ink-soft);
+}
+.calendar-day button:not(:disabled):hover {
+  filter: brightness(1.2);
+}
+.calendar-months {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(118px, 1fr));
+  gap: 14px;
+}
+.calendar-month {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+}
+.calendar-grid.compact .calendar-day {
+  height: 15px;
+}
+.calendar-grid.compact .calendar-day button {
+  width: 13px;
+  height: 13px;
+  border-radius: 3px;
+}
+.journal-month {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.journal-month > p {
+  margin: 8px 0 4px;
+  font-size: 12px;
+}
+.journal-entry {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: 10px;
+  padding: 8px 6px;
+  border-radius: 8px;
+  text-align: left;
+  font-size: 14px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.journal-entry:hover {
+  background-color: var(--surface);
+}
+
+/* Narrow windows: the panel covers the grid instead of docking. */
+@media (max-width: 1000px) {
+  .side-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 8;
+    width: min(440px, 100vw);
+    box-shadow: -10px 0 40px rgb(0 0 0 / 0.5);
+  }
+}

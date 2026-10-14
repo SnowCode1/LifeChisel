@@ -25,6 +25,8 @@ import { moveHabit } from '@onpurpose/core/habitOrdering';
 import { habitTrackingStart } from '@onpurpose/core/statistics';
 import { HabitMenu, type HabitMenuAction } from './habits/HabitMenu.tsx';
 import { HabitEditor } from './habits/HabitEditor.tsx';
+import { HabitPanel, type HabitTab } from './panel/HabitPanel.tsx';
+import { habitType } from '@onpurpose/core/habits';
 import { useToday } from './useToday.ts';
 import { useHabitActions, MAX_HABITS } from './actions.ts';
 import { EntryDialog, type EntryTarget } from './entry/EntryDialog.tsx';
@@ -63,8 +65,21 @@ function Tracker({ store }: { store: ChangeStore }) {
     habit: Habit;
     creating: boolean;
   } | null>(null);
+  const [panel, setPanel] = useState<{ habitId: string; tab: HabitTab } | null>(
+    null,
+  );
+  const openHabit = (habit: Habit) =>
+    setPanel({
+      habitId: habit.id,
+      tab: habit.description ? 'notes' : 'statistics',
+    });
   const handlers = useMemo<GridHandlers>(
     () => ({
+      openHabit: (habit) =>
+        setPanel({
+          habitId: habit.id,
+          tab: habit.description ? 'notes' : 'statistics',
+        }),
       toggle: actions.toggle,
       openEntry: (habit, date, label, anchor) =>
         setEntry({ habit, date, label, anchor }),
@@ -142,8 +157,22 @@ function Tracker({ store }: { store: ChangeStore }) {
   const menuIndex = menu
     ? habits.findIndex((habit) => habit.id === menu.habit.id)
     : -1;
+  const panelHabit =
+    panel &&
+    state.habits.find((habit) => habit.id === panel.habitId && !habit.archived);
+  // Calendar days in the panel tick checkboxes or open the entry popover.
+  const panelDay = (
+    habit: Habit,
+    date: string,
+    label: string,
+    anchor: HTMLElement,
+  ) => {
+    if (habitType(habit) === 'checkbox') actions.toggle(habit, date);
+    else setEntry({ habit, date, label, anchor });
+  };
   const menuAction = (habit: Habit, action: HabitMenuAction) => {
-    if (action === 'edit') setEditor({ habit, creating: false });
+    if (action === 'details') openHabit(habit);
+    else if (action === 'edit') setEditor({ habit, creating: false });
     else if (action === 'archive')
       actions.saveHabit({ ...habit, archived: true });
     else {
@@ -181,19 +210,38 @@ function Tracker({ store }: { store: ChangeStore }) {
           <button onClick={store.retry}>Retry</button>
         </div>
       )}
-      <HabitGrid
-        ref={grid}
-        habits={habits}
-        values={state.values}
-        today={today}
-        theme={theme}
-        look={look}
-        weekStart={state.weekStart ?? displayDefaults.weekStart}
-        weekDividers={state.weekDividers ?? displayDefaults.weekDividers}
-        editable={store.canEdit()}
-        canAdd={state.habits.length < MAX_HABITS}
-        on={handlers}
-      />
+      <div className="workspace">
+        <HabitGrid
+          ref={grid}
+          habits={habits}
+          values={state.values}
+          today={today}
+          theme={theme}
+          look={look}
+          weekStart={state.weekStart ?? displayDefaults.weekStart}
+          weekDividers={state.weekDividers ?? displayDefaults.weekDividers}
+          editable={store.canEdit()}
+          canAdd={state.habits.length < MAX_HABITS}
+          on={handlers}
+        />
+        {panel && panelHabit && (
+          <HabitPanel
+            habit={panelHabit}
+            tab={panel.tab}
+            values={state.values}
+            events={snapshot.events}
+            actions={snapshot.replay.undo}
+            today={today}
+            weekStart={state.weekStart ?? displayDefaults.weekStart}
+            theme={theme}
+            editable={store.canEdit()}
+            onTab={(tab) => setPanel({ habitId: panelHabit.id, tab })}
+            onEdit={() => setEditor({ habit: panelHabit, creating: false })}
+            onClose={() => setPanel(null)}
+            onDay={panelDay}
+          />
+        )}
+      </div>
       <footer className="hints">
         Space ticks · Enter opens a value · Arrow keys move · Alt ↑↓ reorders ·
         Ctrl Z undoes

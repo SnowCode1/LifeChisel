@@ -82,14 +82,20 @@ export function HabitRow({
             </span>
           )}
           <HabitSymbol icon={habit.icon} colour={palette.colour} size={20} />
-          <span className="name-text">
+          <button
+            type="button"
+            className="name-text name-button"
+            tabIndex={-1}
+            title={`Notes and statistics for ${habit.name}`}
+            onClick={() => on.openHabit(habit)}
+          >
             <span className="habit-name" style={{ color: palette.colour }}>
               {habit.name}
             </span>
             <span className="summary">
               {habitSummary(habit, values, today)}
             </span>
-          </span>
+          </button>
           <button
             type="button"
             className="row-menu"

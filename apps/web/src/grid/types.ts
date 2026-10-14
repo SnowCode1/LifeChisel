@@ -30,6 +30,8 @@ export type GridHandlers = {
     anchor: HTMLElement,
   ): void;
   openMenu(habit: Habit, anchor: HTMLElement): void;
+  /** Opens the habit's Notes/Statistics panel. */
+  openHabit(habit: Habit): void;
   /** Saves the displayed rows in a new order. */
   reorder(ids: string[]): void;
   add(): void;
