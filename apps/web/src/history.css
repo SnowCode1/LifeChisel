@@ -1,0 +1,236 @@
+/* History panel and the top bar's panel buttons. */
+
+.top-bar .actions button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.top-bar .actions button[aria-pressed='true'] {
+  color: var(--ink);
+  background-color: var(--surface-raised);
+}
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.history-panel .panel-header {
+  padding-bottom: 4px;
+}
+.jump {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.jump:hover,
+.jump:focus-within {
+  background-color: var(--surface-raised);
+}
+/* The native date picker opens from the whole button. */
+.jump input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.jump input::-webkit-calendar-picker-indicator {
+  position: absolute;
+  inset: 0;
+  width: auto;
+  height: auto;
+  cursor: pointer;
+}
+.history-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px 4px;
+}
+.history-filters .chips button {
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 16px;
+  font-size: 13px;
+  background-color: var(--surface-raised);
+}
+.habit-filter {
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--surface-edge);
+  border-radius: 16px;
+  color: var(--ink-soft);
+  background-color: var(--surface-raised);
+  font: inherit;
+  font-size: 13px;
+}
+.history-list {
+  padding-bottom: 96px;
+}
+.history-day h3 {
+  position: sticky;
+  top: -16px;
+  z-index: 1;
+  margin: 0;
+  padding-top: 4px;
+  background-color: var(--background);
+}
+.history-day h3 button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 44px;
+  font-size: 14px;
+  text-align: left;
+}
+.history-day h3 button .icon {
+  flex-shrink: 0;
+  transition: transform 120ms ease;
+}
+.history-day h3 button[aria-expanded='false'] .icon {
+  transform: rotate(-90deg);
+}
+.day-label {
+  flex: 1;
+  font-weight: 600;
+}
+.history-day h3 .muted {
+  font-size: 12px;
+  font-weight: 400;
+}
+.history-day ul {
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+}
+.history-row,
+.history-burst > button {
+  display: grid;
+  grid-template-columns: 30px 1fr auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 52px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--rule);
+  font-size: 14px;
+  text-align: left;
+}
+.history-row.nested {
+  padding-left: 18px;
+}
+.row-icon {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  background-color: var(--surface-raised);
+}
+.row-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.row-text .muted {
+  font-size: 12px;
+}
+.row-title {
+  font-weight: 600;
+}
+.row-time {
+  font-size: 12px;
+  color: var(--ink-hint);
+  font-variant-numeric: tabular-nums;
+}
+.burst-members {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  font-size: 12px;
+}
+.burst-members .removed {
+  text-decoration: line-through;
+}
+.more-days {
+  margin: 12px auto 0;
+}
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-top: 48px;
+  text-align: center;
+  color: var(--ink-quiet);
+}
+.empty-title {
+  margin: 0;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+.empty .muted {
+  margin: 0;
+}
+.undo-bar {
+  display: flex;
+  gap: 8px;
+  margin: 0 16px 16px;
+  padding: 6px;
+  border-radius: 14px;
+  background-color: var(--surface-raised);
+}
+.undo-bar button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 12px;
+  border-radius: 10px;
+}
+.undo-bar button:first-child {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}
+.undo-bar button:not(:disabled):hover {
+  background-color: var(--surface-edge);
+}
+.undo-bar button:disabled {
+  opacity: 0.45;
+}
+.undo-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.undo-text .muted {
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.undo-bar .redo {
+  color: var(--ink-soft);
+}
+@media (prefers-reduced-motion: reduce) {
+  .history-day h3 button .icon {
+    transition: none;
+  }
+}
+@media (max-width: 600px) {
+  .top-bar .actions .label {
+    display: none;
+  }
+}

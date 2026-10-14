@@ -26,6 +26,8 @@ import { habitTrackingStart } from '@onpurpose/core/statistics';
 import { HabitMenu, type HabitMenuAction } from './habits/HabitMenu.tsx';
 import { HabitEditor } from './habits/HabitEditor.tsx';
 import { HabitPanel, type HabitTab } from './panel/HabitPanel.tsx';
+import { HistoryPanel } from './panel/HistoryPanel.tsx';
+import { Icon } from './ui/Icon.tsx';
 import { habitType } from '@onpurpose/core/habits';
 import { useToday } from './useToday.ts';
 import { useHabitActions, MAX_HABITS } from './actions.ts';
@@ -65,11 +67,15 @@ function Tracker({ store }: { store: ChangeStore }) {
     habit: Habit;
     creating: boolean;
   } | null>(null);
-  const [panel, setPanel] = useState<{ habitId: string; tab: HabitTab } | null>(
-    null,
-  );
+  // The docked panel shows one habit or History.
+  const [panel, setPanel] = useState<
+    | { kind: 'habit'; habitId: string; tab: HabitTab }
+    | { kind: 'history' }
+    | null
+  >(null);
   const openHabit = (habit: Habit) =>
     setPanel({
+      kind: 'habit',
       habitId: habit.id,
       tab: habit.description ? 'notes' : 'statistics',
     });
@@ -77,6 +83,7 @@ function Tracker({ store }: { store: ChangeStore }) {
     () => ({
       openHabit: (habit) =>
         setPanel({
+          kind: 'habit',
           habitId: habit.id,
           tab: habit.description ? 'notes' : 'statistics',
         }),
@@ -158,8 +165,11 @@ function Tracker({ store }: { store: ChangeStore }) {
     ? habits.findIndex((habit) => habit.id === menu.habit.id)
     : -1;
   const panelHabit =
-    panel &&
-    state.habits.find((habit) => habit.id === panel.habitId && !habit.archived);
+    panel?.kind === 'habit'
+      ? state.habits.find(
+          (habit) => habit.id === panel.habitId && !habit.archived,
+        )
+      : undefined;
   // Calendar days in the panel tick checkboxes or open the entry popover.
   const panelDay = (
     habit: Habit,
@@ -191,16 +201,13 @@ function Tracker({ store }: { store: ChangeStore }) {
         </button>
         <span className="actions">
           <button
-            onClick={store.undo}
-            disabled={!snapshot.replay.undo.length || !store.canEdit()}
+            aria-pressed={panel?.kind === 'history'}
+            onClick={() =>
+              setPanel(panel?.kind === 'history' ? null : { kind: 'history' })
+            }
           >
-            Undo
-          </button>
-          <button
-            onClick={store.redo}
-            disabled={!snapshot.replay.redo.length || !store.canEdit()}
-          >
-            Redo
+            <Icon name="history" size={19} />
+            <span className="label">History</span>
           </button>
         </span>
       </header>
@@ -224,7 +231,18 @@ function Tracker({ store }: { store: ChangeStore }) {
           canAdd={state.habits.length < MAX_HABITS}
           on={handlers}
         />
-        {panel && panelHabit && (
+        {panel?.kind === 'history' && (
+          <HistoryPanel
+            snapshot={snapshot}
+            today={today}
+            theme={theme}
+            editable={store.canEdit()}
+            onUndo={store.undo}
+            onRedo={store.redo}
+            onClose={() => setPanel(null)}
+          />
+        )}
+        {panel?.kind === 'habit' && panelHabit && (
           <HabitPanel
             habit={panelHabit}
             tab={panel.tab}
@@ -235,7 +253,9 @@ function Tracker({ store }: { store: ChangeStore }) {
             weekStart={state.weekStart ?? displayDefaults.weekStart}
             theme={theme}
             editable={store.canEdit()}
-            onTab={(tab) => setPanel({ habitId: panelHabit.id, tab })}
+            onTab={(tab) =>
+              setPanel({ kind: 'habit', habitId: panelHabit.id, tab })
+            }
             onEdit={() => setEditor({ habit: panelHabit, creating: false })}
             onClose={() => setPanel(null)}
             onDay={panelDay}

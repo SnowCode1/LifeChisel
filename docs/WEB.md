@@ -7,9 +7,8 @@ data format with the phone app through `@onpurpose/core`.
 Status: the home grid (layout A, below) records all four entry types, follows
 the saved theme and cell look, and supports Undo/Redo (buttons, Ctrl+Z,
 Ctrl+Shift+Z or Ctrl+Y) and the four-second quick undo. Habits can be added,
-edited, reordered and archived, and each has a docked Notes/Statistics panel.
-The History panel, Settings, goal and note editing, backups and sync are not
-built yet.
+edited, reordered and archived, and each has a docked Notes/Statistics panel. History has its own panel.
+Settings, goal and note editing, backups and sync are not built yet.
 
 ## Home grid (layout A)
 
@@ -72,6 +71,18 @@ habit has notes, otherwise on Statistics, as on the phone. Esc closes it.
   streaks, calendar, by day of the week, time of day, and an entries journal
   for text and categories. Calendar days tick checkboxes or open the entry
   popover.
+
+## History
+
+The top bar's History button docks the History panel in the same slot as
+the habit panel. It uses core `history.ts` exactly as the phone does:
+active habit actions in log order, grouped by the day they were made (Today
+and Yesterday open; filtered lists open fully), neighbouring same-date
+entries within five minutes collapsed into a burst, and entries for another
+day marked "For <date>". Filters (kind chips and a habit picker) are view
+state. A date picker jumps to a day. The Undo bar always names the newest
+action, even when filtered out; Undo and Redo live there (and on Ctrl+Z /
+Ctrl+Shift+Z) rather than in the top bar.
 
 ## Managing habits
 
