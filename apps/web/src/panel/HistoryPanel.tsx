@@ -65,7 +65,7 @@ export function HistoryPanel({
   const [dayLimit, setDayLimit] = useState(DAY_PAGE);
   const [folds, setFolds] = useState<ReadonlyMap<string, boolean>>(new Map());
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
-  const [jumpTo, setJumpTo] = useState<string | null>(null);
+  const pendingJump = useRef<string | null>(null);
   useEffect(() => panel.current?.focus(), []);
 
   const undo = snapshot.replay.undo;
@@ -107,21 +107,28 @@ export function HistoryPanel({
   const undoLabel = describe(undo.at(-1));
   const redoLabel = describe(snapshot.replay.redo.at(-1)?.action);
 
-  // Jump: load every day, open the chosen one and scroll it into view.
+  // Jump: load every day, open the chosen one and scroll it into view once
+  // it has rendered.
+  const scrollToDay = (date: string) => {
+    const element = list.current?.querySelector(`[data-day="${date}"]`);
+    if (!element) return false;
+    element.scrollIntoView({ block: 'start' });
+    return true;
+  };
   useEffect(() => {
-    if (!jumpTo) return;
-    const element = list.current?.querySelector(`[data-day="${jumpTo}"]`);
-    element?.scrollIntoView({ block: 'start' });
-    setJumpTo(null);
-  }, [jumpTo, days]);
+    if (pendingJump.current && scrollToDay(pendingJump.current))
+      pendingJump.current = null;
+  }, [days, folds]);
   const jump = (date: string) => {
     if (!date) return;
     const all = historyDays(undo, filter).days;
     const target = all[historyDayIndex(all, date)];
     if (!target) return;
+    const loaded = all.indexOf(target) < dayLimit;
+    if (loaded && isOpen(target.date) && scrollToDay(target.date)) return;
+    pendingJump.current = target.date;
     setDayLimit(Math.max(dayLimit, all.indexOf(target) + 1));
     setFolds((previous) => new Map(previous).set(target.date, true));
-    setJumpTo(target.date);
   };
 
   return (
