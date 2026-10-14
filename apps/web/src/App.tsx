@@ -30,6 +30,8 @@ import { HistoryPanel } from './panel/HistoryPanel.tsx';
 import { Icon } from './ui/Icon.tsx';
 import { habitType } from '@onpurpose/core/habits';
 import { useToday } from './useToday.ts';
+import { useHiddenCompleted } from './useHiddenCompleted.ts';
+import { Settings } from './settings/Settings.tsx';
 import { useHabitActions, MAX_HABITS } from './actions.ts';
 import { EntryDialog, type EntryTarget } from './entry/EntryDialog.tsx';
 import { QuickUndoToast } from './QuickUndoToast.tsx';
@@ -117,6 +119,25 @@ function Tracker({ store }: { store: ChangeStore }) {
     () => state.habits.filter((habit) => !habit.archived),
     [state.habits],
   );
+  // Hide completed today filters only displayed rows; hidden and archived
+  // habits keep their saved slots when rows are reordered.
+  const hideCompleted = state.hideCompleted ?? displayDefaults.hideCompleted;
+  const [showCompleted, setShowCompleted] = useState(false);
+  const hidden = useHiddenCompleted(
+    habits,
+    state.values,
+    today,
+    hideCompleted && !showCompleted,
+  );
+  const hiddenKey = [...hidden].join('|');
+  const rows = useMemo(
+    () =>
+      hiddenKey
+        ? habits.filter((habit) => !hiddenKey.split('|').includes(habit.id))
+        : habits,
+    [habits, hiddenKey],
+  );
+  const [settingsOpen, setSettingsOpen] = useState(false);
   // The same saved cell look as the phone; the last four apply to boxes only.
   const cell = cellLookOf(state);
   const boxes =
@@ -162,7 +183,7 @@ function Tracker({ store }: { store: ChangeStore }) {
   const entryHabit =
     entry && state.habits.find((habit) => habit.id === entry.habit.id);
   const menuIndex = menu
-    ? habits.findIndex((habit) => habit.id === menu.habit.id)
+    ? rows.findIndex((habit) => habit.id === menu.habit.id)
     : -1;
   const panelHabit =
     panel?.kind === 'habit'
@@ -186,7 +207,7 @@ function Tracker({ store }: { store: ChangeStore }) {
     else if (action === 'archive')
       actions.saveHabit({ ...habit, archived: true });
     else {
-      const ids = habits.map((item) => item.id);
+      const ids = rows.map((item) => item.id);
       const target = ids.indexOf(habit.id) + (action === 'moveUp' ? -1 : 1);
       grid.current?.focusHabit(habit.id);
       actions.reorder(moveHabit(ids, habit.id, target));
@@ -209,6 +230,14 @@ function Tracker({ store }: { store: ChangeStore }) {
             <Icon name="history" size={19} />
             <span className="label">History</span>
           </button>
+          <button
+            aria-haspopup="dialog"
+            aria-label="Settings"
+            onClick={() => setSettingsOpen(true)}
+          >
+            <Icon name="settings" size={19} />
+            <span className="label">Settings</span>
+          </button>
         </span>
       </header>
       {snapshot.error && (
@@ -220,7 +249,7 @@ function Tracker({ store }: { store: ChangeStore }) {
       <div className="workspace">
         <HabitGrid
           ref={grid}
-          habits={habits}
+          habits={rows}
           values={state.values}
           today={today}
           theme={theme}
@@ -263,6 +292,21 @@ function Tracker({ store }: { store: ChangeStore }) {
         )}
       </div>
       <footer className="hints">
+        {hideCompleted && (hidden.size > 0 || showCompleted) && (
+          <span className="completed-toggle">
+            {showCompleted
+              ? 'Showing completed habits'
+              : `${hidden.size} completed today hidden`}{' '}
+            <button
+              type="button"
+              className="link-button"
+              onClick={() => setShowCompleted((value) => !value)}
+            >
+              {showCompleted ? 'Hide' : 'Show'}
+            </button>
+            {' · '}
+          </span>
+        )}
         Space ticks · Enter opens a value · Arrow keys move · Alt ↑↓ reorders ·
         Ctrl Z undoes
       </footer>
@@ -287,7 +331,7 @@ function Tracker({ store }: { store: ChangeStore }) {
           anchor={menu.anchor}
           colour={theme.colour(menu.habit.color)}
           first={menuIndex === 0}
-          last={menuIndex === habits.length - 1}
+          last={menuIndex === rows.length - 1}
           onClose={() => setMenu(null)}
           onAction={(action) => menuAction(menu.habit, action)}
         />
@@ -308,6 +352,19 @@ function Tracker({ store }: { store: ChangeStore }) {
           editable={store.canEdit()}
           onClose={() => setEditor(null)}
           onSave={actions.saveHabit}
+        />
+      )}
+      {settingsOpen && (
+        <Settings
+          store={store}
+          snapshot={snapshot}
+          theme={theme}
+          look={look}
+          cellLook={cell}
+          today={today}
+          editable={store.canEdit()}
+          actions={actions}
+          onClose={() => setSettingsOpen(false)}
         />
       )}
       <QuickUndoToast quickUndo={quickUndo} editable={store.canEdit()} />

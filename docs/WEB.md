@@ -7,8 +7,9 @@ data format with the phone app through `@onpurpose/core`.
 Status: the home grid (layout A, below) records all four entry types, follows
 the saved theme and cell look, and supports Undo/Redo (buttons, Ctrl+Z,
 Ctrl+Shift+Z or Ctrl+Y) and the four-second quick undo. Habits can be added,
-edited, reordered and archived, and each has a docked Notes/Statistics panel. History has its own panel.
-Settings, goal and note editing, backups and sync are not built yet.
+edited, reordered and archived, and each has a docked Notes/Statistics panel. History has its own panel, and Settings covers appearance, daily tracking,
+backups and archived habits. Goal and note editing and sync are not built
+yet.
 
 ## Home grid (layout A)
 
@@ -83,6 +84,31 @@ day marked "For <date>". Filters (kind chips and a habit picker) are view
 state. A date picker jumps to a day. The Undo bar always names the newest
 action, even when filtered out; Undo and Redo live there (and on Ctrl+Z /
 Ctrl+Shift+Z) rather than in the top bar.
+
+## Settings
+
+The top bar's Settings button opens a two-column dialog (stacked on phones).
+Preferences save immediately as ordinary preference changes, outside History
+and Undo, with the phone's before-value rules (newer kinds start from null).
+
+- **Appearance:** a live preview drawn by the grid's own `HabitRow` (never a
+  separate drawing), theme mode, dark and light backgrounds (presets or a hex,
+  fitted at display time), checkbox style (Squares, Circles, Ticks & crosses),
+  streak numbers, joined checkboxes with connector thickness (saved on
+  release), missed day crosses and week dividers.
+- **Daily tracking:** Hide completed today (rows meeting today's goal leave
+  after 700 ms, return at once when undone, and a footer link shows them) and
+  the week start.
+- **Backups:** export downloads the phone's backup format (core
+  `encodeArchive`, SHA-256 via Web Crypto); restore validates the whole file
+  first, asks for confirmation naming its habits and changes, runs
+  exclusively and keeps a pre-restore copy, which "Restore previous data"
+  returns to.
+- **Archived habits:** record counts and ranges, Restore, and Delete with a
+  named confirmation (core `deleteArchivedHabit`, undoable in History).
+
+Phone-only settings (grid sizes, text size, haptics, tap animations) are not
+shown on the web; browser zoom covers text size.
 
 ## Managing habits
 

@@ -387,10 +387,12 @@ export function HabitGrid({
   );
 }
 
-function gridDays(
+/** The last `count` days ending today, oldest first (also used by previews). */
+export function gridDays(
   today: string,
   weekStart: WeekStart,
   weekDividers: boolean,
+  count = DAYS,
 ): Day[] {
   const weekday = new Intl.DateTimeFormat(undefined, { weekday: 'short' });
   const full = new Intl.DateTimeFormat(undefined, {
@@ -398,8 +400,8 @@ function gridDays(
     day: 'numeric',
     month: 'long',
   });
-  return Array.from({ length: DAYS }, (_, index) => {
-    const ago = DAYS - 1 - index;
+  return Array.from({ length: count }, (_, index) => {
+    const ago = count - 1 - index;
     const date = calendarDay(today, ago);
     const key = localDateKey(date);
     return {

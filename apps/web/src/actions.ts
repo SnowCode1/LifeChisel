@@ -4,8 +4,39 @@ import type { Habit, HabitCategory } from '@onpurpose/core/habits';
 import { toggleCheckboxValue } from '@onpurpose/core/habitGoals';
 import type { QuickUndo } from '@onpurpose/core/quickUndo';
 import type { ChangeStore } from '@onpurpose/core/storage/store';
-import { sameValue } from '@onpurpose/core/storage/model';
+import {
+  sameValue,
+  type Change,
+  type StoredState,
+} from '@onpurpose/core/storage/model';
+import { displayDefaults } from '@onpurpose/core/displayPreferences';
 import { displayedHabitOrder } from '@onpurpose/core/habitOrdering';
+
+/** Preferences the web app shows in Settings. */
+export type WebPreference =
+  | 'themeMode'
+  | 'darkBackground'
+  | 'lightBackground'
+  | 'checkboxStyle'
+  | 'roundCheckboxes'
+  | 'joinedCheckboxes'
+  | 'streakNumbers'
+  | 'connectorThickness'
+  | 'missedDays'
+  | 'weekStart'
+  | 'weekDividers'
+  | 'hideCompleted';
+// Kinds added from v19 store null as their first before-value.
+const NULLABLE = new Set<WebPreference>([
+  'themeMode',
+  'darkBackground',
+  'lightBackground',
+  'roundCheckboxes',
+  'joinedCheckboxes',
+  'streakNumbers',
+  'connectorThickness',
+  'missedDays',
+]);
 
 /** The storage limit, archived habits included. */
 export const MAX_HABITS = 1000;
@@ -63,6 +94,20 @@ export function useHabitActions(store: ChangeStore, quickUndo: QuickUndo) {
         const after = displayedHabitOrder(habits, displayed);
         if (before.join('|') === after.join('|')) return false;
         return store.change({ kind: 'order', before, after });
+      },
+      /**
+       * Saves a display preference (outside History and Undo). Newer kinds
+       * keep `before: null` until first chosen, so defaults can change later.
+       */
+      setPreference<K extends WebPreference>(kind: K, after: StoredState[K]) {
+        if (!store.canEdit()) return false;
+        const state = store.getSnapshot().replay.state;
+        const before =
+          state[kind] ??
+          (NULLABLE.has(kind)
+            ? null
+            : displayDefaults[kind as keyof typeof displayDefaults]);
+        return store.change({ kind, before, after } as Change);
       },
       /** Appends categories created while recording an entry, as one edit. */
       addCategories(habitId: string, added: HabitCategory[]) {
