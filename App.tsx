@@ -241,6 +241,7 @@ function PersistentApp({
     streakNumbers,
     roundCheckboxes,
     connectorThickness,
+    joinedEndsOnly,
   } = snapshot.replay.state;
   // One object per distinct look, so save acknowledgements keep its identity.
   const cellLook = useMemo(
@@ -251,6 +252,7 @@ function PersistentApp({
         streakNumbers,
         roundCheckboxes,
         connectorThickness,
+        joinedEndsOnly,
       }),
     [
       missedDays,
@@ -258,6 +260,7 @@ function PersistentApp({
       streakNumbers,
       roundCheckboxes,
       connectorThickness,
+      joinedEndsOnly,
     ],
   );
   const theme = themeFor(

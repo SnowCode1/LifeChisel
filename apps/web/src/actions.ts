@@ -22,6 +22,7 @@ export type WebPreference =
   | 'joinedCheckboxes'
   | 'streakNumbers'
   | 'connectorThickness'
+  | 'joinedEndsOnly'
   | 'missedDays'
   | 'weekStart'
   | 'weekDividers'
@@ -43,6 +44,7 @@ const NULLABLE = new Set<WebPreference>([
   'joinedCheckboxes',
   'streakNumbers',
   'connectorThickness',
+  'joinedEndsOnly',
   'missedDays',
 ]);
 

@@ -207,7 +207,7 @@ function dailyValue(value: unknown, version: number) {
 export function entryFits(
   habit: Habit,
   value: EntryValue | null,
-  version = 20,
+  version = 21,
 ) {
   if (value === null) return true;
   switch (habitType(habit)) {
@@ -228,7 +228,7 @@ export function entryFits(
 }
 export function validateChange(
   value: unknown,
-  version = 20,
+  version = 21,
 ): asserts value is Change {
   object(value);
   if (value.kind === 'entry') {
@@ -385,6 +385,14 @@ export function validateChange(
         isConnectorThickness(value.after),
       'Invalid connector thickness.',
     );
+  } else if (value.kind === 'joinedEndsOnly') {
+    keys(value, ['kind', 'before', 'after']);
+    insist(version >= 21, 'Streak ends only requires version 21.');
+    insist(
+      (value.before === null || typeof value.before === 'boolean') &&
+        typeof value.after === 'boolean',
+      'Invalid cell look preference.',
+    );
   } else if (value.kind === 'weekDividers' || value.kind === 'tapAnimations') {
     keys(value, ['kind', 'before', 'after']);
     insist(version >= 16, 'Grid appearance toggles require version 16.');
@@ -463,7 +471,8 @@ export function validateEvent(value: unknown): asserts value is StoredEvent {
       value.version === 17 ||
       value.version === 18 ||
       value.version === 19 ||
-      value.version === 20,
+      value.version === 20 ||
+      value.version === 21,
     'Unsupported event version.',
   );
   id(value.id);

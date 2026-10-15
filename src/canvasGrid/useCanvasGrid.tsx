@@ -42,6 +42,7 @@ import {
   cellShapes,
   drawCellBase,
   drawCellMark,
+  isHiddenMiddle,
   drawHeadings,
   gridPaints,
   hairline,
@@ -163,8 +164,15 @@ export function useCanvasGrid(props: CanvasGridProps): {
       missedMarks: cellLook.missedDays,
       joined: joinedRuns,
       connector: cellLook.connectorThickness / 100,
+      endsOnly: joinedRuns && cellLook.joinedEndsOnly,
     }),
-    [boxes, cellLook.missedDays, joinedRuns, cellLook.connectorThickness],
+    [
+      boxes,
+      cellLook.missedDays,
+      joinedRuns,
+      cellLook.connectorThickness,
+      cellLook.joinedEndsOnly,
+    ],
   );
   const model = useGridModel({
     store,
@@ -302,6 +310,8 @@ export function useCanvasGrid(props: CanvasGridProps): {
             for (let day = first; day <= last; day++) {
               const x = columnX(day, width, shift, column);
               const cell = cells[day]?.[row.id];
+              const olderChecked = cells[day + 1]?.[row.id]?.c === true;
+              const newerChecked = cells[day - 1]?.[row.id]?.c === true;
               // Halves of a join being animated are drawn by the animation.
               const skipLeft =
                 moving &&
@@ -316,8 +326,8 @@ export function useCanvasGrid(props: CanvasGridProps): {
                 shape,
                 style,
                 cell,
-                cells[day + 1]?.[row.id]?.c === true,
-                cells[day - 1]?.[row.id]?.c === true,
+                olderChecked,
+                newerChecked,
                 day,
                 x,
                 top,
@@ -363,19 +373,27 @@ export function useCanvasGrid(props: CanvasGridProps): {
                 knock.days.includes(day)
               )
                 scale *= bumpScale.value;
-              drawCellMark(
-                canvas,
-                p,
-                shape,
-                style,
-                cell,
-                day,
-                x,
-                top,
-                column,
-                row.height,
-                scale,
-              );
+              if (isHiddenMiddle(style, cell, olderChecked, newerChecked))
+                // Boxes a growing join turns into a streak's middle shrink
+                // into the bar as it reaches them; other middles stay hidden.
+                scale *=
+                  moving && j.joining && Math.abs(day - j.day) <= 1
+                    ? 1 - jt
+                    : 0;
+              if (scale > 0)
+                drawCellMark(
+                  canvas,
+                  p,
+                  shape,
+                  style,
+                  cell,
+                  day,
+                  x,
+                  top,
+                  column,
+                  row.height,
+                  scale,
+                );
             }
           }
       },

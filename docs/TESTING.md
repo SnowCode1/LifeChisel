@@ -203,8 +203,11 @@ docs hold the design behind each check.
   closes. Choices survive a restart. Missed day crosses mark only past
   scheduled days (try a 5-on/2-off habit); Streak numbers count back across
   scrolled-off days and renumber after checking a gap; Joined checkboxes grow
-  or retract their bar with a bump on contact. The Squares/Circles-only rows
-  hide for Ticks & crosses.
+  or retract their bar with a bump on contact. With Streak ends only, a run of
+  three or more shows only its end boxes and one bar; checking the gap
+  between two runs shrinks the boxes that become middles into the bar, and
+  clearing a middle day brings back the two new end boxes. The
+  Squares/Circles-only rows hide for Ticks & crosses.
 - Closing History, Settings or Statistics (button or swipe) keeps the grid's
   dates and vertical position.
 

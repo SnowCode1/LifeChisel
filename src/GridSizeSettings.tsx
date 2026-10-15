@@ -6,6 +6,7 @@ import {
   cellShapes,
   drawCellBase,
   drawCellMark,
+  isHiddenMiddle,
   drawHeadings,
   gridPaints,
   headingLabels,
@@ -273,6 +274,7 @@ function GridPreview({
       missedMarks: cellLook.missedDays,
       joined: boxes && cellLook.joinedCheckboxes,
       connector: cellLook.connectorThickness / 100,
+      endsOnly: boxes && cellLook.joinedCheckboxes && cellLook.joinedEndsOnly,
     };
     const labelCache = new Map();
     const sample = (row: number, day: number) =>
@@ -325,6 +327,8 @@ function GridPreview({
           for (let day = 0; day < visibleDays; day++) {
             const x = datesWidth - (day + 1) * columnWidth;
             const cell = cellAt(index, day);
+            const olderChecked = cellAt(index, day + 1).c;
+            const newerChecked = day > 0 && cellAt(index, day - 1).c;
             drawCellBase(
               canvas,
               paints,
@@ -332,8 +336,8 @@ function GridPreview({
               shape,
               style,
               cell,
-              cellAt(index, day + 1).c,
-              day > 0 && cellAt(index, day - 1).c,
+              olderChecked,
+              newerChecked,
               day,
               x,
               top,
@@ -343,19 +347,20 @@ function GridPreview({
               false,
               false,
             );
-            drawCellMark(
-              canvas,
-              p,
-              shape,
-              style,
-              cell,
-              day,
-              x,
-              top,
-              columnWidth,
-              row.height,
-              1,
-            );
+            if (!isHiddenMiddle(style, cell, olderChecked, newerChecked))
+              drawCellMark(
+                canvas,
+                p,
+                shape,
+                style,
+                cell,
+                day,
+                x,
+                top,
+                columnWidth,
+                row.height,
+                1,
+              );
           }
           top += row.height;
         });

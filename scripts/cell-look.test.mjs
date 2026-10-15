@@ -133,6 +133,7 @@ test('v20 cell look preferences persist in SQLite/backup outside History and Red
     streakNumbers: true,
     roundCheckboxes: true,
     connectorThickness: 60,
+    joinedEndsOnly: true,
   });
   assert.deepEqual(
     store.getSnapshot().replay.redo.map((item) => item.undoId),
@@ -145,7 +146,7 @@ test('v20 cell look preferences persist in SQLite/backup outside History and Red
     '2026-10-12T04:00:00.000Z',
     digest,
   );
-  assert.equal(JSON.parse(backup).version, 20);
+  assert.equal(JSON.parse(backup).version, 21);
   const decoded = await decodeArchive(backup, digest);
   assert.deepEqual(decoded.events, events);
   await store.exclusive(() => store.replace(decoded.events));
@@ -159,7 +160,7 @@ test('v20 cell look preferences persist in SQLite/backup outside History and Red
         type: 'preference',
         change: { kind: 'haptics', before: true, after: false },
       }),
-    /version-20/,
+    /version-21/,
   );
 
   const previous = JSON.parse(
@@ -185,4 +186,120 @@ test('v20 cell look preferences persist in SQLite/backup outside History and Red
   assert.equal(old.hasV20, false);
   // Absent fields display the defaults.
   assert.deepEqual(cellLookOf(old.state), cellLookDefaults);
+});
+
+test('v21 Streak ends only persists outside History, rejects older versions and extends the v20 log', async (t) => {
+  const raw = new DatabaseSync(':memory:');
+  t.after(() => raw.close());
+  let id = 0;
+  const meta = (sequence) => ({
+    version: 21,
+    id: `ends_${++id}`,
+    sequence,
+    recordedAt: '2026-10-14T04:00:00.000Z',
+    timeZone: 'UTC',
+    utcOffsetMinutes: 0,
+  });
+  const repo = sqliteRepository(sqlPort(raw), () => ({
+    ...meta(1),
+    version: 20,
+    type: 'initialize',
+    habits: [habit],
+  }));
+  let store = new ChangeStore(repo, meta);
+  await store.load();
+  store.change({
+    kind: 'entry',
+    habitId: habit.id,
+    date: '2026-10-14',
+    before: null,
+    after: 3,
+  });
+  store.undo();
+  const redo = store.getSnapshot().replay.redo.map((item) => item.undoId);
+  const change = { kind: 'joinedEndsOnly', before: null, after: true };
+  for (let version = 1; version < 21; version++)
+    assert.throws(() => validateChange(change, version), /version 21/);
+  // `before` is null until the first choice, not the default.
+  assert.throws(
+    () =>
+      applyChange(store.getSnapshot().replay.state, {
+        ...change,
+        before: false,
+      }),
+    /precondition/,
+  );
+  assert.equal(store.change(change), true);
+  assert.equal(
+    store.change({ kind: 'joinedEndsOnly', before: true, after: false }),
+    true,
+  );
+  assert.equal(
+    store.change({ kind: 'joinedEndsOnly', before: false, after: true }),
+    true,
+  );
+  for (const invalid of [
+    { kind: 'joinedEndsOnly', before: true, after: 'yes' },
+    { kind: 'joinedEndsOnly', before: null, after: null },
+    { kind: 'joinedEndsOnly', before: null, after: true, extra: 1 },
+  ])
+    assert.throws(() => validateChange(invalid));
+
+  await store.flush();
+  store = new ChangeStore(repo, meta);
+  await store.load();
+  assert.equal(
+    cellLookOf(store.getSnapshot().replay.state).joinedEndsOnly,
+    true,
+  );
+  // A preference leaves Undo empty and Redo intact.
+  assert.equal(store.getSnapshot().replay.undo.length, 0);
+  assert.deepEqual(
+    store.getSnapshot().replay.redo.map((item) => item.undoId),
+    redo,
+  );
+  const events = store.getSnapshot().events;
+  const backup = await encodeArchive(
+    events,
+    '2026-10-14T04:00:00.000Z',
+    digest,
+  );
+  assert.equal(JSON.parse(backup).version, 21);
+  const decoded = await decodeArchive(backup, digest);
+  assert.deepEqual(decoded.events, events);
+  await store.exclusive(() => store.replace(decoded.events));
+  assert.equal(store.redo(), true);
+  assert.equal(store.getSnapshot().replay.state.values['read:2026-10-14'], 3);
+  assert.throws(
+    () =>
+      applyEvent(store.getSnapshot().replay, {
+        ...meta(store.getSnapshot().events.length + 1),
+        version: 20,
+        type: 'preference',
+        change: { kind: 'haptics', before: true, after: false },
+      }),
+    /version-21/,
+  );
+
+  const previous = JSON.parse(
+    readFileSync(
+      new URL('../docs/examples/storage-v20.json', import.meta.url),
+      'utf8',
+    ),
+  );
+  const next = await decodeArchive(
+    readFileSync(
+      new URL('../docs/examples/storage-v21.json', import.meta.url),
+      'utf8',
+    ),
+    digest,
+  );
+  assert.deepEqual(
+    next.events.slice(0, previous.events.length),
+    previous.events,
+  );
+  assert.equal(next.replay.state.joinedEndsOnly, true);
+  const old = replayEvents(previous.events).replay;
+  assert.equal(old.hasV21, false);
+  assert.equal(cellLookOf(old.state).joinedEndsOnly, true);
 });

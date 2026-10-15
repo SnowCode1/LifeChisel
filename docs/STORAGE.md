@@ -36,7 +36,7 @@ physical iPhone.
 
 ### Example event
 
-This entry event comes from [the v20 fixture](examples/storage-v20.json). It was
+This entry event comes from [the v21 fixture](examples/storage-v21.json). It was
 written at version 6 and still replays unchanged.
 
 ```json
@@ -360,7 +360,7 @@ pending saves and captures a stable log. The export is a readable JSON container
 of **changes**, not a replacement snapshot of habit/day values. Every event
 version has a synthetic example in [docs/examples](examples/), from
 [the unchanged version-1 fixture](examples/storage-v1.json) to
-[the newest fixture](examples/storage-v20.json); see
+[the newest fixture](examples/storage-v21.json); see
 [Version history](#version-history).
 
 The container has `format: "onpurpose.changes"`, `version`, `exportedAt`,
@@ -490,6 +490,7 @@ version, older events cannot follow it.
 |      18 | `gridNameWidth`, `gridColumnWidth` and `gridRowHeight` size preferences                  |
 |      19 | `themeMode`, `darkBackground` and `lightBackground` preferences                          |
 |      20 | Cell look preferences (`todayOutlines` … `connectorThickness`)                           |
+|      21 | `joinedEndsOnly` cell look preference                                                    |
 
 ### Version 1: the original log
 
@@ -755,6 +756,18 @@ The preferences stay outside History/Undo, preserve Redo and correction groups,
 and use the ordinary serialized write/restore path. The
 [v20 fixture](examples/storage-v20.json) extends the v19 prefix by turning on
 every cell look and setting a 50% connector.
+
+### Version 21: streak ends only
+
+`joinedEndsOnly` is a boolean cell look preference: with Joined checkboxes on,
+a checked day between two checked neighbours draws no box, so one bar runs from
+a streak's first box to its last. As with the v20 cell look, `before` is `null`
+until the first choice; absent, it displays On (`cellLookDefaults`). Older
+event versions reject the kind, and v1–v20 prefixes replay unchanged with SQL
+schema 1. It stays outside History/Undo, preserves Redo and correction groups,
+and uses the ordinary serialized write/restore path. The
+[v21 fixture](examples/storage-v21.json) extends the v20 prefix by turning it
+on.
 
 ## References
 

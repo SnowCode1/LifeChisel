@@ -7,7 +7,7 @@ Read `PROJECT_GOALS.md`, `docs/DEVELOPMENT.md`, and `docs/DECISIONS.md`;
 (project owner and maintainer) is new to the stack: explain technical choices in
 plain language and connect them to the product goal.
 
-Current storage writers and backup exports are v20 with SQL schema 1;
+Current storage writers and backup exports are v21 with SQL schema 1;
 `docs/STORAGE.md` is the authority. Version numbers in the sections below record
 when a feature's fields arrived, and each older version must keep replaying
 unchanged.
@@ -116,13 +116,16 @@ preserve earlier icon choices/removals and raw history.
   `rowTops`, and release on the same cell calls `onCellPress`. Disable taps when
   not editable, during a drag or in reorder mode; lock scrolling while the menu
   is open or a drag is active.
-- Cell look (v20, Settings → Appearance): `CellLook` in `displayPreferences.ts`
+- Cell look (v20–21, Settings → Appearance): `CellLook` in `displayPreferences.ts`
   holds Missed day crosses (default on; from `CellState.schedule`: due, off or
   none; quotas and tracking-only habits are never missed per day), Round
   checkboxes (shown as the Circles checkbox style), Streak numbers
   (`checkedStreak` counts back from saved values; the model rebuilds newer
-  prepared days after an edit), Joined checkboxes and Connector thickness
-  (20–100% of the box); the last four apply to the checkbox style only.
+  prepared days after an edit), Joined checkboxes, Connector thickness
+  (20–100% of the box) and v21 Streak ends only (`joinedEndsOnly`:
+  `isHiddenMiddle` skips boxes between two checked neighbours; boxes a growing
+  join makes middles shrink into the bar); all but Missed day crosses apply
+  to the checkbox style only.
   `todayOutlines` is retired: replayed, never drawn. `canvasGrid/cellPainter.ts`
   owns all cell and heading drawing for both the grid and the Settings preview
   (`GridLivePreview`, pinned above Appearance on portrait phones); never draw

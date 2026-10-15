@@ -5,6 +5,8 @@ export type CellLookStyle = {
   boxes: boolean;
   round: boolean;
   joined: boolean;
+  /** Joined runs draw boxes only at their ends, one bar between. */
+  endsOnly: boolean;
   streaks: boolean;
   missed: boolean;
   /** Joining bar height as a fraction of the checkbox. */

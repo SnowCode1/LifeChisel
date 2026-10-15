@@ -11,7 +11,7 @@ export function eventMeta(
   now = new Date(),
 ): EventMeta {
   return {
-    version: 20,
+    version: 21,
     id,
     sequence,
     recordedAt: now.toISOString(),

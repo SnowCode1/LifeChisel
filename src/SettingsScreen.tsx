@@ -483,15 +483,25 @@ export function SettingsScreen(p: Props) {
                   disabled={disabled}
                 />
                 {p.cellLook.joinedCheckboxes && (
-                  <ConnectorThickness
-                    key={p.cellLook.connectorThickness}
-                    value={p.cellLook.connectorThickness}
-                    onDraft={setConnectorDraft}
-                    onChange={(value) =>
-                      p.onCellLookChange('connectorThickness', value)
-                    }
-                    disabled={disabled}
-                  />
+                  <>
+                    <Toggle
+                      label="Streak ends only"
+                      value={p.cellLook.joinedEndsOnly}
+                      onChange={(value) =>
+                        p.onCellLookChange('joinedEndsOnly', value)
+                      }
+                      disabled={disabled}
+                    />
+                    <ConnectorThickness
+                      key={p.cellLook.connectorThickness}
+                      value={p.cellLook.connectorThickness}
+                      onDraft={setConnectorDraft}
+                      onChange={(value) =>
+                        p.onCellLookChange('connectorThickness', value)
+                      }
+                      disabled={disabled}
+                    />
+                  </>
                 )}
               </>
             )}
@@ -518,7 +528,7 @@ export function SettingsScreen(p: Props) {
           </Group>
           <InfoNote
             label="About appearance"
-            text="System follows your phone’s light or dark mode. Text, controls and habit colours adjust to each background; your saved habit colours never change. Automatic sizes adapt to this screen; moving a slider sets an exact size, and Reset returns to automatic. Text size applies everywhere and follows your phone’s text size too. Streak numbers show each checked day’s place in its streak, and Joined checkboxes connect checked neighbours. Missed day crosses mark past scheduled days that missed their goal and leave unscheduled days blank. The grid shows changes when Settings closes; the preview shows them straight away."
+            text="System follows your phone’s light or dark mode. Text, controls and habit colours adjust to each background; your saved habit colours never change. Automatic sizes adapt to this screen; moving a slider sets an exact size, and Reset returns to automatic. Text size applies everywhere and follows your phone’s text size too. Streak numbers show each checked day’s place in its streak, and Joined checkboxes connect checked neighbours; with Streak ends only, a streak shows just its first and last boxes with one bar between. Missed day crosses mark past scheduled days that missed their goal and leave unscheduled days blank. The grid shows changes when Settings closes; the preview shows them straight away."
           />
         </>
       )}

@@ -28,6 +28,7 @@ automatic rules in `gridSizing.ts`.
 | Appearance     | Checkbox style       | Circles | Squares, Circles or Ticks & crosses (Circles saves Round checkboxes with the Checkboxes style).                |
 | Appearance     | Streak numbers       | On      | Checked boxes show their place in the streak instead of a tick (Squares and Circles). See [Cells](#cells).     |
 | Appearance     | Joined checkboxes    | On      | Consecutive checked boxes joined by a bar (Squares and Circles).                                               |
+| Appearance     | Streak ends only     | On      | Boxes only on a streak's first and last days, one bar between; shown with Joined checkboxes.                   |
 | Appearance     | Connector thickness  | 55%     | Bar height, 20–100% of the checkbox in 5% steps; shown with Joined checkboxes.                                 |
 | Appearance     | Tap animations       | On      | A short pulse on the tapped checkbox or mark.                                                                  |
 | Appearance     | Missed day crosses   | On      | A quiet cross on past scheduled days that missed; unscheduled days stay blank.                                 |
@@ -79,7 +80,7 @@ Each preference arrived with a storage version: row spacing in v5; column
 spacing, week start and date fading in v6; text size in v8; Hide completed today
 in v9; checkbox style in v15; week dividers and tap animations in v16; revised
 column spacing and name width in v17; grid size sliders in v18; theme and
-backgrounds in v19; and the cell look in v20. Absent fields preserve earlier behaviour without rewriting
+backgrounds in v19; the cell look in v20; and Streak ends only in v21. Absent fields preserve earlier behaviour without rewriting
 old logs, and newer preferences disguised as older events or habit actions are
 rejected. Grid sizes, theme and cell look preferences record `before: null`
 until first chosen, so their defaults are display rules. See [STORAGE.md](STORAGE.md) for
@@ -192,8 +193,8 @@ habit goals ([GOALS.md](GOALS.md)).
 
 Founder decisions (12 October 2026), first tried behind development switches
 and then moved into Appearance as saved preferences. By default the grid shows
-Circles with streak numbers, joined checkboxes (55% connector) and missed day
-crosses. Defaults are display rules (`cellLookDefaults`), so they can change
+Circles with streak numbers, joined checkboxes (55% connector, streak ends
+only) and missed day crosses. Defaults are display rules (`cellLookDefaults`), so they can change
 without rewriting saved data.
 
 - **Checkbox style** offers Squares, Circles and Ticks & crosses. Circles is the
@@ -208,6 +209,15 @@ without rewriting saved data.
   the neighbour into the tapped box, or retracts into the neighbour, and the box
   it reaches bumps slightly at the moment of contact. Tap animations and Reduce
   Motion gate this like the pulse.
+- **Streak ends only** (v21, default On; shown with Joined checkboxes):
+  a checked day between two checked neighbours draws no box, so a streak
+  shows its first and last boxes with one bar between (with Streak numbers,
+  the last box shows the length). A single checked day keeps its box. When a
+  tap joins runs, the boxes that become middles shrink into the bar as it
+  reaches them (220 ms, the join's curve); breaking a streak shows the new end
+  boxes at once with the usual bump. Hidden middles stay checkboxes for
+  keyboard, VoiceOver and TalkBack. Statistics calendars keep their own run
+  drawing.
 - **Connector thickness:** the joining bar's height, 20–100% of the checkbox,
   saved on release.
 - **Missed day crosses** (default On): on days before today, a scheduled day of
@@ -215,7 +225,7 @@ without rewriting saved data.
   or a day before the start date, stays blank. Weekly quotas and tracking-only
   habits never mark a single day as missed.
 
-Streak numbers, Joined checkboxes and Connector thickness apply to Squares and
+Streak numbers, Joined checkboxes, Streak ends only and Connector thickness apply to Squares and
 Circles and are hidden for Ticks & crosses. Outlines only on Today (empty boxes
 only in the Today column) was tried and removed the same day because it looked
 odd; its saved choice still replays but is no longer drawn. Shading cells by

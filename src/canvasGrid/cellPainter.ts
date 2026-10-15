@@ -227,7 +227,23 @@ export type CellStyle = {
   joined: boolean;
   /** Joining bar height as a fraction of the checkbox. */
   connector: number;
+  /** Joined runs draw boxes only at their ends (implies `joined`). */
+  endsOnly: boolean;
 };
+
+/**
+ * With Streak ends only, a checked box between two checked neighbours is not
+ * drawn, so one bar runs from a streak's first box to its last.
+ */
+export function isHiddenMiddle(
+  style: CellStyle,
+  cell: CanvasCell | undefined,
+  olderChecked: boolean,
+  newerChecked: boolean,
+) {
+  'worklet';
+  return style.endsOnly && cell?.c === true && olderChecked && newerChecked;
+}
 
 /** The colour a checked box (and its half of a join) is filled with. */
 export function boxColour(p: HabitPaints, cell: CanvasCell | undefined) {

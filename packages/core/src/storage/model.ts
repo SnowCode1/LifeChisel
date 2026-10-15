@@ -53,6 +53,7 @@ export const emptyReplay = (): Replay => ({
   hasV18: false,
   hasV19: false,
   hasV20: false,
+  hasV21: false,
 });
 export const GROUP_INACTIVITY_MS = 2 * 60 * 1000;
 
@@ -181,6 +182,7 @@ function reduceEvent(
       hasV18: event.version >= 18,
       hasV19: event.version >= 19,
       hasV20: event.version >= 20,
+      hasV21: event.version >= 21,
     };
   }
   insist(
@@ -226,6 +228,10 @@ function reduceEvent(
   insist(
     !previous.hasV11 || event.version >= 11,
     'Older events cannot follow version-11 events.',
+  );
+  insist(
+    !previous.hasV21 || event.version >= 21,
+    'Older events cannot follow version-21 events.',
   );
   insist(
     !previous.hasV20 || event.version >= 20,
@@ -416,6 +422,7 @@ function reduceEvent(
     hasV18: previous.hasV18 || event.version >= 18,
     hasV19: previous.hasV19 || event.version >= 19,
     hasV20: previous.hasV20 || event.version >= 20,
+    hasV21: previous.hasV21 || event.version >= 21,
   };
 }
 const firstThemeDefaults = {
@@ -430,7 +437,7 @@ function reduceChange(
   state: StoredState,
   change: Change,
   mutable: boolean,
-  version = 20,
+  version = 21,
 ): StoredState {
   validateChange(change, version);
   let next: StoredState;
@@ -479,7 +486,8 @@ function reduceChange(
     change.kind === 'joinedCheckboxes' ||
     change.kind === 'streakNumbers' ||
     change.kind === 'roundCheckboxes' ||
-    change.kind === 'connectorThickness'
+    change.kind === 'connectorThickness' ||
+    change.kind === 'joinedEndsOnly'
   ) {
     // `before` is null until the first choice, so defaults stay display rules.
     const stored = state[change.kind];
@@ -667,6 +675,7 @@ const cellLookNames = {
   joinedCheckboxes: 'Joined checkboxes',
   streakNumbers: 'Streak numbers',
   roundCheckboxes: 'Round checkboxes',
+  joinedEndsOnly: 'Streak ends only',
 } as const;
 export function describeChange(change: Change, state: StoredState): string {
   if (change.kind === 'connectorThickness')
@@ -676,7 +685,8 @@ export function describeChange(change: Change, state: StoredState): string {
     change.kind === 'missedDays' ||
     change.kind === 'joinedCheckboxes' ||
     change.kind === 'streakNumbers' ||
-    change.kind === 'roundCheckboxes'
+    change.kind === 'roundCheckboxes' ||
+    change.kind === 'joinedEndsOnly'
   )
     return `${cellLookNames[change.kind]} ${change.after ? 'on' : 'off'}`;
   if (change.kind === 'themeMode') return `Theme · ${change.after}`;

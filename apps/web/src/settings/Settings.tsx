@@ -299,11 +299,20 @@ function Appearance({
               onChange={(value) => set('joinedCheckboxes', value)}
             />
             {cellLook.joinedCheckboxes && (
-              <Thickness
-                value={cellLook.connectorThickness}
-                disabled={!editable}
-                onChange={(value) => set('connectorThickness', value)}
-              />
+              <>
+                <Toggle
+                  label="Streak ends only"
+                  detail="Boxes only on a streak’s first and last days, with one bar between."
+                  value={cellLook.joinedEndsOnly}
+                  disabled={!editable}
+                  onChange={(value) => set('joinedEndsOnly', value)}
+                />
+                <Thickness
+                  value={cellLook.connectorThickness}
+                  disabled={!editable}
+                  onChange={(value) => set('connectorThickness', value)}
+                />
+              </>
             )}
           </>
         )}

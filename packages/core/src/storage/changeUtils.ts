@@ -27,7 +27,8 @@ export function isPreference(change: Change): change is PreferenceChange {
     change.kind === 'joinedCheckboxes' ||
     change.kind === 'streakNumbers' ||
     change.kind === 'roundCheckboxes' ||
-    change.kind === 'connectorThickness'
+    change.kind === 'connectorThickness' ||
+    change.kind === 'joinedEndsOnly'
   );
 }
 export function sameValue(left: unknown, right: unknown): boolean {

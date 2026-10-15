@@ -40,6 +40,7 @@ export type StoredState = {
   streakNumbers?: boolean;
   roundCheckboxes?: boolean;
   connectorThickness?: number;
+  joinedEndsOnly?: boolean;
 };
 export type DeletedHabit = {
   habit: Habit;
@@ -96,7 +97,9 @@ export type Change =
   | { kind: 'joinedCheckboxes'; before: boolean | null; after: boolean }
   | { kind: 'streakNumbers'; before: boolean | null; after: boolean }
   | { kind: 'roundCheckboxes'; before: boolean | null; after: boolean }
-  | { kind: 'connectorThickness'; before: number | null; after: number };
+  | { kind: 'connectorThickness'; before: number | null; after: number }
+  // v21: joined runs show only their end boxes.
+  | { kind: 'joinedEndsOnly'; before: boolean | null; after: boolean };
 export type PreferenceChange = Extract<
   Change,
   {
@@ -124,7 +127,8 @@ export type PreferenceChange = Extract<
       | 'joinedCheckboxes'
       | 'streakNumbers'
       | 'roundCheckboxes'
-      | 'connectorThickness';
+      | 'connectorThickness'
+      | 'joinedEndsOnly';
   }
 >;
 export type HabitChange = Exclude<Change, PreferenceChange>;
@@ -149,7 +153,8 @@ export type EventMeta = {
     | 17
     | 18
     | 19
-    | 20;
+    | 20
+    | 21;
   id: string;
   sequence: number;
   recordedAt: string;
@@ -180,7 +185,8 @@ export type CurrentChangeEvent = EventMeta & {
     | 17
     | 18
     | 19
-    | 20;
+    | 20
+    | 21;
 } & (
     | { type: 'change'; groupId: string; change: HabitChange }
     | { type: 'undo' | 'redo'; targetId: string; change: HabitChange }
@@ -224,4 +230,5 @@ export type Replay = {
   hasV18: boolean;
   hasV19: boolean;
   hasV20: boolean;
+  hasV21: boolean;
 };

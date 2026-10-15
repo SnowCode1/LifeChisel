@@ -178,6 +178,20 @@ function HabitRowView({
             ? checkedStreak(habit, day.ago, values, todayOrdinal, memo)
             : 0;
         const tapped = pulseCol === col;
+        // Streak ends only: a box between two checked neighbours is hidden,
+        // so one bar runs from first to last. Boxes a growing join turns into
+        // middles shrink into the bar as it reaches them.
+        const middle =
+          joins &&
+          look.endsOnly &&
+          state.checked &&
+          older?.checked === true &&
+          newer?.checked === true;
+        const absorbed =
+          middle &&
+          pulseCol >= 0 &&
+          pulse!.checked &&
+          Math.abs(col - pulseCol) <= 1;
         const cross = (
           <Glyph
             path={CROSS}
@@ -218,17 +232,20 @@ function HabitRowView({
               >
                 {missedMark === 'cross' ? (
                   cross
-                ) : missedMark === 'blank' ? null : box ? (
+                ) : missedMark === 'blank' ||
+                  (middle && !absorbed) ? null : box ? (
                   <span
-                    key={tapped ? pulse!.n : 0}
+                    key={tapped || absorbed ? pulse!.n : 0}
                     className={
-                      tapped
-                        ? pulse!.checked &&
-                          joins &&
-                          (older?.checked || newer?.checked)
-                          ? 'box pulse reached'
-                          : 'box pulse'
-                        : 'box'
+                      absorbed
+                        ? 'box absorb'
+                        : tapped
+                          ? pulse!.checked &&
+                            joins &&
+                            (older?.checked || newer?.checked)
+                            ? 'box pulse reached'
+                            : 'box pulse'
+                          : 'box'
                     }
                     style={{
                       borderRadius: look.round ? '50%' : '7px',

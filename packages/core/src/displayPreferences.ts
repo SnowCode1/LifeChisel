@@ -57,6 +57,8 @@ export type CellLook = {
   roundCheckboxes: boolean;
   /** Joining bar height, percent of the checkbox (20–100 in steps of 5). */
   connectorThickness: number;
+  /** Joined runs draw boxes only at their ends, one bar between (v21). */
+  joinedEndsOnly: boolean;
 };
 export type CellLookKind = keyof CellLook;
 export const cellLookDefaults: CellLook = {
@@ -65,6 +67,7 @@ export const cellLookDefaults: CellLook = {
   streakNumbers: true,
   roundCheckboxes: true,
   connectorThickness: 55,
+  joinedEndsOnly: true,
 };
 export function isConnectorThickness(value: unknown): value is number {
   return (
@@ -85,6 +88,7 @@ export function cellLookOf(state: Partial<CellLook>): CellLook {
     roundCheckboxes: state.roundCheckboxes ?? cellLookDefaults.roundCheckboxes,
     connectorThickness:
       state.connectorThickness ?? cellLookDefaults.connectorThickness,
+    joinedEndsOnly: state.joinedEndsOnly ?? cellLookDefaults.joinedEndsOnly,
   };
 }
 export function weekDayOrder(start: WeekStart): number[] {

@@ -2098,3 +2098,26 @@ Status: implemented on the `web-app` branch (web only).
   the calendar's month title sits between the arrows and opens the year (the
   date picker's pattern), replacing the Month/Year switch on web and phone,
   with the explanation behind an InfoNote row below.
+
+## 14 October 2026 — Streak ends only
+
+Status: implemented on the `web-app` branch for the phone app and web app
+(storage v21); not yet judged on a device.
+
+- Founder request: an option, with Joined checkboxes on, to stop drawing the
+  middle of a streak as checkboxes and show one connector from start to end.
+- Assistant implementation: Settings → Appearance → Streak ends only, shown
+  under Joined checkboxes and saved as the v21 preference `joinedEndsOnly`
+  (`before: null` until first chosen). A checked day between two
+  checked neighbours draws no box; the bar halves already meet, so one bar
+  runs from the first box to the last. Streak numbers still number the end
+  boxes, so the last one shows the streak's length. The cells stay
+  checkboxes for keyboard and screen readers.
+- Assistant proposal: when a tap joins runs, boxes that become middles shrink
+  into the growing bar on the join's curve instead of vanishing on the first
+  frame; Tap animations Off and Reduce Motion hide them at once. Statistics
+  calendars keep their own run drawing. Open: whether to keep the start box's
+  "1" with Streak numbers.
+- Founder decision (same day): default Streak ends only to On. Because the
+  default is a display rule, grids that never chose it switch without any
+  stored change.

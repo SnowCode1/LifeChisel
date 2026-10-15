@@ -52,8 +52,8 @@ The founder chose this layout from mockups (see DECISIONS.md, 13 October 2026).
   the oldest day and Today); Space or Enter toggles a checkbox.
 - **Cells follow the phone's rules** from core `cellAccessibility.ts`
   (`cellState`, `checkedStreak`, screen-reader labels) and the saved cell look
-  (Circles/Squares or Ticks & crosses, joins, streak numbers, missed-day
-  crosses, connector thickness). Background precedence is goal met > Today >
+  (Circles/Squares or Ticks & crosses, joins, streak ends only, streak
+  numbers, missed-day crosses, connector thickness). Background precedence is goal met > Today >
   plain.
 - **A quiet second line** under each name comes from core `habitSummary.ts`:
   open quota progress ("1 of 2 this week"), else the goal rule with any
@@ -214,8 +214,8 @@ and Undo, with the phone's before-value rules (newer kinds start from null).
 - **Appearance:** a live preview drawn by the grid's own `HabitRow` (never a
   separate drawing), theme mode, dark and light backgrounds (presets or a hex,
   fitted at display time), checkbox style (Squares, Circles, Ticks & crosses),
-  streak numbers, joined checkboxes with connector thickness (saved on
-  release), missed day crosses, week dividers and tap animations.
+  streak numbers, joined checkboxes with streak ends only and connector
+  thickness (saved on release), missed day crosses, week dividers and tap animations.
 - **Grid size:** name column, day columns and rows (Automatic: square 56 px
   cells), each Automatic or a
   slider in the phone's v18 steps. The grid and preview follow the slider;
