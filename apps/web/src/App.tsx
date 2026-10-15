@@ -6,6 +6,7 @@ import {
   useSyncExternalStore,
 } from 'react';
 import type { ChangeStore } from '@onpurpose/core/storage/store';
+import type { SamplePresetInfo } from '@onpurpose/core/dev/samplePresets';
 import {
   cellLookOf,
   displayDefaults,
@@ -43,7 +44,7 @@ import { Settings } from './settings/Settings.tsx';
 import { useHabitActions, MAX_HABITS } from './actions.ts';
 import { EntryDialog, type EntryTarget } from './entry/EntryDialog.tsx';
 import { QuickUndoToast } from './QuickUndoToast.tsx';
-import { Sidebar } from './Sidebar.tsx';
+import { Sidebar, type SamplePresetChoice } from './Sidebar.tsx';
 import { LANDING_URL } from './config.ts';
 import { Shortcuts } from './Shortcuts.tsx';
 import type { SettingsPage } from './settings/Settings.tsx';
@@ -69,6 +70,15 @@ export function App() {
       store={sample.enabled ? sample.store! : store}
       sampleData={sample.enabled}
       onSampleData={sample.available ? sample.setEnabled : undefined}
+      samplePreset={
+        sample.presets.length
+          ? {
+              value: sample.preset ?? '',
+              options: sample.presets,
+              onChange: sample.setPreset,
+            }
+          : undefined
+      }
     />
   );
 }
@@ -76,22 +86,36 @@ export function App() {
 /**
  * Development only: six months of fictional history in a separate in-memory
  * store (the phone's sample data), so the grid and statistics can be tried
- * without touching saved data. `?sample` in the address turns it on.
- * Production builds drop this code, since import.meta.env.DEV is false.
+ * without touching saved data. `?sample` in the address turns on the
+ * development set and `?sample=athlete` (any id in samplePresets.ts) one of
+ * the marketing presets. Production builds drop this code, since
+ * import.meta.env.DEV is false.
  */
 function useSampleData() {
   const available = import.meta.env.DEV;
-  const [enabled, setEnabledState] = useState(
-    () => available && new URLSearchParams(location.search).has('sample'),
+  // null is off, '' the development set, otherwise a preset id.
+  const [preset, setPresetState] = useState<string | null>(() =>
+    available ? new URLSearchParams(location.search).get('sample') : null,
   );
   const [store, setStore] = useState<ChangeStore | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [presets, setPresets] = useState<SamplePresetInfo[]>([]);
   useEffect(() => {
-    if (!available || !enabled || store) return;
+    if (!available) return;
+    let active = true;
+    void import('@onpurpose/core/dev/samplePresets').then(
+      ({ samplePresetList }) => active && setPresets(samplePresetList),
+    );
+    return () => {
+      active = false;
+    };
+  }, [available]);
+  useEffect(() => {
+    if (!available || preset === null || store) return;
     let active = true;
     import('@onpurpose/core/dev/sampleData')
       .then(({ createSampleStore }) =>
-        createSampleStore(localDateKey(new Date())),
+        createSampleStore(localDateKey(new Date()), preset || undefined),
       )
       .then(
         (value) => active && setStore(value),
@@ -100,28 +124,43 @@ function useSampleData() {
     return () => {
       active = false;
     };
-  }, [available, enabled, store]);
-  const setEnabled = (value: boolean) => {
+  }, [available, preset, store]);
+  const setPreset = (value: string | null) => {
     const url = new URL(location.href);
-    if (value) url.searchParams.set('sample', '');
-    else url.searchParams.delete('sample');
-    history.replaceState(null, '', url.toString().replace('sample=', 'sample'));
-    // Each visit starts the sample history afresh.
-    if (!value) setStore(null);
+    if (value === null) url.searchParams.delete('sample');
+    else url.searchParams.set('sample', value);
+    history.replaceState(
+      null,
+      '',
+      url.toString().replace(/([?&]sample)=(?=&|#|$)/, '$1'),
+    );
+    // Each visit or choice starts the sample history afresh.
+    setStore(null);
     setError(null);
-    setEnabledState(value);
+    setPresetState(value);
   };
-  return { available, enabled, store, error, setEnabled };
+  return {
+    available,
+    enabled: preset !== null,
+    preset,
+    presets,
+    store,
+    error,
+    setPreset,
+    setEnabled: (value: boolean) => setPreset(value ? '' : null),
+  };
 }
 
 function Tracker({
   store,
   sampleData,
   onSampleData,
+  samplePreset,
 }: {
   store: ChangeStore;
   sampleData: boolean;
   onSampleData?: (value: boolean) => void;
+  samplePreset?: SamplePresetChoice;
 }) {
   const snapshot = useSyncExternalStore(store.subscribe, store.getSnapshot);
   const state = snapshot.replay.state;
@@ -330,6 +369,7 @@ function Tracker({
         saveError={!!snapshot.error}
         sampleData={sampleData}
         onSampleData={onSampleData}
+        samplePreset={samplePreset}
         onToggleCollapsed={() => setCollapsed(!collapsed)}
         onAdd={newHabit}
         onHistory={toggleHistory}

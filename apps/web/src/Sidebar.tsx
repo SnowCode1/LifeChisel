@@ -1,5 +1,14 @@
 import { Icon, type WebIconName } from './ui/Icon.tsx';
 import { LANDING_URL } from './config.ts';
+import type { SamplePresetInfo } from '@onpurpose/core/dev/samplePresets';
+
+/** Development only: which fictional history the sample store holds. */
+export type SamplePresetChoice = {
+  /** '' is the development set, otherwise a preset id. */
+  value: string;
+  options: SamplePresetInfo[];
+  onChange: (value: string) => void;
+};
 
 /**
  * The quiet left sidebar on wide screens: the habit list stays the only
@@ -16,6 +25,7 @@ export function Sidebar({
   saveError,
   sampleData,
   onSampleData,
+  samplePreset,
   onToggleCollapsed,
   onAdd,
   onHistory,
@@ -32,6 +42,7 @@ export function Sidebar({
   saveError: boolean;
   sampleData: boolean;
   onSampleData?: (value: boolean) => void;
+  samplePreset?: SamplePresetChoice;
   onToggleCollapsed: () => void;
   onAdd: () => void;
   onHistory: () => void;
@@ -110,6 +121,26 @@ export function Sidebar({
               onChange={(event) => onSampleData(event.target.checked)}
             />
           </label>
+        )}
+        {sampleData && samplePreset && (
+          <select
+            className="sidebar-label sample-preset"
+            aria-label="Sample history"
+            title={
+              samplePreset.options.find(
+                (option) => option.id === samplePreset.value,
+              )?.summary ?? 'Every habit type, long notes and goals for testing'
+            }
+            value={samplePreset.value}
+            onChange={(event) => samplePreset.onChange(event.target.value)}
+          >
+            <option value="">Development set</option>
+            {samplePreset.options.map((option) => (
+              <option key={option.id} value={option.id}>
+                {option.name}
+              </option>
+            ))}
+          </select>
         )}
         <button
           type="button"

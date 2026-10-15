@@ -458,12 +458,38 @@ The fixture contains entirely fictional data:
   3 weeks on/1 off, and Workout with 2–4 successful days per week on alternating
   weeks.
 
+#### Marketing presets
+
+With Sample data on, Settings → Development lists five more fictional
+histories beside the development set, for screenshots and demos. Each is a
+complete 180-day log of its own (`packages/core/src/dev/samplePresets.ts`
+builds it; each person is one file in `dev/presets/`) using all four habit
+types, goals, notes and a usual logging time per habit:
+
+| Id          | Name                | Habits            | Shows                                                                                                                  |
+| ----------- | ------------------- | ----------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `everyday`  | Everyday            | 5 (the free tier) | Walk, water, reading, Dinner categories, One good thing                                                                |
+| `learner`   | Learning & practice | 6                 | Spanish minutes with a raised goal, a word a day, piano with practice types, focus sessions                            |
+| `wellbeing` | Mood & wellbeing    | 8                 | Feelings, meditation, gratitude, screen time, a default-on Alcohol-free box, fortnightly therapy                       |
+| `athlete`   | Marathon training   | 10                | Session types with a weekly quota, distance, session notes, how the legs feel, resting heart rate, weight, physio days |
+| `health`    | Medication & health | 11                | Doses, a Sunday injection, blood pressure, pain, symptom categories, sleep, water, notes for appointments              |
+
+Today looks like an evening in progress: habits usually logged before 8 pm are
+filled in and later ones are still open. `EXPO_PUBLIC_DEV_MOCK_DATA=athlete`
+(any preset id) starts in that preset after a full reload; `true` still starts
+in the development set. On the web, `?sample=athlete` does the same and the
+sidebar shows a picker under the Sample data switch. The sample labels (SAMPLE
+DATA in the top bar, the History and sidebar notes) still show, so crop or hide
+them in marketing captures.
+
 These modules extend only the sample store; never use them to change real
 habits or their saved descriptions. App loads them behind `__DEV__`, so the
 production iOS export excludes their code whatever the env value; verify this
 when changing the gate. Tests cover replay validity, DST and leap dates,
 statistics variety, numeric zeros versus gaps, independent stores, sample
-Undo/Redo, reset and blocked backup replacement. See
+Undo/Redo, reset and blocked backup replacement; preset tests check that every
+preset is deterministic, valid on DST and leap dates, uses all four habit types
+and fills each row in the last two weeks. See
 [STATISTICS.md](STATISTICS.md) and [GOALS.md](GOALS.md) for what each example
 exercises.
 

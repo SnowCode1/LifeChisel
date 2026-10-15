@@ -96,8 +96,11 @@ to the address). It opens the phone's fictional six-month history from core
 `dev/sampleData.ts`, including number, text and category habits, goals and
 notes, in a separate in-memory store; edits last only for that visit and
 backups are off. Turning it off returns to the saved data, which sample mode
-never touches. Production builds leave the sample code out
-(`import.meta.env.DEV`).
+never touches. While it is on, a picker below the switch chooses the
+development set or one of the five marketing presets from
+`dev/samplePresets.ts`; `?sample=<preset id>` opens one directly (see
+[DEVELOPMENT.md](DEVELOPMENT.md#marketing-presets)). Production builds leave
+the sample code out (`import.meta.env.DEV`).
 
 ## Entering values
 

@@ -2121,3 +2121,28 @@ Status: implemented on the `web-app` branch for the phone app and web app
 - Founder decision (same day): default Streak ends only to On. Because the
   default is a display rule, grids that never chose it switch without any
   stored change.
+
+## 15 October 2026 — Sample presets for marketing screenshots
+
+Status: assistant proposal, implemented on the `web-app` branch; the founder
+has not yet reviewed the personas or tried them on a device or in a browser.
+
+- Founder request: five separate sample data presets for marketing screenshots
+  and similar uses, such as normal use, an athlete and someone mostly tracking
+  medications, that show category and free-text habits as well as the others.
+- Assistant proposal (personas): Everyday, Marathon training, Medication &
+  health, Learning & practice, and Mood & wellbeing. Each uses all four habit
+  types and shows a different strength: a weekly quota, weekday schedules, a
+  raised goal, a default-on checkbox and a fortnightly cycle. They are
+  fictional, name no real medicines or brands, and avoid medical claims.
+- Founder request (same day): vary the number of habits. Everyday now has
+  five (the free tier), Learning & practice six, Mood & wellbeing eight,
+  Marathon training ten and Medication & health eleven.
+- Assistant implementation: each preset is a separate in-memory sample history
+  chosen under Settings → Development (phone) or the sidebar picker and
+  `?sample=<id>` (web). The default sample set and its tests are unchanged.
+  Presets stay development-only like the rest of the sample code. Today shows
+  an evening in progress, with habits usually logged after 8 pm still open.
+- Open for the founder: whether marketing captures need a mode that hides the
+  sample labels, and whether a preset should also set appearance preferences
+  (theme, checkbox style, joined streaks).

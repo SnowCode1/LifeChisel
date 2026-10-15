@@ -185,6 +185,8 @@ preserve earlier icon choices/removals and raw history.
   `storage/descriptionDraftModel.ts` distinct from native/web adapters for Metro.
   `packages/core/src/dev/sampleData.ts` owns isolated mock history for statistics testing. Keep
   it in memory, excluded via `__DEV__` from release, and separate from real data.
+  `dev/samplePresets.ts` builds five fictional marketing presets from `dev/presets/`
+  under the same rules; the default sample set stays unchanged for tests.
   `src/HabitSymbol.tsx` renders optional emoji/Phosphor/Tabler icons; the editor owns
   selection drafts through `src/HabitIconPicker.tsx`. Read HABIT_ICONS.md.
   `src/ReorderRow.tsx` moves the actual name views during drag/drop and the canvas

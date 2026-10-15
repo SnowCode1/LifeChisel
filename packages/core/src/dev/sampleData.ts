@@ -2,6 +2,7 @@ import { withSampleTiming } from './sampleTiming.ts';
 import { withSampleRecords } from './sampleRecords.ts';
 import { withSampleGoals } from './sampleGoals.ts';
 import { sampleDescriptions } from './sampleDescriptions.ts';
+import { createPresetEvents } from './samplePresets.ts';
 import { calendarDay, localDateKey } from '../calendar.ts';
 import { demoHabits, isNumericHabit } from '../habits.ts';
 import {
@@ -154,15 +155,23 @@ export function createSampleEvents(today: string): StoredEvent[] {
 
 // An entirely separate in-memory store exercises the normal grid, history,
 // stats and Undo/Redo code. No SQLite, files, localStorage or backup replacement.
-export async function createSampleStore(today: string): Promise<ChangeStore> {
+// Without a preset it holds the development set (the twelve presets plus
+// records, goals and timing); a preset id from samplePresets.ts opens one of
+// the fictional marketing histories instead.
+export async function createSampleStore(
+  today: string,
+  preset?: string,
+): Promise<ChangeStore> {
   let { events, replay } = replayEvents(
-    withSampleTiming(
-      withSampleGoals(
-        withSampleRecords(createSampleEvents(today), today),
-        today,
-      ),
-      today,
-    ),
+    preset
+      ? createPresetEvents(preset, today)
+      : withSampleTiming(
+          withSampleGoals(
+            withSampleRecords(createSampleEvents(today), today),
+            today,
+          ),
+          today,
+        ),
   );
   const repository: Repository = {
     async load() {

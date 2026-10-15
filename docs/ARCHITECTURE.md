@@ -633,7 +633,9 @@ checks.
   development-only fallback.
 - **Sample data.** `packages/core/src/dev/sampleData.ts` and its companions build an isolated
   in-memory store of fictional history, notes, goals and records for statistics
-  review. It never touches real data or backups.
+  review. `samplePresets.ts` adds five fictional people (one file each in
+  `dev/presets/`) for marketing screenshots. It never touches real data or
+  backups.
 - **Grid diagnostics.** With the performance flag on, Settings → Development
   runs timed Normal sessions (the earlier No goal tint and Simple cells
   experiments were removed with the canvas grid) and can send anonymous timing

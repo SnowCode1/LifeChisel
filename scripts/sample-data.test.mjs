@@ -215,3 +215,64 @@ test('three sample notes grow progressively towards the limit without altering r
       assert.equal(sampleDescriptions[habit.id], presetDescriptions[habit.id]);
   }
 });
+
+test('marketing presets are deterministic, valid and show every habit type across DST and leap days', async () => {
+  const { createPresetEvents, samplePresets, PRESET_DAYS } =
+    await import('../packages/core/src/dev/samplePresets.ts');
+  const { habitType } = await import('../packages/core/src/habits.ts');
+  assert.equal(samplePresets.length, 5);
+  for (const preset of samplePresets)
+    for (const date of [today, '2024-03-05', '2026-04-05', '2026-10-26']) {
+      const events = createPresetEvents(preset.id, date);
+      assert.deepEqual(events, createPresetEvents(preset.id, date));
+      const { replay } = replayEvents(events);
+      const { habits, values } = replay.state;
+      assert.deepEqual(
+        new Set(habits.map(habitType)),
+        new Set(['checkbox', 'number', 'categorical', 'text']),
+      );
+      const recent = Array.from({ length: 14 }, (_, ago) =>
+        new Date(Date.parse(`${date}T12:00:00Z`) - ago * 864e5)
+          .toISOString()
+          .slice(0, 10),
+      );
+      for (const habit of habits) {
+        // Every row has something to show in a two-week screenshot.
+        assert.ok(
+          habit.goals?.[0]?.defaultChecked ||
+            recent.some((day) => values[`${habit.id}:${day}`] !== undefined),
+          `${preset.id}/${habit.id}`,
+        );
+        // Habits logged late in the evening are still open today.
+        const late = preset.habits.find((item) => item.id === habit.id).at[0];
+        if (late >= 20) assert.equal(values[`${habit.id}:${date}`], undefined);
+      }
+      for (const event of events.slice(1)) {
+        const ago = dayNumber(date) - dayNumber(event.change.date);
+        assert.ok(ago >= 0 && ago < PRESET_DAYS);
+      }
+    }
+  assert.throws(() => createPresetEvents('nobody', today), /Unknown/);
+});
+
+test('a preset opens as its own in-memory sample store', async () => {
+  const store = await createSampleStore(today, 'athlete');
+  const { state } = store.getSnapshot().replay;
+  assert.ok(state.habits.every((habit) => habit.id.startsWith('athlete-')));
+  const key = `athlete-mobility:${today}`;
+  const before = state.values[key] ?? null;
+  assert.equal(
+    store.change({
+      kind: 'entry',
+      habitId: 'athlete-mobility',
+      date: today,
+      before,
+      after: before === 1 ? null : 1,
+    }),
+    true,
+  );
+  await store.flush();
+  assert.equal(store.undo(), true);
+  assert.equal(store.getSnapshot().replay.state.values[key] ?? null, before);
+  await assert.rejects(createSampleStore(today, 'nobody'), /Unknown/);
+});

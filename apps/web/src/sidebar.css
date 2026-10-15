@@ -128,6 +128,17 @@ label.sidebar-item:hover,
   margin-left: auto;
   accent-color: var(--accent);
 }
+.sample-preset {
+  height: 32px;
+  margin: 0 0 6px;
+  padding: 0 8px;
+  border: 1px solid var(--surface-edge);
+  border-radius: 8px;
+  color: var(--ink);
+  background-color: var(--surface-raised);
+  font: inherit;
+  font-size: 13px;
+}
 
 /* Collapsed, or medium widths: icons only. */
 .sidebar.collapsed {

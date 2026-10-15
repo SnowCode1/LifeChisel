@@ -4,6 +4,10 @@ import { ActivityIndicator, Pressable, Switch, View } from 'react-native';
 import { localDateKey } from '@onpurpose/core/calendar';
 import type { ChangeStore } from '@onpurpose/core/storage/store';
 import { createSampleStore } from '@onpurpose/core/dev/sampleData';
+import {
+  isSamplePreset,
+  samplePresetList,
+} from '@onpurpose/core/dev/samplePresets';
 import { performanceRun } from '@onpurpose/core/performance';
 import { themedStyles, useTheme } from '../ThemeContext';
 
@@ -11,11 +15,15 @@ import { themedStyles, useTheme } from '../ThemeContext';
 // itself, so it reads the current theme where it renders.
 function SampleControls({
   enabled,
+  preset,
   onChange,
+  onPreset,
   onReset,
 }: {
   enabled: boolean;
+  preset: string | null;
   onChange: (value: boolean) => void;
+  onPreset: (value: string | null) => void;
   onReset: () => void;
 }) {
   const theme = useTheme();
@@ -39,6 +47,34 @@ function SampleControls({
           ? 'Six months of fictional history. Edits stay in this preview session; turn this off to return to your real data.'
           : 'Try statistics with six months of fictional history. Your real data stays separate.'}
       </Text>
+      {enabled && (
+        <View accessibilityRole="radiogroup" style={styles.presets}>
+          {[
+            {
+              id: null,
+              name: 'Development set',
+              summary:
+                'Every habit type, long notes, goals, cycles and quotas for testing.',
+            },
+            ...samplePresetList,
+          ].map((option) => {
+            const selected = option.id === preset;
+            return (
+              <Pressable
+                key={option.id ?? 'development'}
+                accessibilityRole="radio"
+                accessibilityState={{ checked: selected }}
+                accessibilityHint={option.summary}
+                style={[styles.preset, selected && styles.presetSelected]}
+                onPress={() => !selected && onPreset(option.id)}
+              >
+                <Text style={styles.label}>{option.name}</Text>
+                <Text style={styles.summary}>{option.summary}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
       {enabled && (
         <Pressable
           accessibilityRole="button"
@@ -65,15 +101,20 @@ export function SampleDataMode({
 }) {
   const theme = useTheme();
   const styles = useStyles();
+  // `true` starts in the development set; a preset id starts in that preset.
+  const startup = process.env.EXPO_PUBLIC_DEV_MOCK_DATA;
   const [enabled, setEnabled] = useState(
-    process.env.EXPO_PUBLIC_DEV_MOCK_DATA === 'true',
+    startup === 'true' || isSamplePreset(startup),
+  );
+  const [preset, setPreset] = useState<string | null>(
+    isSamplePreset(startup) ? startup : null,
   );
   const [sample, setSample] = useState<ChangeStore | null>(null);
   const [error, setError] = useState(false);
   useEffect(() => {
     if (!enabled || sample) return;
     let active = true;
-    void createSampleStore(localDateKey(new Date()))
+    void createSampleStore(localDateKey(new Date()), preset ?? undefined)
       .then((value) => {
         if (active) setSample(value);
       })
@@ -83,14 +124,21 @@ export function SampleDataMode({
     return () => {
       active = false;
     };
-  }, [enabled, sample]);
+  }, [enabled, sample, preset]);
   const controls = (
     <SampleControls
       enabled={enabled}
+      preset={preset}
       onChange={(value) => {
         performanceRun.stop();
         setError(false);
         setEnabled(value);
+      }}
+      onPreset={(value) => {
+        performanceRun.stop();
+        setError(false);
+        setPreset(value);
+        setSample(null);
       }}
       onReset={() => {
         performanceRun.stop();
@@ -144,6 +192,18 @@ const useStyles = themedStyles((t) => ({
     flexShrink: 1,
   },
   description: { color: t.ink(0x96), fontSize: 14, lineHeight: 21 },
+  presets: { gap: 8 },
+  preset: {
+    minHeight: 48,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    gap: 2,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: t.ink(0x20),
+  },
+  presetSelected: { borderColor: t.accent, backgroundColor: t.ink(0x15) },
+  summary: { color: t.ink(0x96), fontSize: 13, lineHeight: 18 },
   button: {
     minHeight: 48,
     padding: 14,
