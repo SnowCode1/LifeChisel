@@ -3,191 +3,636 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="color-scheme" content="dark light" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#000000" />
     <meta
       name="description"
-      content="A habit tracker built around one fast grid: tick today's habits in a few seconds and get on with your day."
+      content="A habit tracker built around one grid. Each habit keeps its place, so after a few days you can tick off your day without reading the screen. For iPhone, Android and the web."
     />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <title>OnPurpose — habit tracking without the friction</title>
+    <title>OnPurpose: the habit grid built for muscle memory</title>
   </head>
   <body>
-    <!-- Scaffold: OnPurpose is a working name and this copy is a first draft.
-         Claims stay within confirmed scope (PROJECT_GOALS.md). -->
+    <!-- OnPurpose is a working name. The copy describes the product at launch
+         (founder decision, 16 October 2026); see docs/LANDING.md. -->
+    <a class="skip" href="#main">Skip to content</a>
     <header class="site-header">
-      <a class="brand" href="/" aria-label="OnPurpose home">
-        <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true">
-          <rect width="24" height="24" rx="7" fill="var(--accent)" />
-          <path
-            d="m7 12.5 3.2 3.2L17 9"
-            fill="none"
-            stroke="var(--on-accent)"
-            stroke-width="2.4"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-        </svg>
+      <a class="brand" href="/">
+        <img src="/favicon.svg" width="28" height="28" alt="" />
         OnPurpose
       </a>
       <nav aria-label="Sections">
-        <a href="#features">Features</a>
+        <a href="#examples">Examples</a>
+        <a href="#habits">Habits and goals</a>
+        <a href="#statistics">Statistics</a>
         <a href="#pricing">Pricing</a>
-        <a href="https://github.com/SnowCode1/OnPurpose">Source</a>
+        <a href="https://github.com/SnowCode1/OnPurpose">GitHub</a>
       </nav>
-      <a class="button small" data-app-link href="/app/">Open the web app</a>
+      <a class="button small light" data-app-link href="/app/"
+        >Open the web app</a
+      >
     </header>
 
-    <main>
+    <main id="main">
       <section class="hero">
-        <div class="hero-text">
-          <h1>Track your habits in seconds, then get on with your day.</h1>
-          <p class="lede">
-            OnPurpose puts every habit and day in one grid. Open it, tap the
-            same familiar spots, and you are done: no menus, no celebrations,
-            nothing to read first.
-          </p>
-          <div class="actions">
-            <a class="button" data-app-link href="/app/">Open the web app</a>
-            <span class="note">iPhone and Android apps coming soon</span>
+        <h1>The habit grid built for muscle memory.</h1>
+        <p class="lede">
+          Habits are rows and days are columns, and each habit keeps its place.
+          After a few days you can tick off what you've done without reading the
+          screen.
+        </p>
+        <div class="actions">
+          <a class="button" data-app-link href="/app/">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="3" y="4" width="18" height="13" rx="2" />
+              <path d="M8 21h8M12 17v4" />
+            </svg>
+            Open the web app
+          </a>
+          <a class="button ghost" data-store="ios" href="#get">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="6" y="2" width="12" height="20" rx="3" />
+              <path d="M11 18h2" />
+            </svg>
+            Get it for iPhone
+          </a>
+          <a class="button ghost" data-store="android" href="#get">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="6" y="2" width="12" height="20" rx="3" />
+              <path d="M11 18h2" />
+            </svg>
+            Get it for Android
+          </a>
+        </div>
+      </section>
+
+      <div class="showcase" aria-hidden="true">
+        <div class="window">
+          <div class="window-bar">
+            <span data-month></span><b>Today</b><span>History · Settings</span>
+          </div>
+          <div class="window-grid" data-grid="8"></div>
+        </div>
+        <div class="phone">
+          <div class="phone-screen">
+            <b class="phone-today">Today</b>
+            <div data-grid="4"></div>
           </div>
         </div>
-        <figure class="hero-figure" aria-hidden="true">
-          <div class="device">
-            <table class="demo-grid">
-              <thead>
-                <tr>
-                  <th>October</th>
-                  <th><span>Thu</span>8</th>
-                  <th><span>Fri</span>9</th>
-                  <th><span>Sat</span>10</th>
-                  <th><span>Sun</span>11</th>
-                  <th><span>Mon</span>12</th>
-                  <th><span>Tue</span>13</th>
-                  <th class="today"><span>Today</span>14</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr style="--habit: #82e6bc">
-                  <th><b>Go for a walk</b><small>Every day</small></th>
-                  <td class="join-r"><span class="box on"></span></td>
-                  <td class="join-l join-r"><span class="box on"></span></td>
-                  <td class="join-l join-r"><span class="box on"></span></td>
-                  <td class="join-l"><span class="box on"></span></td>
-                  <td><span class="box"></span></td>
-                  <td class="join-r"><span class="box on"></span></td>
-                  <td class="today join-l"><span class="box on"></span></td>
-                </tr>
-                <tr style="--habit: #bda5ff">
-                  <th><b>Read</b><small>At least 20 minutes</small></th>
-                  <td class="met"><span class="num">30</span></td>
-                  <td class="met"><span class="num">45</span></td>
-                  <td><span class="num">—</span></td>
-                  <td class="met"><span class="num">20</span></td>
-                  <td class="met"><span class="num">35</span></td>
-                  <td class="met"><span class="num">40</span></td>
-                  <td class="today met"><span class="num">25</span></td>
-                </tr>
-                <tr style="--habit: #ffb38a">
-                  <th><b>Stretch</b><small>Every day</small></th>
-                  <td><span class="box"></span></td>
-                  <td class="join-r"><span class="box on"></span></td>
-                  <td class="join-l join-r"><span class="box on"></span></td>
-                  <td class="join-l"><span class="box on"></span></td>
-                  <td><span class="box"></span></td>
-                  <td class="join-r"><span class="box on"></span></td>
-                  <td class="today join-l"><span class="box on"></span></td>
-                </tr>
-                <tr style="--habit: #c5e788">
-                  <th><b>Workout</b><small>Run, gym or swim</small></th>
-                  <td><span class="word">Run</span></td>
-                  <td><span class="word">Rest</span></td>
-                  <td><span class="word">Gym</span></td>
-                  <td><span class="word">Run</span></td>
-                  <td><span class="word">—</span></td>
-                  <td><span class="word">Swim</span></td>
-                  <td class="today"><span class="word">Run</span></td>
-                </tr>
-                <tr style="--habit: #7dddd9">
-                  <th><b>Wind down</b><small>Every evening</small></th>
-                  <td class="join-r"><span class="box on"></span></td>
-                  <td class="join-l"><span class="box on"></span></td>
-                  <td><span class="box"></span></td>
-                  <td class="join-r"><span class="box on"></span></td>
-                  <td class="join-l join-r"><span class="box on"></span></td>
-                  <td class="join-l"><span class="box on"></span></td>
-                  <td class="today"><span class="box"></span></td>
-                </tr>
-              </tbody>
-            </table>
+      </div>
+
+      <section id="examples" class="section" aria-labelledby="examples-title">
+        <div class="section-head split">
+          <div>
+            <h2 id="examples-title">Five example setups</h2>
+            <p>
+              Fictional people with six months of sample data, shown in the web
+              app.
+            </p>
           </div>
-        </figure>
+          <div class="carousel-arrows">
+            <button
+              type="button"
+              class="icon-button"
+              data-carousel="prev"
+              aria-label="Previous example"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="m15 6-6 6 6 6" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              class="icon-button"
+              data-carousel="next"
+              aria-label="Next example"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="m9 6 6 6-6 6" />
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div
+          class="pills"
+          role="group"
+          aria-label="Choose an example"
+          data-carousel-tabs
+        >
+          <button type="button" class="pill" aria-pressed="true">
+            Everyday
+          </button>
+          <button type="button" class="pill" aria-pressed="false">
+            Marathon training
+          </button>
+          <button type="button" class="pill" aria-pressed="false">
+            Medication &amp; health
+          </button>
+          <button type="button" class="pill" aria-pressed="false">
+            Learning &amp; practice
+          </button>
+          <button type="button" class="pill" aria-pressed="false">
+            Mood &amp; wellbeing
+          </button>
+        </div>
+        <div
+          class="carousel"
+          data-carousel-track
+          tabindex="0"
+          aria-label="Example setups, scroll sideways"
+        >
+          <figure class="slide">
+            <div class="shot">
+              <picture
+                ><source
+                  media="(max-width: 760px)"
+                  srcset="/screenshots/everyday-phone.webp"
+                  width="780"
+                  height="840" />
+                <img
+                  src="/screenshots/everyday.webp"
+                  width="2400"
+                  height="984"
+                  alt="The Everyday example in the web app: five habits over the last two weeks."
+              /></picture>
+            </div>
+            <figcaption>
+              <div>
+                <h3>Everyday</h3>
+                <p>
+                  Five habits, the most the free version holds: a morning walk,
+                  water, reading, what was for dinner, and one good thing about
+                  the day.
+                </p>
+              </div>
+              <ul class="tags">
+                <li>Morning walk</li>
+                <li>Drink water</li>
+                <li>Read</li>
+                <li>Dinner</li>
+                <li>One good thing</li>
+              </ul>
+            </figcaption>
+          </figure>
+          <figure class="slide">
+            <div class="shot">
+              <picture
+                ><source
+                  media="(max-width: 760px)"
+                  srcset="/screenshots/athlete-phone.webp"
+                  width="780"
+                  height="1300" />
+                <img
+                  src="/screenshots/athlete.webp"
+                  width="2400"
+                  height="1544"
+                  loading="lazy"
+                  alt="The Marathon training example: training sessions, distance, notes, heart rate, sleep and more."
+              /></picture>
+            </div>
+            <figcaption>
+              <div>
+                <h3>Marathon training</h3>
+                <p>
+                  A runner building up to a spring marathon, with an easier week
+                  every fourth week.
+                </p>
+              </div>
+              <ul class="tags">
+                <li>Training</li>
+                <li>Distance</li>
+                <li>Session notes</li>
+                <li>Legs</li>
+                <li>Resting heart rate</li>
+                <li>Sleep</li>
+                <li>Mobility</li>
+                <li>Physio exercises</li>
+                <li>Weight</li>
+                <li>Protein</li>
+              </ul>
+            </figcaption>
+          </figure>
+          <figure class="slide">
+            <div class="shot">
+              <picture
+                ><source
+                  media="(max-width: 760px)"
+                  srcset="/screenshots/health-phone.webp"
+                  width="780"
+                  height="1392" />
+                <img
+                  src="/screenshots/health.webp"
+                  width="2400"
+                  height="1656"
+                  loading="lazy"
+                  alt="The Medication and health example: doses, blood pressure, pain, symptoms and notes for the doctor."
+              /></picture>
+            </div>
+            <figcaption>
+              <div>
+                <h3>Medication &amp; health</h3>
+                <p>
+                  Someone managing a long-term condition, with notes to bring to
+                  the doctor.
+                </p>
+              </div>
+              <ul class="tags">
+                <li>Morning medication</li>
+                <li>Evening medication</li>
+                <li>Weekly injection</li>
+                <li>Vitamin D</li>
+                <li>Blood pressure</li>
+                <li>Pain level</li>
+                <li>Symptoms</li>
+                <li>Sleep</li>
+                <li>Water</li>
+                <li>Steps</li>
+                <li>Notes for my doctor</li>
+              </ul>
+            </figcaption>
+          </figure>
+          <figure class="slide">
+            <div class="shot">
+              <picture
+                ><source
+                  media="(max-width: 760px)"
+                  srcset="/screenshots/learner-phone.webp"
+                  width="780"
+                  height="932" />
+                <img
+                  src="/screenshots/learner.webp"
+                  width="2400"
+                  height="1096"
+                  loading="lazy"
+                  alt="The Learning and practice example: Spanish, piano practice, focus sessions and a phone-free morning."
+              /></picture>
+            </div>
+            <figcaption>
+              <div>
+                <h3>Learning &amp; practice</h3>
+                <p>
+                  A student learning Spanish and piano, keeping their phone away
+                  until nine.
+                </p>
+              </div>
+              <ul class="tags">
+                <li>Spanish</li>
+                <li>Word of the day</li>
+                <li>Piano</li>
+                <li>Practised</li>
+                <li>Focus sessions</li>
+                <li>No phone before 9</li>
+              </ul>
+            </figcaption>
+          </figure>
+          <figure class="slide">
+            <div class="shot">
+              <picture
+                ><source
+                  media="(max-width: 760px)"
+                  srcset="/screenshots/wellbeing-phone.webp"
+                  width="780"
+                  height="1116" />
+                <img
+                  src="/screenshots/wellbeing.webp"
+                  width="2400"
+                  height="1320"
+                  loading="lazy"
+                  alt="The Mood and wellbeing example: feelings, meditation, gratitude, screen time and therapy."
+              /></picture>
+            </div>
+            <figcaption>
+              <div>
+                <h3>Mood &amp; wellbeing</h3>
+                <p>
+                  Looking after mental health, with therapy every other week.
+                </p>
+              </div>
+              <ul class="tags">
+                <li>Feelings</li>
+                <li>Meditate</li>
+                <li>Grateful for</li>
+                <li>Morning sunlight</li>
+                <li>Alcohol-free</li>
+                <li>Screen time</li>
+                <li>Coffee</li>
+                <li>Therapy</li>
+              </ul>
+            </figcaption>
+          </figure>
+        </div>
       </section>
 
-      <section id="features" class="features" aria-labelledby="features-title">
-        <h2 id="features-title">Built to stay out of your way</h2>
-        <ul>
-          <li>
-            <h3>One grid, every habit</h3>
-            <p>
-              Habits down the side, days across the top, in the order you
-              choose. Rows never jump around, so your hand learns where to tap.
+      <section id="habits" class="section" aria-labelledby="habits-title">
+        <div class="section-head">
+          <h2 id="habits-title">Four kinds of habit</h2>
+          <p>
+            Some habits are done or not done. Others are better as a number, a
+            choice or a few words. All four sit in the same grid.
+          </p>
+        </div>
+        <div class="kinds">
+          <article class="card kind">
+            <div class="strip" style="--c: #49de78" aria-hidden="true">
+              <span class="cell jr"><span class="box on"></span></span>
+              <span class="cell jl"><span class="box on"></span></span>
+              <span class="cell"><span class="cross"></span></span>
+              <span class="cell today"><span class="box on"></span></span>
+            </div>
+            <div class="kind-body">
+              <h3>Checkbox</h3>
+              <p>Done or not. One tap ticks it.</p>
+              <details class="more">
+                <summary>Goal options</summary>
+                <p>
+                  A ticked day counts as done. You can flip that for things
+                  you're cutting out, so an unticked day counts, or start every
+                  day ticked and untick the days you slip.
+                </p>
+              </details>
+            </div>
+          </article>
+          <article class="card kind">
+            <div class="strip" style="--c: #bda5ff" aria-hidden="true">
+              <span class="cell met"><span class="val">35</span></span>
+              <span class="cell"><span class="val">12</span></span>
+              <span class="cell met"><span class="val">40</span></span>
+              <span class="cell met today"><span class="val">25</span></span>
+            </div>
+            <div class="kind-body">
+              <h3>Number</h3>
+              <p>
+                Minutes, glasses, pages, kilometres. Shaded when you reach your
+                target.
+              </p>
+              <details class="more">
+                <summary>Goal options</summary>
+                <p>
+                  At least an amount, at most an amount, or between two. When
+                  you enter a number, your recent amounts are offered so you
+                  rarely need to type.
+                </p>
+              </details>
+            </div>
+          </article>
+          <article class="card kind">
+            <div class="strip" style="--c: #2bdbbe" aria-hidden="true">
+              <span class="cell"><span class="val">Run</span></span>
+              <span class="cell"><span class="val">Gym</span></span>
+              <span class="cell blank"><span class="val">–</span></span>
+              <span class="cell today"><span class="val">Swim</span></span>
+            </div>
+            <div class="kind-body">
+              <h3>Category</h3>
+              <p>Pick from a list you make yourself, one choice or several.</p>
+              <details class="more">
+                <summary>Goal options</summary>
+                <p>
+                  Any choice can count, or only some of them: a training habit
+                  might count Run and Swim but not Rest.
+                </p>
+              </details>
+            </div>
+          </article>
+          <article class="card kind">
+            <div class="strip" style="--c: #fdbe45" aria-hidden="true">
+              <span class="cell"><span class="val">Tired</span></span>
+              <span class="cell"><span class="val">Good</span></span>
+              <span class="cell"><span class="val">Calm</span></span>
+              <span class="cell today"><span class="val">Busy</span></span>
+            </div>
+            <div class="kind-body">
+              <h3>Text</h3>
+              <p>A word or a short note for the day.</p>
+              <details class="more">
+                <summary>Goal options</summary>
+                <p>
+                  Any note can count as done, or only notes containing certain
+                  text. Or leave it without a goal as a simple diary.
+                </p>
+              </details>
+            </div>
+          </article>
+        </div>
+
+        <div class="goals">
+          <div>
+            <h2>Goals you set yourself</h2>
+            <p class="section-text">
+              Each habit can have its own goal, or none at all if you only want
+              to keep a record.
             </p>
-          </li>
-          <li>
-            <h3>More than checkboxes</h3>
-            <p>
-              Tick a box, count minutes or glasses, pick a category like Run or
-              Gym, or jot a line of text, all in the same grid.
+            <p class="section-text">
+              If you change a goal later, you choose the date it starts from.
+              Days before that are still measured against the old goal, so your
+              past results stay the same.
             </p>
-          </li>
-          <li>
-            <h3>Goals that fit real weeks</h3>
-            <p>
-              Every day, chosen weekdays, or three times a week. Change a goal
-              from a date onwards and earlier results stay as they were.
-            </p>
-          </li>
-          <li>
-            <h3>Statistics when you want them</h3>
-            <p>
-              Streaks, trends, a calendar, the days and times you do best. They
-              are one tap away and never in the way of tracking.
-            </p>
-          </li>
-          <li>
-            <h3>Nothing is ever lost</h3>
-            <p>
-              Every change is recorded in History and can be undone. Export a
-              full backup whenever you like and open it on another device.
-            </p>
-          </li>
-          <li>
-            <h3>No account needed</h3>
-            <p>
-              Your habits are saved on your device. The source is open under the
-              GPL, so anyone can check how it works.
-            </p>
-          </li>
-        </ul>
+            <details class="more">
+              <summary>All the ways a goal can repeat</summary>
+              <ul>
+                <li>Every day, or only on the weekdays you pick</li>
+                <li>
+                  A number of days per week: at least, at most, or between two
+                  numbers
+                </li>
+                <li>
+                  The same over a period of your own length, from 1 to 366 days
+                </li>
+                <li>
+                  On and off cycles: 5 days on and 2 off, 3 weeks on and 1 off,
+                  alternate weeks, or your own pattern
+                </li>
+              </ul>
+            </details>
+          </div>
+          <div class="goals-visual" aria-hidden="true">
+            <ul class="chips">
+              <li>Every day</li>
+              <li>Mon · Wed · Fri</li>
+              <li class="on">3 times a week</li>
+              <li>At least 20</li>
+              <li>At most 2</li>
+              <li>5 days on, 2 off</li>
+              <li>No goal</li>
+            </ul>
+            <div class="card timeline">
+              <b style="color: #fdbe45">Stretch</b>
+              <div class="version current">
+                <i></i>
+                <div><b>Mon, Wed and Fri</b><span>From 5 October</span></div>
+              </div>
+              <div class="version">
+                <i></i>
+                <div><b>Every day</b><span>1 September to 4 October</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
 
-      <section id="pricing" class="pricing" aria-labelledby="pricing-title">
-        <h2 id="pricing-title">Simple pricing</h2>
-        <div class="plans">
-          <article class="plan">
+      <section
+        id="statistics"
+        class="section"
+        aria-labelledby="statistics-title"
+      >
+        <div class="section-head">
+          <h2 id="statistics-title">
+            Track anything with versatile built-in statistics
+          </h2>
+          <p>
+            Tap a habit's name to open its statistics. This one is a reading
+            habit with a year of sample data. Try the ranges and charts.
+          </p>
+        </div>
+        <div class="card stats" data-stats>
+          <noscript
+            ><p>
+              The interactive statistics example needs JavaScript.
+            </p></noscript
+          >
+        </div>
+      </section>
+
+      <section class="section history" aria-labelledby="history-title">
+        <div>
+          <h2 id="history-title">History and Undo</h2>
+          <p class="section-text">
+            History lists the changes you've made, day by day. If you tick the
+            wrong box or archive a habit by accident, Undo puts it back.
+          </p>
+          <p class="section-text">
+            Everything can also go into a single backup file, which you can open
+            again on any device.
+          </p>
+          <details class="more">
+            <summary>What History keeps</summary>
+            <ul>
+              <li>Every entry, including changes to earlier days</li>
+              <li>Edits to a habit: its name, colour, notes and goal</li>
+              <li>
+                Archiving, restoring and deleting habits, and changes to their
+                order
+              </li>
+              <li>
+                A calendar of the days you made changes, and filters by habit
+              </li>
+            </ul>
+          </details>
+        </div>
+        <div class="card history-list" aria-hidden="true">
+          <span class="day">Today</span>
+          <div class="change">
+            <span><b style="color: #bda5ff">Read</b> 25</span><time>8:12</time>
+          </div>
+          <div class="change">
+            <span><b style="color: #49de78">Go for a walk</b> ticked</span
+            ><time>8:11</time>
+          </div>
+          <div class="change">
+            <span
+              ><b style="color: #fdbe45">Stretch</b> goal: Mon, Wed, Fri</span
+            ><time>7:58</time>
+          </div>
+          <span class="day">Yesterday</span>
+          <div class="change">
+            <span><b style="color: #2bdbbe">Workout</b> Gym</span
+            ><time>18:40</time>
+          </div>
+          <div class="undo-bar"><span>Read 25</span><b>Undo</b></div>
+        </div>
+      </section>
+
+      <section class="section pair">
+        <article class="card feature">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M20 11a8 8 0 0 0-14.3-4.9L4 8M4 4v4h4M4 13a8 8 0 0 0 14.3 4.9L20 16M20 20v-4h-4"
+            />
+          </svg>
+          <h2>On one device, or synced</h2>
+          <p>
+            Use it on one device without an account, or sign in to sync your
+            habits between your phone and computer. Either way, you can export
+            everything to a backup file whenever you like.
+          </p>
+          <ul class="tags">
+            <li>iPhone</li>
+            <li>Android</li>
+            <li>Web</li>
+          </ul>
+        </article>
+        <article class="card feature">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m8 7-5 5 5 5M16 7l5 5-5 5M14 4l-4 16" />
+          </svg>
+          <h2>Open source</h2>
+          <p>
+            OnPurpose is free software under the GNU GPL. Anyone can read the
+            code, see exactly how your data is stored, and build the app
+            themselves.
+          </p>
+          <a
+            class="button ghost small"
+            href="https://github.com/SnowCode1/OnPurpose"
+            >View the code on GitHub</a
+          >
+        </article>
+      </section>
+
+      <section id="pricing" class="section" aria-labelledby="pricing-title">
+        <div class="card pricing">
+          <div class="pricing-intro">
+            <h2 id="pricing-title">Pricing</h2>
+            <p>One payment, no subscription.</p>
+          </div>
+          <div class="plan">
             <h3>Free</h3>
             <p class="price">US$0</p>
-            <p>Up to five active habits, with every feature.</p>
-          </article>
-          <article class="plan featured">
+            <p>Up to five habits, with every feature.</p>
+          </div>
+          <div class="plan featured">
             <h3>Unlimited</h3>
-            <p class="price">US$9.99 <small>once</small></p>
-            <p>As many habits as you like. One payment, no subscription.</p>
-          </article>
+            <p class="price">US$9.99</p>
+            <p>Paid once, for as many habits as you want.</p>
+          </div>
         </div>
-        <p class="note">
-          Archived habits never count towards the limit, and your records,
-          History, exports and backups are never locked.
+        <div class="faq">
+          <details class="more">
+            <summary>What counts toward the five habits?</summary>
+            <p>
+              Only active habits. Archive one you've finished with and it no
+              longer counts, with all its records kept.
+            </p>
+          </details>
+          <details class="more">
+            <summary>What happens to my records if I don't upgrade?</summary>
+            <p>
+              Nothing. The limit only stops you adding a sixth habit. Your
+              existing habits, History, exports and backups keep working either
+              way.
+            </p>
+          </details>
+          <details class="more">
+            <summary>Where are my habits stored?</summary>
+            <p>
+              On your device. If you sign in and turn on sync, they're also kept
+              up to date on your other devices. You can export a backup file at
+              any time.
+            </p>
+          </details>
+          <details class="more">
+            <summary>Which devices does it work on?</summary>
+            <p>iPhone and Android, plus any computer through the web app.</p>
+          </details>
+        </div>
+      </section>
+
+      <section id="get" class="section closing">
+        <h2>Try it in your browser</h2>
+        <a class="button" data-app-link href="/app/">Open the web app</a>
+        <p>
+          Also on <a data-store="ios" href="#get">iPhone</a> and
+          <a data-store="android" href="#get">Android</a>.
         </p>
       </section>
     </main>
@@ -197,9 +642,7 @@
         © <span data-year>2026</span> Daniel Adams. OnPurpose is free software
         under the GNU GPL, version 3 or later.
       </p>
-      <p>
-        <a href="https://github.com/SnowCode1/OnPurpose">Source code</a>
-      </p>
+      <a href="https://github.com/SnowCode1/OnPurpose">Source code on GitHub</a>
     </footer>
     <script type="module" src="/src/main.ts"></script>
   </body>

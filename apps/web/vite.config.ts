@@ -6,4 +6,6 @@ export default defineConfig({
   // SQLite ships its own WebAssembly loader; pre-bundling would break its path.
   optimizeDeps: { exclude: ['@sqlite.org/sqlite-wasm'] },
   worker: { format: 'es' },
+  // The landing page's development links point here (apps/landing/src/config.ts).
+  server: { port: 5173, strictPort: true },
 });

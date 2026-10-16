@@ -74,8 +74,9 @@ No env file is needed to run the app. `.env.local` only holds the
 - **Linux and Windows** cannot run the iOS Simulator, Xcode or `expo run:ios`.
   Use a physical iPhone, and EAS for iOS builds (see [RELEASING.md](RELEASING.md)).
 - **Browser app:** `npm run web:dev` runs the separate browser app in
-  `apps/web`; see [WEB.md](WEB.md).
-- **Landing page:** `npm run landing:dev` runs the static landing page in
+  `apps/web` (port 5173) together with the landing page (port 5175), so the
+  links between them work; see [WEB.md](WEB.md).
+- **Landing page:** `npm run landing:dev` runs only the static landing page in
   `apps/landing`; see [LANDING.md](LANDING.md).
 - **Expo browser preview:** `npm run web` is a limited preview of the phone screens. It stores data in browser
   `localStorage` (`packages/core/src/storage/browserRepository.ts`), not SQLite, and shows a
@@ -120,7 +121,7 @@ Expo troubleshooting pages, some of which describe an earlier freeze at SDK 54.
 | `npm run start:tunnel`          | Try a tunnel if Wi-Fi isolation blocks local access                         |
 | `npm run android`               | Forward port 8081 over USB with `adb reverse` and open Expo Go on the phone |
 | `npm run web`                   | Limited Expo browser preview; the grid shows a notice (browser storage)     |
-| `npm run web:dev`               | Browser app (`apps/web`) development server                                 |
+| `npm run web:dev`               | Browser app (`apps/web`) and landing page development servers               |
 | `npm run web:build`             | Typecheck and build the browser app into `apps/web/dist/`                   |
 | `npm run web:preview`           | Serve the browser app's production build locally                            |
 | `npm run typecheck`             | TypeScript checks for the phone and web apps                                |

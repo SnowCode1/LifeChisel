@@ -55,7 +55,7 @@ Android over USB and troubleshooting, see the
 [development guide](docs/DEVELOPMENT.md).
 
 ```sh
-npm run web:dev         # the browser app (apps/web); see docs/WEB.md
+npm run web:dev         # the browser app and landing page; see docs/WEB.md
 npm run landing:dev     # the landing page (apps/landing); see docs/LANDING.md
 npm run web             # Expo browser preview of phone screens; the grid is phones only
 npm run check           # TypeScript, lint and formatting

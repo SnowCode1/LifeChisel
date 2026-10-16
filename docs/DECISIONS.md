@@ -2146,3 +2146,34 @@ has not yet reviewed the personas or tried them on a device or in a browser.
 - Open for the founder: whether marketing captures need a mode that hides the
   sample labels, and whether a preset should also set appearance preferences
   (theme, checkbox style, joined streaks).
+
+## 16 October 2026 — Landing page design
+
+Status: implemented in `apps/landing` on the `web-app` branch from mockup "G";
+checked in a desktop browser at 1440, 900 and 390 px wide, not yet reviewed by
+the founder in the browser.
+
+- Founder decisions, over three rounds of assistant mockups: the headline "The
+  habit grid built for muscle memory."; a pure black background; showing the
+  four habit kinds and that goals are customisable; History with Undo; an
+  interactive statistics section titled "Track anything with versatile
+  built-in statistics" that shows the real range of charts; a carousel of the
+  five sample presets with captions; open source with a link to GitHub; and
+  details people only sometimes want behind clickable sections. The font is
+  Instrument Sans, chosen from eight assistant options.
+- Founder feedback: wording should be plain, not sound generated or like
+  marketing. "Rows stay where you put them" was removed as self-evident, and
+  "No account needed" was removed because the product will support either
+  on-device use or an account synced between devices.
+- Founder decision: the page describes the product at launch, including the
+  iPhone and Android apps and optional sync, not the current development
+  state. This supersedes the landing scaffold's rule (14 October) of claiming
+  only built scope and calling the store apps coming soon.
+- Assistant implementation: real screenshots of each preset taken from the web
+  app (desktop and phone widths), a statistics example computed from a year
+  of fictional data, and the font bundled locally instead of loaded from a
+  font service. `npm run web:dev` now starts the landing page with the web app,
+  because the web app's brand linked to a landing server that was usually not
+  running.
+- Open: store links, privacy policy, hosting and final brand. Whether sync is
+  free or part of the unlock is not decided, so the page does not say.

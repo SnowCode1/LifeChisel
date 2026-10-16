@@ -75,7 +75,8 @@ redraws one row rather than the whole grid.
 ## Sidebar and shortcuts
 
 The OnPurpose brand links to the landing page (`src/config.ts`: `/` in builds,
-the landing development server in development).
+the landing development server in development, which `npm run web:dev` starts
+alongside this app).
 
 A quiet sidebar on the left (`Sidebar.tsx`, founder request, 14 October 2026) holds what surrounds the grid, which stays the only page: New habit;
 Habits (the current page, with a count), History (toggles the docked History panel),
@@ -325,7 +326,7 @@ Run from the repository root:
 
 | Command               | Use                                                    |
 | --------------------- | ------------------------------------------------------ |
-| `npm run web:dev`     | Development server with instant reload                 |
+| `npm run web:dev`     | Development servers for this app and the landing page  |
 | `npm run web:build`   | Typecheck and build static files into `apps/web/dist/` |
 | `npm run web:preview` | Serve the production build locally                     |
 

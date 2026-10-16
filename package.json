@@ -55,7 +55,7 @@
     "start:compare-dev": "node scripts/start-comparison.mjs development",
     "start:production-js": "node scripts/start-comparison.mjs production-js",
     "web": "expo start --web",
-    "web:dev": "npm run dev -w @onpurpose/web",
+    "web:dev": "node scripts/web-dev.mjs",
     "web:build": "npm run build -w @onpurpose/web",
     "web:preview": "npm run preview -w @onpurpose/web",
     "landing:dev": "npm run dev -w @onpurpose/landing",
