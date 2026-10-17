@@ -61,23 +61,13 @@ export function Sidebar({
         href={LANDING_URL}
         title="OnPurpose home page"
       >
-        <svg
+        <img
           className="brand-mark"
+          src={`${import.meta.env.BASE_URL}favicon.svg`}
           width="24"
           height="24"
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-        >
-          <rect width="24" height="24" rx="7" fill="var(--accent)" />
-          <path
-            d="m7 12.5 3.2 3.2L17 9"
-            fill="none"
-            stroke="var(--background)"
-            strokeWidth="2.4"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
+          alt=""
+        />
         <span className="sidebar-label wordmark">OnPurpose</span>
       </a>
       <button
