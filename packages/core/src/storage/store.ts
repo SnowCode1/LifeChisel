@@ -91,7 +91,7 @@ export class ChangeStore {
     const started = performanceEnabled ? performance.now() : 0;
     const meta = {
       ...this.metadata(this.snapshot.events.length + 1),
-      version: 21 as const,
+      version: 22 as const,
     };
     if (performanceEnabled)
       recordPerformance('store.metadata', performance.now() - started);
@@ -129,7 +129,7 @@ export class ChangeStore {
     if (!target) return false;
     return this.enqueue({
       ...this.metadata(this.snapshot.events.length + 1),
-      version: 21,
+      version: 22,
       type: 'undo',
       targetId: target.id,
       change: inverse(target.change) as typeof target.change,
@@ -141,7 +141,7 @@ export class ChangeStore {
     if (!target) return false;
     return this.enqueue({
       ...this.metadata(this.snapshot.events.length + 1),
-      version: 21,
+      version: 22,
       type: 'redo',
       targetId: target.undoId,
       change: target.action.change,

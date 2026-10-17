@@ -67,7 +67,7 @@ export const cellLookDefaults: CellLook = {
   streakNumbers: true,
   roundCheckboxes: true,
   connectorThickness: 55,
-  joinedEndsOnly: true,
+  joinedEndsOnly: false,
 };
 export function isConnectorThickness(value: unknown): value is number {
   return (

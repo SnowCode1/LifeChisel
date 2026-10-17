@@ -10,6 +10,7 @@ import type { Habit } from '@onpurpose/core/habits';
 import { Icon } from './Icon';
 import { HabitSymbol } from './HabitSymbol';
 import { ReorderRow, type RowMotion } from './ReorderRow';
+import { habitInitial } from '@onpurpose/core/gridModes';
 import { useTheme } from './ThemeContext';
 
 export type HabitAction =
@@ -26,6 +27,7 @@ export function HabitName({
   selected,
   motion,
   reorder,
+  compact = false,
   disabled,
   onPress,
   onHold,
@@ -40,6 +42,8 @@ export function HabitName({
   selected: boolean;
   motion: RowMotion;
   reorder: boolean;
+  /** Compact mode: the icon (or initial) alone; the name stays in labels. */
+  compact?: boolean;
   disabled: boolean;
   onPress: () => void;
   onHold: (anchor: HabitAnchor) => void;
@@ -153,7 +157,7 @@ export function HabitName({
         style={({ pressed }) => ({
           minHeight: height,
           paddingVertical: height < 52 ? 4 : 8,
-          paddingRight: 10,
+          paddingRight: compact ? 0 : 10,
           borderBottomWidth: 0.5,
           borderBottomColor: `${colour}20`,
           backgroundColor: motion.active
@@ -165,35 +169,51 @@ export function HabitName({
                 : theme.background,
           flexDirection: 'row',
           alignItems: 'center',
+          justifyContent: compact ? 'center' : 'flex-start',
           gap: 8,
         })}
       >
-        {reorder && <Icon name="reorder" size={17} color={colour} />}
-        <HabitSymbol icon={habit.icon} colour={colour} />
-        <View style={{ flex: 1, gap: 2 }}>
-          <Text
-            style={{
-              color: colour,
-              fontSize: 15,
-              lineHeight: 20,
-              fontWeight: '500',
-            }}
-          >
-            {habit.name}
-          </Text>
-          {habit.unit && (
+        {compact ? (
+          habit.icon ? (
+            <HabitSymbol icon={habit.icon} colour={colour} size={22} />
+          ) : (
             <Text
-              style={{
-                color: colour,
-                fontSize: 11,
-                lineHeight: 13,
-                opacity: 0.8,
-              }}
+              accessible={false}
+              style={{ color: colour, fontSize: 17, fontWeight: '700' }}
             >
-              {habit.unit}
+              {habitInitial(habit.name)}
             </Text>
-          )}
-        </View>
+          )
+        ) : (
+          <>
+            {reorder && <Icon name="reorder" size={17} color={colour} />}
+            <HabitSymbol icon={habit.icon} colour={colour} />
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text
+                style={{
+                  color: colour,
+                  fontSize: 15,
+                  lineHeight: 20,
+                  fontWeight: '500',
+                }}
+              >
+                {habit.name}
+              </Text>
+              {habit.unit && (
+                <Text
+                  style={{
+                    color: colour,
+                    fontSize: 11,
+                    lineHeight: 13,
+                    opacity: 0.8,
+                  }}
+                >
+                  {habit.unit}
+                </Text>
+              )}
+            </View>
+          </>
+        )}
       </Pressable>
     </ReorderRow>
   );

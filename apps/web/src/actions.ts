@@ -1,7 +1,12 @@
 import { useMemo } from 'react';
 import { sameEntry, type EntryValue } from '@onpurpose/core/entries';
 import type { Habit, HabitCategory } from '@onpurpose/core/habits';
-import { toggleCheckboxValue } from '@onpurpose/core/habitGoals';
+import { checkboxFill, valueFill } from '@onpurpose/core/entryFill';
+import {
+  checkboxChecked,
+  toggleCheckboxValue,
+} from '@onpurpose/core/habitGoals';
+import type { FillChange } from './grid/fillWave.ts';
 import type { QuickUndo } from '@onpurpose/core/quickUndo';
 import type { ChangeStore } from '@onpurpose/core/storage/store';
 import {
@@ -72,8 +77,38 @@ export function useHabitActions(store: ChangeStore, quickUndo: QuickUndo) {
       quickUndo.capture(change);
       return true;
     }
+    // A fill is one change (an ordinary entry when only one day changes):
+    // the change applied, null when nothing changes, false when refused.
+    function applyFill(change: FillChange | null): FillChange | null | false {
+      if (!change) return null;
+      if (!store.change(change)) return false;
+      quickUndo.capture(change);
+      return change;
+    }
     return {
       saveEntry,
+      /**
+       * Sets a run of days (drag order) to the start day's checkbox state,
+       * or, when the drag began without a first click (`toggleStart`), to the
+       * opposite of it, start day included.
+       */
+      fillChecks(habit: Habit, dates: string[], toggleStart = false) {
+        if (!store.canEdit() || !dates.length) return false;
+        const values = store.getSnapshot().replay.state.values;
+        const checked =
+          checkboxChecked(
+            habit,
+            values[`${habit.id}:${dates[0]}`],
+            dates[0],
+          ) !== toggleStart;
+        return applyFill(checkboxFill(habit, values, dates, checked));
+      },
+      /** Sets a run of days to one value (null clears them). */
+      fillValues(habit: Habit, dates: string[], value: EntryValue | null) {
+        if (!store.canEdit()) return false;
+        const values = store.getSnapshot().replay.state.values;
+        return applyFill(valueFill(habit, values, dates, value));
+      },
       toggle(habit: Habit, date: string) {
         const before = stored(habit.id, date);
         return saveEntry(habit, date, toggleCheckboxValue(habit, before, date));

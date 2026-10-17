@@ -346,6 +346,7 @@ function GridPreview({
               false,
               false,
               false,
+              1,
             );
             if (!isHiddenMiddle(style, cell, olderChecked, newerChecked))
               drawCellMark(

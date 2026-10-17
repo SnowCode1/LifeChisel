@@ -99,6 +99,33 @@ export function Icon({
           <Path d="M5 8v12h14V8M9 12h6" />
         </>
       )}
+      {name === 'modeGrid' && (
+        <>
+          <Rect x={3.5} y={4.5} width={17} height={15} rx={2.5} />
+          <Path d="M9.5 4.5v15M13.2 9.5v10M16.9 9.5v10M3.5 9.5h17M3.5 14.5h17" />
+        </>
+      )}
+      {name === 'modeCompact' && (
+        <>
+          <Rect x={3.5} y={4.5} width={17} height={15} rx={2.5} />
+          <Path d="M7.5 4.5v15M10.75 9.5v10M14 9.5v10M17.25 9.5v10M3.5 9.5h17M3.5 14.5h17" />
+        </>
+      )}
+      {name === 'modeToday' && (
+        <>
+          <Rect x={3.5} y={3.5} width={7.5} height={7.5} rx={2} />
+          <Rect x={13} y={3.5} width={7.5} height={7.5} rx={2} />
+          <Rect x={3.5} y={13} width={7.5} height={7.5} rx={2} />
+          <Rect x={13} y={13} width={7.5} height={7.5} rx={2} />
+        </>
+      )}
+      {name === 'modeWeeks' && (
+        <>
+          <Rect x={3.5} y={4.5} width={17} height={15} rx={2.5} />
+          <Path d="M9.5 4.5v15M15 9.5v10M3.5 9.5h17" />
+          <Path d="M11.5 14.5h1.5M16.8 14.5h1.5" />
+        </>
+      )}
       {name === 'plus' && <Path d="M12 5v14M5 12h14" />}
       {name === 'info' && (
         <>

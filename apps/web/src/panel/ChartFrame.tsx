@@ -11,6 +11,9 @@ export type ChartSlot = {
   /** Horizontal extent as fractions of the plot width. */
   x0: number;
   x1: number;
+  /** Vertical extent as fractions of the plot height, for stacked rows. */
+  y0?: number;
+  y1?: number;
   title: string;
   value: string;
 };
@@ -54,11 +57,17 @@ export function ChartFrame({
     observer.observe(element);
     return () => observer.disconnect();
   }, []);
-  const slotAt = (clientX: number) => {
+  const slotAt = (clientX: number, clientY: number) => {
     const box = plot.current?.getBoundingClientRect();
     if (!box) return null;
     const x = (clientX - box.left) / box.width;
-    const index = slots.findIndex((slot) => x >= slot.x0 && x < slot.x1);
+    const y = (clientY - box.top) / box.height;
+    const index = slots.findIndex(
+      (slot) =>
+        x >= slot.x0 &&
+        x < slot.x1 &&
+        (slot.y0 === undefined || (y >= slot.y0 && y < (slot.y1 ?? 1))),
+    );
     return index < 0 ? null : index;
   };
   const onKeyDown = (event: KeyboardEvent) => {
@@ -99,7 +108,9 @@ export function ChartFrame({
           role="group"
           aria-label={`${name}. Use the left and right arrow keys to read each value.`}
           onKeyDown={onKeyDown}
-          onPointerMove={(event) => setSelected(slotAt(event.clientX))}
+          onPointerMove={(event) =>
+            setSelected(slotAt(event.clientX, event.clientY))
+          }
           onPointerLeave={() => setSelected(null)}
           onBlur={() => setSelected(null)}
           style={{ height }}
@@ -119,9 +130,9 @@ export function ChartFrame({
             {current && (
               <rect
                 x={current.x0 * width}
-                y={0}
+                y={(current.y0 ?? 0) * height}
                 width={Math.max(1, (current.x1 - current.x0) * width)}
-                height={height}
+                height={((current.y1 ?? 1) - (current.y0 ?? 0)) * height}
                 className="chart-selection"
               />
             )}

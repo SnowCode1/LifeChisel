@@ -2050,3 +2050,40 @@ tiles were raised; the History calendar's title read "October 2026", opened
 or years, and "What the dots mean" below the separator opened the explanation.
 The details, calendar, panel, notes and goals checks passed. The phone
 calendar is unchecked on a device.
+
+## 16 October 2026
+
+### Home views: Grid, Compact, Today and Weeks
+
+Automated: `npm run check` passed; `npm test` passed 403 of 403 (new
+`scripts/grid-modes.test.mjs`); `npm run web:build` built; Android and iOS
+bundles exported.
+
+Headless desktop Chrome with sample data at 1400 and 390 px: the view menu
+opened below its button with four labelled rows and a tick on the current
+view; Compact showed icons in a narrow column with 7 days at 390 px and
+"Add habit" on one line; Today showed one tile per habit with the name on
+top and the checkbox or value centred; Weeks showed week columns with a
+number over seven dots, the current week partly filled, and goal-met weeks
+shaded. Earlier attempts found two class clashes (`.empty` in history.css and
+`.tile` in panel.css), now renamed. The phone views are unchecked on a
+device.
+
+## 17 October 2026
+
+### Today view refinements
+
+Automated: `npm run check` passed; `npm test` passed 406 of 406 (new
+`scripts/today-summary.test.mjs`); `npm run web:build` built; Android and iOS
+bundles exported.
+
+Headless desktop Chrome with sample data at 1400 and 390 px: tiles showed the
+icon, name and schedule/goal line, checked boxes carried their streak numbers
+in the habit colour, Drink water showed "Usual", a "4 glasses" chip and "…",
+and the date read "Saturday, October 17 · 6 of 14 done". Clicking the chip
+recorded that value at once and the tile then showed it with its unit. A
+habit checked on an unscheduled day counted as done rather than "Not today"
+(found and fixed in review). The founder's first look showed one row of
+tiles stretched by wrapped chips and a two-line summary; every tile now has
+one fixed height and rows stayed level at both widths. The phone tiles are
+unchecked on a device.

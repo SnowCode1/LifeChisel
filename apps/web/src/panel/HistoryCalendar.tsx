@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { addMonths } from '@onpurpose/core/calendar';
 import {
   weekDayOrder,
@@ -14,7 +14,6 @@ import { monthDays } from '@onpurpose/core/statistics';
 import type { StoredState } from '@onpurpose/core/storage/model';
 import type { Theme } from '@onpurpose/core/theme';
 import { Icon } from '../ui/Icon.tsx';
-import { InfoNote } from '../ui/InfoNote.tsx';
 
 export type CalendarScale = 'month' | 'year';
 // Dots per day in the month view; more habits show as "+n".
@@ -93,6 +92,8 @@ export function HistoryCalendar({
     return `${dayName(date)}, ${historyCountLabel(day.counts)}${habits.length ? `: ${habits.join(', ')}` : ''}`;
   };
   const weekdays = weekDayOrder(weekStart);
+  // What the dots mean, behind a bare (i) below the calendar.
+  const [explained, setExplained] = useState(false);
 
   return (
     <div className="history-calendar">
@@ -179,7 +180,7 @@ export function HistoryCalendar({
                         onClick={() => onChoose(date)}
                       >
                         <span
-                          className={day ? 'dot' : 'dot empty'}
+                          className={day ? 'dot' : 'dot none'}
                           style={
                             day
                               ? {
@@ -258,10 +259,19 @@ export function HistoryCalendar({
         <p className="hint calendar-hint">No changes to show.</p>
       )}
       <div className="calendar-foot">
-        <InfoNote
-          label="What the dots mean"
-          text={historyCalendarInfo[scale]}
-        />
+        <button
+          type="button"
+          className="info-button"
+          aria-label="About the calendar"
+          aria-expanded={explained}
+          title="About the calendar"
+          onClick={() => setExplained((value) => !value)}
+        >
+          <Icon name="info" size={17} />
+        </button>
+        {explained && (
+          <p className="calendar-explanation">{historyCalendarInfo[scale]}</p>
+        )}
       </div>
     </div>
   );

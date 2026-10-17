@@ -25,6 +25,8 @@ import type { Change, StoredEvent } from './types.ts';
 
 // Exact field/version validation stays independent of state transitions. Keep
 // historical version gates and rejection messages unchanged during refactoring.
+// The most dates one v22 fill may change (about ten years).
+export const MAX_FILL_DATES = 3660;
 export function insist(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
@@ -207,7 +209,7 @@ function dailyValue(value: unknown, version: number) {
 export function entryFits(
   habit: Habit,
   value: EntryValue | null,
-  version = 21,
+  version = 22,
 ) {
   if (value === null) return true;
   switch (habitType(habit)) {
@@ -228,7 +230,7 @@ export function entryFits(
 }
 export function validateChange(
   value: unknown,
-  version = 21,
+  version = 22,
 ): asserts value is Change {
   object(value);
   if (value.kind === 'entry') {
@@ -237,6 +239,34 @@ export function validateChange(
     insist(validDate(value.date), 'Invalid calendar date.');
     dailyValue(value.before, version);
     dailyValue(value.after, version);
+  } else if (value.kind === 'entries') {
+    insist(version >= 22, 'Multi-day fills require version 22.');
+    keys(value, ['kind', 'habitId', 'before', 'after']);
+    id(value.habitId);
+    object(value.before);
+    object(value.after);
+    const before = value.before,
+      after = value.after;
+    const dates = Object.keys(before);
+    // One date is an ordinary entry change; the bound keeps one action small.
+    insist(
+      dates.length >= 2 && dates.length <= MAX_FILL_DATES,
+      'A fill needs 2 to 3660 dates.',
+    );
+    insist(
+      Object.keys(after).length === dates.length &&
+        dates.every((date) => Object.hasOwn(after, date)),
+      'A fill needs the same dates before and after.',
+    );
+    for (const date of dates) {
+      insist(validDate(date), 'Invalid calendar date.');
+      dailyValue(before[date], version);
+      dailyValue(after[date], version);
+      insist(
+        !sameValue(before[date], after[date]),
+        'Every filled date must change.',
+      );
+    }
   } else if (value.kind === 'colour') {
     keys(value, ['kind', 'habitId', 'before', 'after']);
     id(value.habitId);
@@ -472,7 +502,8 @@ export function validateEvent(value: unknown): asserts value is StoredEvent {
       value.version === 18 ||
       value.version === 19 ||
       value.version === 20 ||
-      value.version === 21,
+      value.version === 21 ||
+      value.version === 22,
     'Unsupported event version.',
   );
   id(value.id);

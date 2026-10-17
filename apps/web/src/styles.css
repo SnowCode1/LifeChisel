@@ -21,6 +21,7 @@
   --today-edge: #262626;
   --week-shade: #0c0c0c;
   --row-highlight: #ffffff0d;
+  --fill-highlight: #ffffff1f;
   --accent: #74bba5;
   --accent-text: #9bdbbe;
   --danger: #d99090;
@@ -393,7 +394,7 @@ button[aria-disabled='true'] {
   right: 0;
 }
 /* Numbers shrink to fit their column, down to about 65%. */
-.mark.value span {
+.mark.value .label {
   max-width: var(--column);
   overflow: hidden;
   font-size: max(
@@ -407,7 +408,7 @@ button[aria-disabled='true'] {
    depending on the row height (the phone's rule), ending in an ellipsis.
    The full value shows on hover. A fixed width keeps long words from
    widening their column (columns must stay equal for whole-day scrolling). */
-.mark.text span {
+.mark.text .label {
   width: var(--column);
   display: -webkit-box;
   -webkit-line-clamp: var(--text-lines, 3);
@@ -428,20 +429,32 @@ button[aria-disabled='true'] {
   color: var(--ink-strong);
 }
 
-/* Tap animations: a short pulse on the tapped box; a join grows out of the
-   neighbour (or retracts into it) over 220 ms, half by half, and the box it
-   reaches bumps. Only taps in the grid animate. */
+/* Tap animations (timing in core tapMotion.ts): a short pulse on the tapped
+   box; a join grows out of the neighbour with ease-out (or retracts into it
+   with ease-in-out) and the box it reaches bumps when the bar touches it. Only
+   taps in the grid animate. */
 .glyph {
   display: grid;
 }
 .box.pulse,
 .glyph.pulse {
-  animation: tap-pulse 180ms ease-out;
+  animation: tap-pulse 180ms ease-out var(--delay, 0ms);
+}
+.box.reached {
+  animation: join-bump 230ms ease-out var(--contact);
 }
 .box.pulse.reached {
   animation:
-    tap-pulse 180ms ease-out,
-    join-bump 160ms ease-out 220ms;
+    tap-pulse 180ms ease-out var(--delay, 0ms),
+    join-bump 230ms ease-out var(--contact);
+}
+/* Both halves of a moving join follow one eased reach from the neighbour's
+   centre (0) to the tapped box's centre (1): the half in the neighbour's cell
+   covers the first half of it, the half in the tapped cell the second. */
+@property --reach {
+  syntax: '<number>';
+  inherits: false;
+  initial-value: 1;
 }
 .join.from-older {
   transform-origin: left center;
@@ -449,19 +462,56 @@ button[aria-disabled='true'] {
 .join.from-newer {
   transform-origin: right center;
 }
+.join.in-neighbour {
+  transform: translateY(-50%) scaleX(clamp(0, var(--reach) * 2, 1));
+}
+.join.in-tapped {
+  transform: translateY(-50%) scaleX(clamp(0, var(--reach) * 2 - 1, 1));
+}
 .join.grow {
-  animation: join-grow 110ms linear both;
+  /* Ease-out cubic, exactly. */
+  animation: join-grow 220ms cubic-bezier(0.333, 1, 0.667, 1) both;
 }
 .join.shrink {
-  animation: join-shrink 110ms linear both;
+  /* RETRACT_CURVE in tapMotion.ts. */
+  animation: join-shrink 180ms ease-in-out both;
 }
-.join.second {
-  animation-delay: 110ms;
+/* A fill runs as one stroke (core tapMotion): every moving half animates the
+   same progress --p (0 → 1 along `--len` cells, ease-in-out) from the same
+   moment, and shows its own part of the bar from where it starts along the
+   stroke (--start, in cells). Growing, the bar is drawn behind the stroke;
+   erasing, it remains only ahead of it. */
+@property --p {
+  syntax: '<number>';
+  inherits: false;
+  initial-value: 1;
+}
+.join.stroke {
+  animation-name: fill-stroke;
+  animation-timing-function: ease-in-out;
+  animation-fill-mode: both;
+}
+.join.stroke-grow {
+  transform: translateY(-50%)
+    scaleX(clamp(0, (var(--p) * var(--len) - var(--start)) * 2, 1));
+}
+.join.stroke-erase {
+  transform: translateY(-50%)
+    scaleX(clamp(0, (var(--start) + 0.5 - var(--p) * var(--len)) * 2, 1));
+}
+@keyframes fill-stroke {
+  from {
+    --p: 0;
+  }
+  to {
+    --p: 1;
+  }
 }
 /* Streak ends only: a box a growing join makes a middle shrinks into the bar
    on the join's curve. */
 .box.absorb {
-  animation: join-absorb 220ms cubic-bezier(0.333, 1, 0.667, 1) both;
+  animation: join-absorb 220ms cubic-bezier(0.333, 1, 0.667, 1)
+    var(--delay, 0ms) both;
 }
 @keyframes join-absorb {
   to {
@@ -474,30 +524,94 @@ button[aria-disabled='true'] {
   }
 }
 @keyframes join-bump {
-  50% {
+  30% {
     transform: scale(1.07);
   }
 }
 @keyframes join-grow {
   from {
-    transform: translateY(-50%) scaleX(0);
+    --reach: 0;
   }
   to {
-    transform: translateY(-50%) scaleX(1);
+    --reach: 1;
   }
 }
 @keyframes join-shrink {
   from {
-    transform: translateY(-50%) scaleX(1);
+    --reach: 1;
   }
   to {
-    transform: translateY(-50%) scaleX(0);
+    --reach: 0;
+  }
+}
+/* The tapped cell's background fades to its new one (ease-out quad). A
+   cross-fade is not motion, so it stays with Reduce motion. */
+.grid .cell.fade {
+  transition: background-color var(--fade-ms)
+    cubic-bezier(0.333, 0.667, 0.667, 1);
+}
+/* Drag to fill: the run being drawn (or awaiting its value) is highlighted
+   like a hovered row, a little stronger. A committed fill runs as a wave in
+   drag order: each run cell (inline --delay) fades its highlight and
+   background, and a changed cell keeps showing what it showed before (.was)
+   until its turn, when its new content (.later) takes over. */
+.grid-scroller.filling-row {
+  user-select: none;
+}
+.grid .cell.filling::before,
+.grid .cell.unfill::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-color: var(--fill-highlight);
+  pointer-events: none;
+}
+.grid .cell.unfill::before {
+  animation: fill-unhighlight var(--fade-ms)
+    cubic-bezier(0.333, 0.667, 0.667, 1) var(--delay, 0ms) both;
+}
+@keyframes fill-unhighlight {
+  to {
+    opacity: 0;
+  }
+}
+.mark .later {
+  display: grid;
+  place-items: center;
+  animation: fill-later 1ms var(--delay, 0ms) backwards;
+}
+.mark .was {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  visibility: hidden;
+  animation: fill-was 1ms var(--delay, 0ms) backwards;
+}
+/* A box's old streak number, held until the stroke reaches it, shares the
+   box's one grid cell with the new number. */
+.box > .was,
+.box > .later {
+  position: static;
+  grid-area: 1 / 1;
+}
+@keyframes fill-later {
+  from,
+  to {
+    visibility: hidden;
+  }
+}
+@keyframes fill-was {
+  from,
+  to {
+    visibility: visible;
   }
 }
 @media (prefers-reduced-motion: reduce) {
   .box.pulse,
+  .box.reached,
   .glyph.pulse,
-  .join.grow {
+  .join.grow,
+  .join.stroke {
     animation: none;
   }
   .join.shrink,
@@ -563,43 +677,6 @@ button[aria-disabled='true'] {
   color: var(--ink-quiet);
 }
 
-/* An explanation behind an (i) row, as on the phone (ui/InfoNote.tsx). */
-.info-note-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  min-height: 40px;
-  font-size: 13px;
-  text-align: left;
-  color: var(--ink-quiet);
-}
-.info-note-row:hover {
-  color: var(--ink-soft);
-}
-.info-note-row .icon {
-  flex: none;
-}
-.info-note-row .chevron {
-  display: grid;
-  margin-left: auto;
-  transition: transform 160ms ease;
-}
-.info-note-row[aria-expanded='true'] .chevron {
-  transform: rotate(180deg);
-}
-.info-note-text {
-  margin: 0 0 10px 25px;
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--ink-soft);
-}
-@media (prefers-reduced-motion: reduce) {
-  .info-note-row .chevron {
-    transition: none;
-  }
-}
-
 /* Popovers: beside their cell on wide screens, a bottom sheet on phones. */
 .popover {
   position: fixed;
@@ -617,6 +694,29 @@ button[aria-disabled='true'] {
 }
 .popover::backdrop {
   background-color: var(--scrim);
+}
+/* Popovers ease in from the cell that opened them (origin set inline). */
+.popover[open] {
+  animation: popover-in 160ms ease-out;
+}
+.popover[open]::backdrop {
+  animation: popover-fade 160ms ease-out;
+}
+@keyframes popover-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+@keyframes popover-fade {
+  from {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .popover[open] {
+    animation-name: popover-fade;
+  }
 }
 .popover-body {
   display: flex;
@@ -838,8 +938,375 @@ button[aria-disabled='true'] {
     width: 100%;
     max-width: none;
     border-radius: 18px 18px 0 0;
+    transform-origin: 50% 100% !important;
   }
   .entry-actions .shortcut {
     display: none;
+  }
+}
+
+/* The view menu in the top bar's left corner (see ModeMenu.tsx). */
+.mode-button {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 40px;
+  margin-left: -8px;
+  padding: 0 10px 0 8px;
+  border-radius: 10px;
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+.mode-button:hover {
+  background-color: var(--surface-raised);
+}
+.mode-label {
+  display: grid;
+  line-height: 1.1;
+  text-align: left;
+}
+.mode-sample {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-hint);
+}
+.popover.menu.mode-menu {
+  width: 260px;
+}
+/* Above editor.css's plain menu items, which load later. */
+.menu-item.mode-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  height: auto;
+  min-height: 48px;
+  padding: 6px 10px;
+}
+.mode-item > span {
+  flex: 1;
+  display: grid;
+}
+.mode-item-label {
+  font-weight: 600;
+}
+.mode-item-description {
+  font-size: 12px;
+  color: var(--ink-quiet);
+}
+.menu-item.mode-item[aria-checked='true'] {
+  background-color: var(--surface-raised);
+}
+.mode-item[aria-checked='true'] > .icon:last-child {
+  color: var(--accent);
+}
+
+/* Compact: icons stand for names, so the same width holds more days. */
+.grid-area.compact {
+  --name-width: 56px;
+}
+.grid-area.compact .grid .corner {
+  padding: 0 0 10px;
+  text-align: center;
+}
+.grid-area.compact .grid .name {
+  padding: 0;
+}
+.compact-name {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+}
+.habit-initial {
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* Weeks: a number over seven day dots in each cell. */
+.grid.weeks {
+  /* Wide enough for seven dots and a short total. */
+  --column: 60px;
+}
+.grid .week {
+  scroll-snap-align: end;
+  width: var(--column);
+  min-width: var(--column);
+  height: 60px;
+  text-align: center;
+  border-bottom: 1px solid var(--rule);
+}
+.grid .week span {
+  display: block;
+}
+.grid .week.shaded {
+  background-color: var(--week-shade);
+}
+.grid .week.today {
+  background-color: var(--today-pill);
+  border-radius: 10px 10px 0 0;
+}
+.grid .week.today .weekday {
+  color: var(--ink-strong);
+}
+.week-mark {
+  flex-direction: column;
+  gap: 5px;
+}
+.week-mark:not(:disabled):hover {
+  background-color: var(--fill-highlight);
+}
+.week-number {
+  min-height: 1.2em;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.week-dots {
+  display: flex;
+  gap: 2.5px;
+}
+.week-dots .dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: var(--ink-hint);
+  opacity: 0.55;
+}
+.week-dots .dot-done,
+.week-dots .dot-missed {
+  opacity: 1;
+}
+.week-dots .dot-off {
+  transform: scale(0.5);
+  opacity: 0.4;
+}
+.week-dots .dot-none {
+  visibility: hidden;
+}
+
+/* Today: one tile per habit, centred like the grid. A tile is a name cell
+   over a Today cell; its height follows the Rows size. */
+.today-area {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 0 16px 16px;
+}
+.today-tiles {
+  max-width: 880px;
+  margin: 0 auto;
+}
+.today-date {
+  margin: 4px 2px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-quiet);
+}
+.today-count {
+  font-weight: 500;
+  color: var(--ink-hint);
+}
+.today-tile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(176px, 1fr));
+  gap: 10px;
+}
+/* Every tile is the same height (rows would otherwise stretch to their
+   tallest tile): room for a two-line name, one summary line and the cell. */
+.today-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: calc(max(var(--row), 56px) * 2.45);
+  overflow: hidden;
+  border: 1px solid;
+  border-radius: 14px;
+  background-color: var(--surface);
+}
+/* Not scheduled today: still there, in the same place, but quiet. */
+.today-tile.off {
+  opacity: 0.55;
+}
+.today-tile-main {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px 12px;
+  border-radius: 13px;
+  text-align: left;
+  color: inherit;
+}
+.today-tile-main:not(:disabled):hover {
+  background-color: var(--row-highlight);
+}
+.today-tile-main:focus-visible {
+  outline-offset: -2px;
+}
+/* The icon, name and the grid's line under it. */
+.today-tile-head {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding-right: 22px;
+}
+.today-tile-head .habit-symbol,
+.today-tile-head .habit-initial {
+  flex: none;
+  margin-top: 1px;
+}
+.today-tile-text {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+}
+.today-tile-name {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-weight: 600;
+  line-height: 1.3;
+  overflow-wrap: break-word;
+}
+.today-tile-summary {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  line-height: 1.3;
+  color: var(--ink-quiet);
+}
+/* Today's cell: a fixed block at the bottom, the same in every tile. */
+.today-tile-cell {
+  flex: none;
+  height: 54px;
+  display: grid;
+  place-items: center;
+}
+.today-box {
+  width: 34px;
+  height: 34px;
+}
+.today-tile-value {
+  max-width: 100%;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  overflow-wrap: break-word;
+}
+.today-tile-value.number {
+  font-size: 24px;
+}
+.today-tile-value.blank {
+  font-size: 22px;
+  color: var(--ink-hint);
+}
+.today-tile-unit {
+  font-size: 12px;
+  font-weight: 500;
+  opacity: 0.8;
+}
+/* A blank number: its usual total records in one tap; … opens the dialog. */
+.today-tile-chips {
+  flex: none;
+  height: 54px;
+  margin: 0 10px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+.today-chips-label {
+  font-size: 11px;
+  line-height: 1;
+  color: var(--ink-hint);
+}
+.today-chips-row {
+  display: flex;
+  gap: 6px;
+}
+.today-chip {
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 10px;
+  background-color: var(--surface-raised);
+  font-weight: 600;
+  white-space: nowrap;
+  color: inherit;
+}
+.today-chip:hover {
+  filter: brightness(1.2);
+}
+.today-chip-unit {
+  font-size: 12px;
+  font-weight: 500;
+  opacity: 0.8;
+}
+.today-chip.more {
+  min-width: 36px;
+  padding: 0;
+  color: var(--ink-quiet);
+}
+.today-tile-more {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  color: var(--ink-quiet);
+  opacity: 0;
+}
+.today-tile:hover .today-tile-more,
+.today-tile-more:focus-visible {
+  opacity: 1;
+}
+.today-tile-more:hover {
+  background-color: var(--surface-raised);
+}
+.today-tiles .add-habit {
+  margin-top: 8px;
+}
+/* Add habit reads across the row, not squeezed into the name column. */
+.add-habit {
+  white-space: nowrap;
+}
+.grid .add-row {
+  overflow: visible;
+}
+@media (hover: none) {
+  .today-tile-more {
+    opacity: 1;
+  }
+}
+@media (max-width: 600px) {
+  .today-area {
+    padding: 0 8px 12px;
+  }
+  .today-tile-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .today-tile-box.pulse {
+    animation: none;
   }
 }

@@ -19,13 +19,23 @@ import { recentNumericTotals } from '@onpurpose/core/numericSuggestions';
 import { checkmarkColor } from '@onpurpose/core/colors';
 import type { Theme } from '@onpurpose/core/theme';
 import { AnchoredDialog } from '../ui/AnchoredDialog.tsx';
+import type { FillChange } from '../grid/fillWave.ts';
 
 export type EntryTarget = {
   habit: Habit;
   date: string;
-  /** Full spoken date, such as "Tuesday 13 October". */
+  /** Full spoken date, such as "Tuesday 13 October", or a fill's range. */
   label: string;
   anchor: HTMLElement;
+  /**
+   * Fill mode: Done sets every day of the run (drag order; `date` is its
+   * start, whose value prefills the form) to one value as one change. `done`
+   * hears what was applied when the popover closes.
+   */
+  fill?: {
+    dates: string[];
+    done: (change: FillChange | null) => void;
+  };
 };
 
 // Typing stays in this draft. Done saves through onSave, which reads the
@@ -58,6 +68,9 @@ export function EntryDialog({
     : habitType(habit) === 'categorical'
       ? 'categories'
       : 'text';
+  const clearHint = target.fill
+    ? `Leave blank to clear all ${target.fill.dates.length} days.`
+    : 'Leave blank to clear this entry.';
   return (
     <AnchoredDialog
       anchor={target.anchor}
@@ -89,6 +102,7 @@ export function EntryDialog({
           values={values}
           accent={accent}
           editable={editable}
+          clearHint={clearHint}
           onClose={onClose}
           onSave={onSave}
         />
@@ -109,6 +123,7 @@ export function EntryDialog({
           value={typeof value === 'string' ? value : ''}
           accent={accent}
           editable={editable}
+          clearHint={clearHint}
           onClose={onClose}
           onSave={onSave}
         />
@@ -124,6 +139,7 @@ function NumberForm({
   values,
   accent,
   editable,
+  clearHint,
   onClose,
   onSave,
 }: {
@@ -133,6 +149,7 @@ function NumberForm({
   values: EntryValues;
   accent: string;
   editable: boolean;
+  clearHint: string;
   onClose: () => void;
   onSave: (value: EntryValue | null) => boolean;
 }) {
@@ -186,9 +203,7 @@ function NumberForm({
         </div>
       )}
       <p className={parsed.valid ? 'hint' : 'hint error'} role="status">
-        {parsed.valid
-          ? 'Leave blank to clear this entry.'
-          : 'Enter a number of zero or more.'}
+        {parsed.valid ? clearHint : 'Enter a number of zero or more.'}
       </p>
       <Actions
         accent={accent}
@@ -205,6 +220,7 @@ function TextForm({
   value,
   accent,
   editable,
+  clearHint,
   onClose,
   onSave,
 }: {
@@ -212,6 +228,7 @@ function TextForm({
   value: string;
   accent: string;
   editable: boolean;
+  clearHint: string;
   onClose: () => void;
   onSave: (value: EntryValue | null) => boolean;
 }) {
@@ -237,7 +254,7 @@ function TextForm({
         }}
         style={{ caretColor: accent }}
       />
-      <p className="hint">Leave blank to clear this entry.</p>
+      <p className="hint">{clearHint}</p>
       <Actions
         accent={accent}
         canSave={editable}

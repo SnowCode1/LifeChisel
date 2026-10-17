@@ -9,7 +9,7 @@ const gear = Array.from({ length: 40 }, (_, index) => {
 
 // Web-only icons (the sidebar and its controls) beside the shared ones.
 export type WebIconName =
-  IconName | 'grid' | 'keyboard' | 'sidebar' | 'device' | 'flask';
+  IconName | 'grid' | 'keyboard' | 'sidebar' | 'device' | 'flask' | 'expand';
 
 export function Icon({
   name,
@@ -96,6 +96,33 @@ export function Icon({
           <path d="M5 8v12h14V8M9 12h6" />
         </>
       )}
+      {name === 'modeGrid' && (
+        <>
+          <rect x={3.5} y={4.5} width={17} height={15} rx={2.5} />
+          <path d="M9.5 4.5v15M13.2 9.5v10M16.9 9.5v10M3.5 9.5h17M3.5 14.5h17" />
+        </>
+      )}
+      {name === 'modeCompact' && (
+        <>
+          <rect x={3.5} y={4.5} width={17} height={15} rx={2.5} />
+          <path d="M7.5 4.5v15M10.75 9.5v10M14 9.5v10M17.25 9.5v10M3.5 9.5h17M3.5 14.5h17" />
+        </>
+      )}
+      {name === 'modeToday' && (
+        <>
+          <rect x={3.5} y={3.5} width={7.5} height={7.5} rx={2} />
+          <rect x={13} y={3.5} width={7.5} height={7.5} rx={2} />
+          <rect x={3.5} y={13} width={7.5} height={7.5} rx={2} />
+          <rect x={13} y={13} width={7.5} height={7.5} rx={2} />
+        </>
+      )}
+      {name === 'modeWeeks' && (
+        <>
+          <rect x={3.5} y={4.5} width={17} height={15} rx={2.5} />
+          <path d="M9.5 4.5v15M15 9.5v10M3.5 9.5h17" />
+          <path d="M11.5 14.5h1.5M16.8 14.5h1.5" />
+        </>
+      )}
       {name === 'plus' && <path d="M12 5v14M5 12h14" />}
       {name === 'grid' && (
         <>
@@ -120,6 +147,9 @@ export function Icon({
           <ellipse cx={12} cy={6} rx={7.5} ry={2.5} />
           <path d="M4.5 6v12c0 1.4 3.4 2.5 7.5 2.5s7.5-1.1 7.5-2.5V6M4.5 12c0 1.4 3.4 2.5 7.5 2.5s7.5-1.1 7.5-2.5" />
         </>
+      )}
+      {name === 'expand' && (
+        <path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7" />
       )}
       {name === 'flask' && (
         <path d="M9.5 3.5h5M10.5 3.5v6L5 18.5A1.6 1.6 0 0 0 6.4 21h11.2a1.6 1.6 0 0 0 1.4-2.5l-5.5-9v-6M7.5 15h9" />

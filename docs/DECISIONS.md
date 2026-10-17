@@ -2099,6 +2099,47 @@ Status: implemented on the `web-app` branch (web only).
   date picker's pattern), replacing the Month/Year switch on web and phone,
   with the explanation behind an InfoNote row below.
 
+## 14 October 2026 — App icon
+
+Status: implemented on the `web-app` branch for the phone app, web app and
+landing page.
+
+- Founder decision: the app icon is a 2×2 grid of habit cells on near-black
+  (#0A0A0A), each cell its own colour: green and teal cells ticked, an amber
+  outlined cell still open, and a red cross for a missed day. It was chosen
+  from several rounds of assistant mockups (design "S2"); dark is the primary
+  look on both platforms.
+- Assistant implementation: `scripts/generate-app-icons.mjs` draws every
+  raster and SVG from one geometry (colours from OKLCH through core
+  `oklchToHex`): the iOS icon, Android adaptive foreground, background and
+  themed monochrome layers (cells inside the 66 dp safe zone), the Expo
+  favicon and splash image, and both browser favicons. The web sidebar and
+  landing header show the same favicon, replacing the single-tick mark.
+- Open: separate iOS dark and tinted icon variants (iOS currently derives
+  them), and whether the icon changes with the final brand.
+
+## 14 October 2026 — Tap animation curves and background fade
+
+Status: implemented on the `web-app` branch for the phone app and web app;
+not yet judged on a device.
+
+- Founder request: make the join animation feel natural rather than linear,
+  and consider fading cell backgrounds instead of switching them instantly.
+- Assistant proposal, accepted by the founder: a growing join uses ease-out
+  cubic over 220 ms (it starts at once and settles into the box). No spring:
+  its overshoot would be hidden under the box and its contact time cannot be
+  inverted. A breaking join first retracted with ease-in quad over 180 ms (a
+  fast snap into the neighbour); founder revision (same day): use ease-in-out
+  instead, CSS `ease-in-out` as the same bezier on both platforms. Core
+  `tapMotion.ts` holds the timing and contact calculation for both apps; the
+  web's two linear 110 ms halves became one eased progress.
+- Assistant proposal, accepted by the founder: after a checkbox tap the cell's
+  background fades (ease-out, 180 ms when the goal becomes met, 120 ms
+  otherwise) while the box changes on the first frame. Only grid taps fade;
+  Undo, loading and dialogs switch instantly. Tap animations Off removes it;
+  Reduce Motion keeps it, because a cross-fade is not motion. On the phone the
+  pressed shade is held until the tap is applied and fades from there.
+
 ## 14 October 2026 — Streak ends only
 
 Status: implemented on the `web-app` branch for the phone app and web app
@@ -2120,7 +2161,54 @@ Status: implemented on the `web-app` branch for the phone app and web app
   "1" with Streak numbers.
 - Founder decision (same day): default Streak ends only to On. Because the
   default is a display rule, grids that never chose it switch without any
-  stored change.
+  stored change. Superseded on 15 October: the founder set the default to
+  Off; grids that never chose it switch back the same way.
+
+## 14 October 2026 — Drag to fill a row
+
+Status: implemented on the `web-app` branch for the phone app and web app;
+not yet tried on a device or in a browser.
+
+- Founder request: a double tap and drag shortcut that draws across a row,
+  keeping every cell being drawn highlighted (like the hover highlight) until
+  it completes, with the tap animations working too. It works for every habit
+  type: numbers, text and categories ask once for the value that fills the
+  whole selection. It works only along a row, never down a column, because a
+  column mixes habit types and is rarely needed.
+- Founder decisions (from assistant options): a fill is one undoable action
+  and one History row, through a new stored change kind (storage v22,
+  `entries`, on top of v21's Streak ends only); checkboxes follow the first
+  tap (the first tap toggles the start cell as usual and the drag paints that
+  state, so starting on an empty box ticks and on a ticked box clears; a plain
+  double tap still toggles twice); number, text and category cells open their
+  dialog after a short delay (250 ms) so a second tap can land, with the
+  dialog animating in so the delay does not end in a sudden appearance; both
+  the phone and the web get it.
+- Assistant implementation: core `entryFill.ts` builds the change and
+  `tapMotion.ts` holds the shared timing. A committed fill animates as a wave
+  along the run in drag order: the highlight drains cell by cell, changed boxes
+  pulse, joins grow from each cell into the next (or retract in the drag
+  direction when clearing) and each reached box bumps. On the web it is a
+  double click and drag with a mouse; touch keeps native scrolling.
+- Founder report (15 October): double-click and drag did nothing in Chrome
+  with a laptop trackpad. Assistant finding and change: the first click needs
+  a 500 ms window (300 ms was shorter than most double clicks), and a
+  trackpad's tap-and-drag reaches the page as a single press, so on the web
+  any mouse, trackpad or pen press-and-drag along a row now fills; a press
+  without a first click toggles the start checkbox and paints that state.
+  The phone keeps double tap and drag (a plain drag scrolls there), with a
+  350 ms window.
+- Founder request (15 October): make the fill animation coherent, the boxes
+  and the connectors moving smoothly through the cells. Assistant change: the
+  staggered per-join wave became one stroke (core `fillStrokeMs`, ease-in-out,
+  160 ms plus 100 ms per cell, at most 720 ms) that the bar follows through
+  every cell, with each box (and streak number) changing as the stroke
+  reaches it, on the phone and the web.
+- Founder decision (15 October): Streak ends only defaults to Off.
+- Founder report (same day): the web Settings dialog was narrower than its
+  content and the Appearance preview showed only a scrollbar. Assistant fix:
+  the layout may no longer grow past the dialog, and the page's sections no
+  longer shrink (the preview had collapsed to its scrollbar).
 
 ## 15 October 2026 — Sample presets for marketing screenshots
 
@@ -2177,3 +2265,73 @@ the founder in the browser.
   running.
 - Open: store links, privacy policy, hosting and final brand. Whether sync is
   free or part of the unlock is not decided, so the page does not say.
+
+## 16 October 2026 — Home views: Grid, Compact, Today and Weeks
+
+Status: implemented on the `web-app` branch for both apps. The web app was
+checked in a desktop browser at 1400 and 390 px wide with sample data; the
+phone app passes type checks, tests and both exports but has not been tried
+on a device.
+
+- Founder request: replace the "ONPURPOSE"/"SAMPLE DATA" text in the top
+  bar's left corner with a view switcher, on the phone and the web. Grid is
+  the normal grid. Compact shows only each habit's icon, leaving room for
+  seven day columns. Today shows one cell per habit for Today, with no axes.
+  Weeks is like the grid with one week per column.
+- Founder decisions: a week cell shows both a number and seven day dots;
+  tapping a week cell shows that week in the day grid; each device remembers
+  its own view (not a saved preference, so no storage version change).
+- Founder question, assistant recommendation accepted by default: a menu
+  rather than a button that cycles through the four. A menu keeps every view
+  two taps away in a fixed place; cycling takes up to three taps and changes
+  the button under the finger.
+- Assistant implementation: core `gridModes.ts` lists the views and
+  `weekSummary.ts` derives each week cell from the daily goal rules. The
+  number is the days done (the week's total for numeric habits). Dots are
+  done, missed (daily goals only; follows Missed day crosses), empty, off
+  (not scheduled) or blank (before the start date or in the future). A week
+  is goal-met when every scheduled day was met, or when a seven-day quota
+  that starts on the week's first day is met. "At least" quotas count as
+  met as soon as they are reached; other weeks are judged once finished.
+  Habits without an icon show their initial in Compact and on tiles. A
+  chosen week opens in whichever of Grid or Compact was used last. The phone
+  draws week columns with Skia and reuses the day grid's scrolling; Today
+  tiles toggle checkboxes or open the entry dialog, and holding a tile opens
+  Notes and Statistics.
+- Open for the founder: whether Weeks should allow editing, and whether
+  Today tiles should support reordering.
+
+## 17 October 2026 — Today view refinements
+
+Status: implemented on the `web-app` branch for both apps from the assistant's
+proposals, which the founder asked it to build; checked in a desktop browser
+at 1400 and 390 px wide with sample data, not yet on a phone.
+
+- Founder feedback: the Today view felt less developed than the grid. The
+  assistant proposed nine refinements and recommended four; the founder said
+  to build the assistant's best solution.
+- Built (assistant choices): each tile is the habit's name cell over its
+  Today cell. Under the name sits the same line the web grid shows
+  (`habitSummary`: schedule, rule or quota progress); a habit unscheduled
+  today and not done reads "Not today" and dims, in place. The checkbox is
+  drawn with the saved cell look (round boxes, the streak number in place of
+  the tick, Ticks & crosses, the tap pulse), so a tile looks like its cell.
+  A blank number shows its most usual total (the dialog's first
+  suggestion) as one chip under a small "Usual" label, with the unit, that
+  records in one tap with a Quick Undo receipt, beside "…" for the dialog;
+  a recorded value opens the dialog to change it. Every tile has the same
+  fixed height, about two and a half Rows sizes, so one preference governs
+  both views and no row stretches. A quiet count follows the date ("5 of 13
+  done · 1 not today"; no ring or percentage). On the web, arrow keys move
+  between tiles.
+- Founder feedback (same day, first version): a row of tiles grew taller
+  than the others, and two bare number chips read as choices rather than
+  shortcuts. The assistant fixed the height and reduced the chips to one,
+  labelled and with its unit.
+- Rule change (assistant, for the founder to confirm): suggestions in the
+  dialogs still only fill drafts; on a Today tile they record directly,
+  because the tile has no draft and Quick Undo covers a wrong tap.
+- Not built, open for the founder: options directly on category tiles,
+  stepping to earlier days from the Today view, reordering tiles. Declined
+  by the assistant as against the product rules: sorting tiles by usual
+  logging time, moving done tiles to the end, progress rings.

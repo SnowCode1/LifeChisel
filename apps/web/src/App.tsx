@@ -16,7 +16,8 @@ import { gridSizing } from '@onpurpose/core/gridSizing';
 import { useGridSizes } from './grid/gridSizes.ts';
 import { themeFor, type Theme } from '@onpurpose/core/theme';
 import { createQuickUndo } from '@onpurpose/core/quickUndo';
-import { localDateKey } from '@onpurpose/core/calendar';
+import { dateRangeLabel, localDateKey } from '@onpurpose/core/calendar';
+import type { FillChange } from './grid/fillWave.ts';
 import { openStore } from './storage/openStore.ts';
 import {
   HabitGrid,
@@ -45,7 +46,11 @@ import { useHabitActions, MAX_HABITS } from './actions.ts';
 import { EntryDialog, type EntryTarget } from './entry/EntryDialog.tsx';
 import { QuickUndoToast } from './QuickUndoToast.tsx';
 import { Sidebar, type SamplePresetChoice } from './Sidebar.tsx';
-import { LANDING_URL } from './config.ts';
+import { ModeMenu, useGridMode } from './ModeMenu.tsx';
+import { WeekGrid } from './grid/WeekGrid.tsx';
+import { TodayTiles } from './grid/TodayTiles.tsx';
+import type { GridMode } from '@onpurpose/core/gridModes';
+import { weekJumpDay } from '@onpurpose/core/weekSummary';
 import { Shortcuts } from './Shortcuts.tsx';
 import type { SettingsPage } from './settings/Settings.tsx';
 
@@ -199,14 +204,37 @@ function Tracker({
     () => ({
       openHabit: (habit) => setDetailsId(habit.id),
       toggle: actions.toggle,
+      saveValue: actions.saveEntry,
       openEntry: (habit, date, label, anchor) =>
         setEntry({ habit, date, label, anchor }),
+      closeEntry: () => setEntry(null),
+      fillChecks: (habit, dates, toggleStart) =>
+        actions.fillChecks(habit, dates, toggleStart) || null,
+      // A value fill opens the entry popover for the run, prefilled with the
+      // start day's value.
+      openFill: (habit, dates, anchor, done) =>
+        setEntry({
+          habit,
+          date: dates[0],
+          label: dateRangeLabel(dates),
+          anchor,
+          fill: { dates, done },
+        }),
       openMenu: (habit, anchor) => setMenu({ habit, anchor }),
       reorder: (ids) => void actions.reorder(ids),
       add: newHabit,
     }),
     [actions],
   );
+  // A fill's popover tells the grid what it applied (or null) as it closes,
+  // so the run stays highlighted until then.
+  const fillApplied = useRef<FillChange | null>(null);
+  useEffect(() => {
+    const fill = entry?.fill;
+    if (!fill) return;
+    fillApplied.current = null;
+    return () => fill.done(fillApplied.current);
+  }, [entry]);
   const theme = themeFor(
     state.themeMode ?? displayDefaults.themeMode,
     prefersDark ? 'dark' : 'light',
@@ -216,6 +244,28 @@ function Tracker({
   useThemeVariables(theme);
   useGridSizes(gridSizing(state, effectiveColumnSpacing(state)));
   const [away, setAway] = useState(false);
+  // The view is this browser's own choice, outside the change log.
+  const [mode, saveMode] = useGridMode();
+  // Where a day grid opens: a week chosen in Weeks mode, otherwise Today.
+  const [jump, setJump] = useState<{ ago: number; mode: GridMode }>({
+    ago: 0,
+    mode: 'grid',
+  });
+  const changeMode = (next: GridMode) => {
+    setAway(false);
+    saveMode(next);
+    setJump((current) => ({
+      ago: 0,
+      mode: next === 'grid' || next === 'compact' ? next : current.mode,
+    }));
+  };
+  const weekStart = state.weekStart ?? displayDefaults.weekStart;
+  // A week opens in the day grid last used (Grid or Compact).
+  const showWeek = (weeksAgo: number) => {
+    setAway(false);
+    setJump({ ago: weekJumpDay(today, weekStart, weeksAgo), mode: jump.mode });
+    saveMode(jump.mode);
+  };
   const panelWidth = usePanelWidth();
   const habits = useMemo(
     () => state.habits.filter((habit) => !habit.archived),
@@ -380,16 +430,24 @@ function Tracker({
       />
       <main className="main">
         <header className="top-bar">
-          <a className="wordmark" href={LANDING_URL}>
-            {sampleData ? 'Sample data' : 'OnPurpose'}
-          </a>
-          <button
-            className="today"
-            aria-label="Today"
-            onClick={() => grid.current?.showToday()}
-          >
-            {away ? 'Today →' : 'Today'}
-          </button>
+          <ModeMenu mode={mode} sampleData={sampleData} onChange={changeMode} />
+          {mode === 'today' ? (
+            <span />
+          ) : (
+            <button
+              className="today"
+              aria-label={mode === 'weeks' ? 'This week' : 'Today'}
+              onClick={() => grid.current?.showToday()}
+            >
+              {mode === 'weeks'
+                ? away
+                  ? 'This week →'
+                  : 'This week'
+                : away
+                  ? 'Today →'
+                  : 'Today'}
+            </button>
+          )}
           <span className="actions">
             <button
               aria-pressed={panel?.kind === 'history'}
@@ -415,20 +473,50 @@ function Tracker({
           </div>
         )}
         <div className="workspace" style={panelWidth.style}>
-          <HabitGrid
-            ref={grid}
-            habits={rows}
-            values={state.values}
-            today={today}
-            theme={theme}
-            look={look}
-            weekStart={state.weekStart ?? displayDefaults.weekStart}
-            weekDividers={state.weekDividers ?? displayDefaults.weekDividers}
-            editable={store.canEdit()}
-            canAdd={state.habits.length < MAX_HABITS}
-            on={handlers}
-            onAwayFromToday={setAway}
-          />
+          {mode === 'today' ? (
+            <TodayTiles
+              habits={rows}
+              values={state.values}
+              today={today}
+              theme={theme}
+              look={look}
+              editable={store.canEdit()}
+              canAdd={state.habits.length < MAX_HABITS}
+              on={handlers}
+            />
+          ) : mode === 'weeks' ? (
+            <WeekGrid
+              ref={grid}
+              habits={rows}
+              values={state.values}
+              today={today}
+              theme={theme}
+              weekStart={weekStart}
+              weekDividers={state.weekDividers ?? displayDefaults.weekDividers}
+              missed={look.missed}
+              onWeek={showWeek}
+              onOpenHabit={openHabit}
+              onOpenMenu={handlers.openMenu}
+              onAwayFromToday={setAway}
+            />
+          ) : (
+            <HabitGrid
+              ref={grid}
+              compact={mode === 'compact'}
+              startAgo={jump.ago}
+              habits={rows}
+              values={state.values}
+              today={today}
+              theme={theme}
+              look={look}
+              weekStart={state.weekStart ?? displayDefaults.weekStart}
+              weekDividers={state.weekDividers ?? displayDefaults.weekDividers}
+              editable={store.canEdit()}
+              canAdd={state.habits.length < MAX_HABITS}
+              on={handlers}
+              onAwayFromToday={setAway}
+            />
+          )}
           {panel?.kind === 'history' && (
             <PanelResizer
               width={panelWidth.width}
@@ -483,14 +571,25 @@ function Tracker({
       </main>
       {entry && entryHabit && (
         <EntryDialog
-          key={`${entry.habit.id}:${entry.date}`}
+          key={`${entry.habit.id}:${entry.date}${entry.fill ? ':fill' : ''}`}
           target={{ ...entry, habit: entryHabit }}
           value={state.values[`${entry.habit.id}:${entry.date}`]}
           values={state.values}
           theme={theme}
           editable={store.canEdit()}
           onClose={() => setEntry(null)}
-          onSave={(value) => actions.saveEntry(entryHabit, entry.date, value)}
+          onSave={(value) => {
+            if (!entry.fill)
+              return actions.saveEntry(entryHabit, entry.date, value);
+            const applied = actions.fillValues(
+              entryHabit,
+              entry.fill.dates,
+              value,
+            );
+            if (applied === false) return false;
+            fillApplied.current = applied;
+            return true;
+          }}
           onAddCategories={(added) =>
             actions.addCategories(entryHabit.id, added)
           }
@@ -645,6 +744,7 @@ function useThemeVariables(theme: Theme) {
     style.setProperty('--today-edge', theme.ink(0x26));
     style.setProperty('--week-shade', theme.ink(0x0c));
     style.setProperty('--row-highlight', theme.overlay(0x0d));
+    style.setProperty('--fill-highlight', theme.overlay(0x1f));
     style.setProperty('--accent', theme.accent);
     style.setProperty('--danger', theme.danger);
     style.setProperty('--accent-text', theme.accentText);

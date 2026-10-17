@@ -119,77 +119,88 @@ export function Settings({
             </button>
           ))}
         </nav>
-        <section
-          className="settings-page"
-          aria-label={PAGES.find((item) => item.id === page)?.label}
-        >
+        <div className="settings-main">
           {page === 'appearance' && (
-            <Appearance
-              state={state}
+            <PinnedPreview
               theme={theme}
               look={look}
-              cellLook={cellLook}
               today={today}
-              editable={editable}
-              set={set}
+              weekStart={state.weekStart ?? displayDefaults.weekStart}
+              weekDividers={state.weekDividers ?? displayDefaults.weekDividers}
             />
           )}
-          {page === 'tracking' && (
-            <>
-              <Group title="Grid">
-                <Toggle
-                  label="Hide completed today"
-                  detail="Rows that met today’s goal leave the grid until tomorrow. Other dates always show every habit."
-                  value={state.hideCompleted ?? displayDefaults.hideCompleted}
-                  disabled={!editable}
-                  onChange={(value) => set('hideCompleted', value)}
-                />
-                <label className="setting-row">
-                  <span>Week starts on</span>
-                  <select
-                    value={state.weekStart ?? displayDefaults.weekStart}
+          <section
+            className="settings-page"
+            aria-label={PAGES.find((item) => item.id === page)?.label}
+          >
+            {page === 'appearance' && (
+              <Appearance
+                state={state}
+                theme={theme}
+                look={look}
+                cellLook={cellLook}
+                today={today}
+                editable={editable}
+                set={set}
+              />
+            )}
+            {page === 'tracking' && (
+              <>
+                <Group title="Grid">
+                  <Toggle
+                    label="Hide completed today"
+                    detail="Rows that met today’s goal leave the grid until tomorrow. Other dates always show every habit."
+                    value={state.hideCompleted ?? displayDefaults.hideCompleted}
                     disabled={!editable}
-                    onChange={(event) =>
-                      set(
-                        'weekStart',
-                        event.target.value as 'monday' | 'sunday',
-                      )
-                    }
-                  >
-                    {weekStartOptions.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </Group>
-              <p className="hint">
-                Completion uses each habit’s goal for today; habits set to Track
-                only stay visible.
-              </p>
-            </>
-          )}
-          {page === 'backups' && (
-            <Backups
-              store={store}
-              snapshot={snapshot}
-              editable={editable && !sampleData}
-              sampleData={sampleData}
-            />
-          )}
-          {page === 'archived' && (
-            <Archived
-              habits={state.habits}
-              values={state.values}
-              theme={theme}
-              editable={editable}
-              actions={actions}
-              store={store}
-            />
-          )}
-          {page === 'about' && <About />}
-        </section>
+                    onChange={(value) => set('hideCompleted', value)}
+                  />
+                  <label className="setting-row">
+                    <span>Week starts on</span>
+                    <select
+                      value={state.weekStart ?? displayDefaults.weekStart}
+                      disabled={!editable}
+                      onChange={(event) =>
+                        set(
+                          'weekStart',
+                          event.target.value as 'monday' | 'sunday',
+                        )
+                      }
+                    >
+                      {weekStartOptions.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </Group>
+                <p className="hint">
+                  Completion uses each habit’s goal for today; habits set to
+                  Track only stay visible.
+                </p>
+              </>
+            )}
+            {page === 'backups' && (
+              <Backups
+                store={store}
+                snapshot={snapshot}
+                editable={editable && !sampleData}
+                sampleData={sampleData}
+              />
+            )}
+            {page === 'archived' && (
+              <Archived
+                habits={state.habits}
+                values={state.values}
+                theme={theme}
+                editable={editable}
+                actions={actions}
+                store={store}
+              />
+            )}
+            {page === 'about' && <About />}
+          </section>
+        </div>
       </div>
     </Modal>
   );
@@ -229,13 +240,6 @@ function Appearance({
   };
   return (
     <>
-      <Preview
-        theme={theme}
-        look={look}
-        today={today}
-        weekStart={state.weekStart ?? displayDefaults.weekStart}
-        weekDividers={state.weekDividers ?? displayDefaults.weekDividers}
-      />
       <Group title="Theme">
         <div className="setting-row">
           <span>Theme</span>
@@ -332,7 +336,7 @@ function Appearance({
         />
         <Toggle
           label="Tap animations"
-          detail="A short pulse when you tick a box, and joins that grow between neighbours. Your system’s Reduce motion setting turns them off too."
+          detail="A short pulse when you tick a box, joins that grow between neighbours, and a background fade. Your system’s Reduce motion setting turns off the movement but keeps the fade."
           value={state.tapAnimations ?? displayDefaults.tapAnimations}
           disabled={!editable}
           onChange={(value) => set('tapAnimations', value)}
@@ -374,15 +378,56 @@ const PREVIEW: Habit[] = [
   },
 ];
 const PATTERNS = ['1101110111', '0111011100', '1011101110'];
+// Like the grid, a preview too wide for its box keeps Today in view. It
+// mounts before the dialog is shown, so it scrolls on the next frame.
+const endOnToday = (element: HTMLElement | null) => {
+  if (element)
+    requestAnimationFrame(() => {
+      element.scrollLeft = element.scrollWidth;
+    });
+};
 const noop = () => {};
 const NO_HANDLERS: GridHandlers = {
   toggle: () => false,
+  saveValue: () => false,
   openEntry: noop,
+  closeEntry: noop,
+  fillChecks: () => null,
+  openFill: noop,
   openMenu: noop,
   openHabit: noop,
   reorder: noop,
   add: noop,
 };
+// Whether the pinned Appearance preview is collapsed, remembered while the
+// app stays open (as on the phone).
+let previewCollapsed = false;
+// The preview stays above the Appearance controls while they scroll, so
+// every change shows at once; it collapses to its heading.
+function PinnedPreview(props: Parameters<typeof Preview>[0]) {
+  const [collapsed, setCollapsed] = useState(previewCollapsed);
+  const previewId = useId();
+  return (
+    <div className="settings-pinned">
+      <button
+        type="button"
+        className="preview-toggle"
+        aria-expanded={!collapsed}
+        aria-controls={previewId}
+        onClick={() => {
+          previewCollapsed = !collapsed;
+          setCollapsed(!collapsed);
+        }}
+      >
+        <span className="field-label">Preview</span>
+        <Icon name="chevron" size={16} />
+      </button>
+      <div id={previewId} hidden={collapsed}>
+        {!collapsed && <Preview {...props} />}
+      </div>
+    </div>
+  );
+}
 function Preview({
   theme,
   look,
@@ -406,8 +451,11 @@ function Preview({
     }),
   );
   return (
-    <figure className="settings-preview" aria-label="Preview of the grid">
-      <figcaption className="field-label">Preview</figcaption>
+    <figure
+      ref={endOnToday}
+      className="settings-preview"
+      aria-label="Preview of the grid"
+    >
       <table className="grid preview-grid" aria-hidden="true">
         <thead>
           <tr>

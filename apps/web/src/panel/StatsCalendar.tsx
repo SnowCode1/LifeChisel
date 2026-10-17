@@ -3,12 +3,14 @@ import {
   weekDayOrder,
   type WeekStart,
 } from '@onpurpose/core/displayPreferences';
-import { entryLabel } from '@onpurpose/core/entries';
+import { cellEntryLabel, entryLabel } from '@onpurpose/core/entries';
+import { checkmarkColor } from '@onpurpose/core/colors';
 import { checkboxChecked } from '@onpurpose/core/habitGoals';
 import { habitType, type Habit } from '@onpurpose/core/habits';
 import { dateKey, dayNumber } from '@onpurpose/core/statistics';
 import {
   formatStatistic as format,
+  statisticDateLabel,
   statisticDayLabel,
   statisticMonthLabel,
 } from '@onpurpose/core/statisticsFormatting';
@@ -227,8 +229,90 @@ export function StatsCalendar({
       </div>
     );
   }
+  const type = habitType(habit);
+  // Up to about six weeks the tiles are taller, with room for a value.
+  const tall = to - from < 45;
+  const tile = (
+    cell: Cell,
+    fill: string,
+    joinLeft: boolean,
+    joinRight: boolean,
+  ) => {
+    const inWindow = !!cell.item && cell.state !== 'outside';
+    const label = `${statisticDayLabel(cell.date, today)}, ${describe(habit, cell)}`;
+    const value = cell.item?.value;
+    // Strong fills (a met checkbox day) carry their own readable ink.
+    const strong =
+      fill.startsWith('#') && fill.length === 7 && theme.contrast(fill) > 7;
+    const ink = strong
+      ? checkmarkColor(fill)
+      : cell.state === 'future' || cell.state === 'outside'
+        ? theme.ink(0x5c)
+        : theme.ink(0xa8);
+    const firstLabel =
+      cell.date.endsWith('-01') || (cell.day === from && cell.item !== null);
+    return (
+      <div
+        key={cell.day}
+        className={`calendar-cell${joinLeft ? ' join-left' : ''}${joinRight ? ' join-right' : ''}${cell.day === now ? ' today' : ''}`}
+      >
+        {cell.state === 'beyond' ? null : (
+          <button
+            type="button"
+            aria-label={label}
+            title={label}
+            disabled={!editable || !inWindow || cell.state === 'future'}
+            onClick={(event) =>
+              onDay(
+                cell.date,
+                statisticDayLabel(cell.date, today),
+                event.currentTarget,
+              )
+            }
+            style={{
+              backgroundColor: fill,
+              color: ink,
+              opacity: fade(cell) ? 0.25 : 1,
+            }}
+          >
+            <span className="tile-date">
+              {firstLabel
+                ? statisticDateLabel(cell.date)
+                : Number(cell.date.slice(8))}
+            </span>
+            {type === 'number' && typeof value === 'number' && (
+              <span
+                className="tile-value"
+                style={{ color: strong ? ink : colour }}
+              >
+                {cellEntryLabel(habit, value)}
+              </span>
+            )}
+            {type === 'categorical' && Array.isArray(value) && (
+              <span className="tile-dots">
+                {value.slice(0, 4).map((id) => (
+                  <span
+                    key={id}
+                    style={{
+                      backgroundColor: categoryColours?.get(id) ?? colour,
+                      opacity: !highlight || highlight === id ? 1 : 0.2,
+                    }}
+                  />
+                ))}
+              </span>
+            )}
+            {type === 'text' && typeof value === 'string' && (
+              <span className="tile-dots">
+                <span style={{ backgroundColor: colour }} />
+              </span>
+            )}
+          </button>
+        )}
+      </div>
+    );
+  };
   return (
-    <div className="calendar">
+    <div className={tall ? 'calendar tall' : 'calendar'}>
       <div className="calendar-grid headings" aria-hidden="true">
         {weekDayOrder(weekStart).map((day) => (
           <span key={day}>{WEEKDAYS[day]}</span>
@@ -248,13 +332,19 @@ export function StatsCalendar({
           i >= 0 && i < week.length && (week[i].state === 'met' || bridged[i]);
         return (
           <div key={week[0].day} className="calendar-grid">
-            {week.map((cell, i) =>
-              dayButton(
+            {week.map((cell, i) => {
+              const inRun = cell.state === 'met' || bridged[i];
+              const fill = bridged[i]
+                ? theme.mix(colour, 0.38)
+                : (markColour(cell) ??
+                  dayFill(habit, cell, colour, max, theme));
+              return tile(
                 cell,
-                joined(i) && joined(i - 1),
-                joined(i) && joined(i + 1),
-              ),
-            )}
+                fill,
+                inRun && joined(i - 1),
+                inRun && joined(i + 1),
+              );
+            })}
           </div>
         );
       })}

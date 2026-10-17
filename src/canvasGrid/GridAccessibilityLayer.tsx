@@ -12,7 +12,7 @@ import type { CanvasGridProps } from './useCanvasGrid';
 // label and activation the native grid had. These elements stay mounted for
 // Switch Control and scripted checks; they take touches only while a screen
 // reader runs, leaving the canvas gestures to everyone else.
-function useScreenReader() {
+export function useScreenReader() {
   const [enabled, setEnabled] = useState(false);
   useEffect(() => {
     let active = true;

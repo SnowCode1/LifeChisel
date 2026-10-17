@@ -10,11 +10,13 @@ import {
   type KeyboardEvent,
   type PointerEvent,
   type Ref,
+  type RefObject,
 } from 'react';
 import { calendarDay, localDateKey } from '@onpurpose/core/calendar';
 import { cellState } from '@onpurpose/core/cellAccessibility';
 import type { EntryValues } from '@onpurpose/core/entries';
-import type { Habit } from '@onpurpose/core/habits';
+import { fillDates } from '@onpurpose/core/entryFill';
+import { habitType, type Habit } from '@onpurpose/core/habits';
 import { ordinal } from '@onpurpose/core/goalTiming';
 import { moveHabit } from '@onpurpose/core/habitOrdering';
 import {
@@ -22,9 +24,24 @@ import {
   type WeekStart,
 } from '@onpurpose/core/displayPreferences';
 import { createGridPalette } from '@onpurpose/core/gridAppearance';
+import {
+  FILL_DOUBLE_CLICK_MS,
+  FILL_SLOP_PX,
+  VALUE_OPEN_DELAY_MS,
+  fillStrokeMs,
+  joinContactMs,
+} from '@onpurpose/core/tapMotion';
 import type { Theme } from '@onpurpose/core/theme';
 import { HabitRow } from './HabitRow.tsx';
 import { GridScrollbars } from './Scrollbars.tsx';
+import {
+  changedBefore,
+  edgeScrollStep,
+  fillAgoAt,
+  fillIntent,
+  type FillChange,
+  type FillRun,
+} from './fillWave.ts';
 import type { CellLookStyle, Day, GridHandlers, Pulse } from './types.ts';
 
 export type { CellLookStyle, GridHandlers } from './types.ts';
@@ -36,7 +53,8 @@ const DAYS = 120;
 const MORE_DAYS = 120;
 const MAX_DAYS = 3660;
 export const VISIBLE_DAYS = 21;
-// How long a tap's pulse and join animation may run before its state clears.
+// How long a tap's pulse, join, bump and fade may run before its state
+// clears (a fill's wave adds its stagger along the run).
 const PULSE_MS = 450;
 
 export type GridHandle = {
@@ -64,6 +82,8 @@ export function HabitGrid({
   weekDividers,
   editable,
   canAdd,
+  compact = false,
+  startAgo = 0,
   on,
   onAwayFromToday,
 }: {
@@ -77,11 +97,17 @@ export function HabitGrid({
   weekDividers: boolean;
   editable: boolean;
   canAdd: boolean;
+  /** Compact mode: icons stand for names, leaving more room for days. */
+  compact?: boolean;
+  /** Opens with this day (days ago) at the right edge, e.g. a chosen week. */
+  startAgo?: number;
   on: GridHandlers;
   /** Called when the reader scrolls away from Today or back to it. */
   onAwayFromToday?: (away: boolean) => void;
 }) {
-  const [count, setCount] = useState(DAYS);
+  const [count, setCount] = useState(() =>
+    Math.min(MAX_DAYS, Math.max(DAYS, startAgo + MORE_DAYS)),
+  );
   const days = useMemo(
     () => gridDays(today, weekStart, weekDividers, count),
     [today, weekStart, weekDividers, count],
@@ -89,6 +115,8 @@ export function HabitGrid({
   const scroller = useRef<HTMLDivElement>(null);
   const area = useRef<HTMLDivElement>(null);
   const monthLabel = useRef<HTMLSpanElement>(null);
+  const compactRef = useRef(compact);
+  const startRef = useRef(startAgo);
   // Focus is kept by days ago, so loading older days never moves it.
   const [focus, setFocus] = useState({ row: 0, ago: 0 });
   const focusRow = Math.min(focus.row, Math.max(0, habits.length - 1));
@@ -162,6 +190,12 @@ export function HabitGrid({
     added.current = { days: 0, from: 0 };
   }, [count]);
 
+  // Compact mode narrows the names: refit the frame and relabel the corner.
+  useLayoutEffect(() => {
+    compactRef.current = compact;
+    scroller.current?.dispatchEvent(new Event('scroll'));
+  }, [compact]);
+
   // Start at Today, and keep Today at the right edge through resizes unless
   // the reader has scrolled back into history.
   useLayoutEffect(() => {
@@ -186,10 +220,11 @@ export function HabitGrid({
         (element.clientWidth - corner.offsetWidth) / width,
       );
       const last = Math.min(total - 1, first + Math.max(0, visible - 1));
-      target.textContent = monthRange(
-        calendarDay(today, total - 1 - first),
-        calendarDay(today, total - 1 - last),
-      );
+      const newest = calendarDay(today, total - 1 - last);
+      // The compact corner holds the newest month alone.
+      target.textContent = compactRef.current
+        ? newest.toLocaleDateString(undefined, { month: 'short' })
+        : monthRange(calendarDay(today, total - 1 - first), newest);
     };
     const track = () => {
       pinned =
@@ -238,7 +273,18 @@ export function HabitGrid({
       frame.style.width = `${corner.offsetWidth + days * day.offsetWidth + gutter}px`;
     };
     fit();
-    pin();
+    // A chosen week opens with its last day at the right edge.
+    const day = element.querySelector<HTMLElement>('.day');
+    if (startRef.current > 0 && day) {
+      element.scrollLeft =
+        element.scrollWidth -
+        element.clientWidth -
+        startRef.current * day.offsetWidth;
+      startRef.current = 0;
+      pinned = false;
+      away = true;
+      onAwayFromToday?.(true);
+    } else pin();
     label();
     const observer = new ResizeObserver(() => {
       fit();
@@ -345,35 +391,370 @@ export function HabitGrid({
   // look allows it; Undo, other windows and the panel never animate.
   const lookRef = useRef(look);
   const valuesRef = useRef(values);
+  const daysRef = useRef(days);
   useEffect(() => {
     lookRef.current = look;
     valuesRef.current = values;
+    daysRef.current = days;
   });
+  // When a moving join touches the box it reaches; the box and column sizes
+  // are the grid's CSS variables.
+  // The box and column sizes are the grid's CSS variables.
+  const boxSizes = useCallback(() => {
+    const sizes = scroller.current && getComputedStyle(scroller.current);
+    return {
+      box: parseFloat(sizes?.getPropertyValue('--box') ?? '') || 0,
+      column: parseFloat(sizes?.getPropertyValue('--column') ?? '') || 0,
+    };
+  }, []);
+  const contactMs = useCallback(
+    (joining: boolean) => {
+      const { box, column } = boxSizes();
+      return joinContactMs(box, column, joining);
+    },
+    [boxSizes],
+  );
   const toggle = useCallback(
     (habit: Habit, date: string) => {
-      const before = cellState(
-        habit,
-        valuesRef.current[`${habit.id}:${date}`],
-        date,
-      ).checked;
+      const value = valuesRef.current[`${habit.id}:${date}`];
+      const before = cellState(habit, value, date).checked;
       const accepted = on.toggle(habit, date);
       if (accepted && lookRef.current.animate)
         setPulse((current) => ({
           habitId: habit.id,
-          date,
+          kind: 'tap',
+          dates: [date],
+          before: { [date]: value ?? null },
           checked: !before,
+          contactMs: contactMs(!before),
+          reach: 0,
           n: (current?.n ?? 0) + 1,
         }));
       return accepted;
     },
-    [on],
+    [on, contactMs],
+  );
+  // A committed fill animates as a wave along the run, in drag order.
+  const startWave = useCallback(
+    (
+      habit: Habit,
+      kind: 'checks' | 'values',
+      dates: string[],
+      change: FillChange,
+    ) => {
+      if (!lookRef.current.animate) return;
+      const after =
+        change.kind === 'entry'
+          ? { [change.date]: change.after }
+          : change.after;
+      const [date] = Object.keys(after);
+      const checked =
+        kind === 'checks' &&
+        cellState(habit, after[date] ?? undefined, date).checked;
+      setPulse((current) => ({
+        habitId: habit.id,
+        kind,
+        dates,
+        before: changedBefore(change),
+        checked,
+        contactMs: contactMs(checked),
+        reach: (() => {
+          const { box, column } = boxSizes();
+          return column > 0 ? box / 2 / column : 0;
+        })(),
+        n: (current?.n ?? 0) + 1,
+      }));
+    },
+    [contactMs, boxSizes],
   );
   useEffect(() => {
     if (!pulse) return;
-    const timer = setTimeout(() => setPulse(null), PULSE_MS);
+    const timer = setTimeout(
+      () => setPulse(null),
+      PULSE_MS + fillStrokeMs(pulse.dates.length),
+    );
     return () => clearTimeout(timer);
   }, [pulse]);
-  const rowHandlers = useMemo(() => ({ ...on, toggle }), [on, toggle]);
+
+  // Number, text and category cells open their popover a moment after a
+  // pointer click, so a second press can start a fill instead; keyboard
+  // activation opens at once.
+  const pendingOpen = useRef<{ cell: string; timer: number } | null>(null);
+  // The cell whose popover a delayed open showed (see armFill below).
+  const openedFrom = useRef<string | null>(null);
+  const openEntry = useCallback(
+    (
+      habit: Habit,
+      date: string,
+      label: string,
+      anchor: HTMLElement,
+      delayed?: boolean,
+    ) => {
+      cancelPending(pendingOpen);
+      if (!delayed) return on.openEntry(habit, date, label, anchor);
+      pendingOpen.current = {
+        cell: anchor.dataset.cell ?? '',
+        timer: window.setTimeout(() => {
+          pendingOpen.current = null;
+          if (!anchor.isConnected) return;
+          openedFrom.current = anchor.dataset.cell ?? null;
+          on.openEntry(habit, date, label, anchor);
+        }, VALUE_OPEN_DELAY_MS),
+      };
+    },
+    [on],
+  );
+  const rowHandlers = useMemo(
+    () => ({ ...on, toggle, openEntry }),
+    [on, toggle, openEntry],
+  );
+
+  // Drag to fill: with a mouse or pen, a second press on the cell just
+  // clicked (within FILL_DOUBLE_CLICK_MS of its release) that moves along the
+  // row draws a fill from that cell to the column under the pointer. The row
+  // stays fixed; vertical movement is ignored. Touch keeps native scrolling.
+  // Checkbox runs take the start cell's state on release; other types open
+  // the entry popover for the run. The run stays highlighted until the fill
+  // completes. Escape cancels.
+  const [fill, setFill] = useState<{ habitId: string; run: FillRun } | null>(
+    null,
+  );
+  const lastRelease = useRef<{ cell: string; time: number } | null>(null);
+  const fillToken = useRef(0);
+  const stopFill = useRef<(() => void) | null>(null);
+  useEffect(
+    () => () => {
+      cancelPending(pendingOpen);
+      stopFill.current?.();
+    },
+    [],
+  );
+  const onCellPointerUp = (event: PointerEvent<HTMLElement>) => {
+    if (event.pointerType === 'touch') return;
+    const cell = (event.target as HTMLElement).closest<HTMLElement>(
+      '[data-cell]',
+    )?.dataset.cell;
+    lastRelease.current = cell ? { cell, time: event.timeStamp } : null;
+  };
+  const onCellPointerDown = (event: PointerEvent<HTMLElement>) => {
+    if (event.pointerType === 'touch' || event.button !== 0 || !editable)
+      return;
+    const button = (event.target as HTMLElement).closest<HTMLElement>(
+      '[data-cell]',
+    );
+    const cell = button?.dataset.cell;
+    if (!button || !cell) return;
+    // A second press on the cell just clicked continues that click: its
+    // toggle already happened. Any other press that moves along the row also
+    // draws a fill: a trackpad's tap-and-drag reaches the page as one press,
+    // its first tap never arriving as a click.
+    const last = lastRelease.current;
+    const second =
+      last?.cell === cell &&
+      event.timeStamp - last.time <= FILL_DOUBLE_CLICK_MS;
+    armFill(button, cell, event.nativeEvent, !second);
+  };
+  function armFill(
+    button: HTMLElement,
+    cell: string,
+    event: globalThis.PointerEvent,
+    /** No first click toggled the start cell (checkbox fills toggle it). */
+    fresh: boolean,
+  ) {
+    if (pendingOpen.current?.cell === cell) cancelPending(pendingOpen);
+    const [row, startAgo] = cell.split(':').map(Number);
+    const habit = habits[row];
+    const td = button.closest('td');
+    const element = scroller.current;
+    if (!habit || !td || !element) return;
+    stopFill.current?.();
+
+    const pointerId = event.pointerId;
+    const x0 = event.clientX,
+      y0 = event.clientY;
+    let x = x0;
+    let phase: 'armed' | 'drawing' | 'cancelled' = 'armed';
+    let end = startAgo;
+    let frame = 0;
+    const show = (ago: number) => {
+      end = ago;
+      setFill({
+        habitId: habit.id,
+        run: { lo: Math.min(startAgo, ago), hi: Math.max(startAgo, ago) },
+      });
+      hoverColumn(cellAt(row, ago) ?? null);
+    };
+    // The column under the pointer, measured from the start cell (which
+    // moves when the grid scrolls).
+    const track = () => {
+      const rect = td.getBoundingClientRect();
+      const ago = fillAgoAt(
+        x,
+        rect.left,
+        rect.width,
+        startAgo,
+        daysRef.current.length - 1,
+      );
+      if (ago !== end) show(ago);
+    };
+    // Near the left or right edge of the days in view, scroll the grid.
+    const autoScroll = () => {
+      const rect = element.getBoundingClientRect();
+      const corner =
+        element.querySelector<HTMLElement>('.corner')?.offsetWidth ?? 0;
+      const step = edgeScrollStep(
+        x,
+        rect.left + corner,
+        rect.left + element.clientWidth,
+      );
+      if (step) {
+        element.scrollLeft += step;
+        track();
+      }
+      frame = requestAnimationFrame(autoScroll);
+    };
+    const stopDrawing = () => {
+      cancelAnimationFrame(frame);
+      element.classList.remove('filling-row');
+    };
+    const onMove = (move: globalThis.PointerEvent) => {
+      if (move.pointerId !== pointerId) return;
+      x = move.clientX;
+      if (phase === 'drawing') {
+        move.preventDefault();
+        track();
+        return;
+      }
+      if (phase !== 'armed') return;
+      const intent = fillIntent(x - x0, move.clientY - y0, FILL_SLOP_PX);
+      if (intent === 'none') finish();
+      if (intent !== 'fill') return;
+      phase = 'drawing';
+      try {
+        button.setPointerCapture(pointerId);
+      } catch {
+        // The pointer is gone; pointerup or pointercancel ends the fill.
+      }
+      element.classList.add('filling-row');
+      window.getSelection()?.removeAllRanges();
+      show(startAgo);
+      track();
+      frame = requestAnimationFrame(autoScroll);
+    };
+    const onUp = (up: globalThis.PointerEvent) => {
+      if (up.pointerId !== pointerId) return;
+      const drew = phase === 'drawing';
+      // The click that follows would toggle or open the cell again.
+      if (phase !== 'armed') swallowClick();
+      finish();
+      if (drew) commitFill(habit, row, startAgo, end, fresh);
+    };
+    const onCancel = (cancel: globalThis.PointerEvent) => {
+      if (cancel.pointerId !== pointerId) return;
+      if (phase === 'drawing') setFill(null);
+      finish();
+    };
+    const onKey = (key: globalThis.KeyboardEvent) => {
+      if (key.key !== 'Escape' || phase !== 'drawing') return;
+      key.preventDefault();
+      key.stopPropagation();
+      phase = 'cancelled';
+      stopDrawing();
+      setFill(null);
+    };
+    const onSelect = (select: Event) => select.preventDefault();
+    const finish = () => {
+      stopDrawing();
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onCancel);
+      window.removeEventListener('keydown', onKey, true);
+      document.removeEventListener('selectstart', onSelect);
+      // A fill's release is not the first click of another.
+      if (phase !== 'armed') lastRelease.current = null;
+      if (stopFill.current === finish) stopFill.current = null;
+    };
+    stopFill.current = finish;
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onCancel);
+    window.addEventListener('keydown', onKey, true);
+    document.addEventListener('selectstart', onSelect);
+  }
+  // A slower second click on a number, text or category cell can land after
+  // its popover opened: on the popover's backdrop, over the same cell. It
+  // closes that popover and arms the fill as if it had reached the cell.
+  const armFillRef = useRef(armFill);
+  useEffect(() => {
+    armFillRef.current = armFill;
+  });
+  useEffect(() => {
+    const onDown = (event: globalThis.PointerEvent) => {
+      const cell = openedFrom.current;
+      const last = lastRelease.current;
+      if (
+        !cell ||
+        last?.cell !== cell ||
+        event.pointerType === 'touch' ||
+        event.button !== 0 ||
+        event.timeStamp - last.time > FILL_DOUBLE_CLICK_MS
+      )
+        return;
+      const button = scroller.current?.querySelector<HTMLElement>(
+        `[data-cell="${cell}"]`,
+      );
+      const rect = button?.getBoundingClientRect();
+      if (
+        !button ||
+        !rect ||
+        event.clientX < rect.left ||
+        event.clientX >= rect.right ||
+        event.clientY < rect.top ||
+        event.clientY >= rect.bottom
+      )
+        return;
+      openedFrom.current = null;
+      event.preventDefault();
+      event.stopPropagation();
+      on.closeEntry();
+      armFillRef.current(button, cell, event, false);
+    };
+    window.addEventListener('pointerdown', onDown, true);
+    return () => window.removeEventListener('pointerdown', onDown, true);
+  }, [on]);
+  const commitFill = (
+    habit: Habit,
+    row: number,
+    startAgo: number,
+    endAgo: number,
+    fresh: boolean,
+  ) => {
+    const list = daysRef.current;
+    const from = list[list.length - 1 - startAgo];
+    const to = list[list.length - 1 - endAgo];
+    if (!from || !to) return setFill(null);
+    const dates = fillDates(from.key, to.key);
+    if (habitType(habit) === 'checkbox') {
+      const change = on.fillChecks(habit, dates, fresh);
+      setFill(null);
+      if (change) startWave(habit, 'checks', dates, change);
+      return;
+    }
+    const anchor = cellAt(row, endAgo);
+    if (!anchor || dates.length < 2) {
+      // Drawn back to where it started: an ordinary entry.
+      setFill(null);
+      if (anchor) on.openEntry(habit, from.key, from.label, anchor);
+      return;
+    }
+    const token = ++fillToken.current;
+    on.openFill(habit, dates, anchor, (change) => {
+      if (fillToken.current !== token) return;
+      fillToken.current++;
+      setFill(null);
+      if (change) startWave(habit, 'values', dates, change);
+    });
+  };
 
   // Dragging a name's handle moves the real row; the rows it passes slide
   // out of the way. Only a completed drop saves; Esc cancels.
@@ -455,7 +836,7 @@ export function HabitGrid({
 
   const todayOrdinal = ordinal(today);
   return (
-    <div className="grid-area" ref={area}>
+    <div className={compact ? 'grid-area compact' : 'grid-area'} ref={area}>
       <div
         className="grid-frame"
         style={{ '--visible-days': VISIBLE_DAYS } as CSSProperties}
@@ -468,6 +849,8 @@ export function HabitGrid({
             className="grid"
             onKeyDown={onKeyDown}
             onFocus={onFocus}
+            onPointerDown={onCellPointerDown}
+            onPointerUp={onCellPointerUp}
             onPointerOver={(event) => hoverColumn(event.target)}
             onPointerLeave={() => hoverColumn(null)}
           >
@@ -512,12 +895,14 @@ export function HabitGrid({
                   palette={palettes.get(habit.id)!}
                   look={look}
                   editable={editable}
+                  compact={compact}
                   focusAgo={row === focusRow ? focus.ago : -1}
                   on={rowHandlers}
                   dragStyle={dragStyle(row)}
                   dragging={drag?.from === row}
                   onHandleDown={onHandleDown}
                   pulse={pulse?.habitId === habit.id ? pulse : undefined}
+                  fillRun={fill?.habitId === habit.id ? fill.run : undefined}
                 />
               ))}
             </tbody>
@@ -559,6 +944,24 @@ export function HabitGrid({
       </div>
     </div>
   );
+}
+
+function cancelPending(
+  pending: RefObject<{ cell: string; timer: number } | null>,
+) {
+  if (pending.current) clearTimeout(pending.current.timer);
+  pending.current = null;
+}
+
+/** Stops the click that follows a drawn fill's release. */
+function swallowClick() {
+  const stop = (click: MouseEvent) => {
+    click.stopPropagation();
+    click.preventDefault();
+  };
+  window.addEventListener('click', stop, { capture: true, once: true });
+  // The click comes in the same task as the release, if at all.
+  setTimeout(() => window.removeEventListener('click', stop, true));
 }
 
 /** "October 2026", "September – October 2026" or "Dec 2025 – Jan 2026". */

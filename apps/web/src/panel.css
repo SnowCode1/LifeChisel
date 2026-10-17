@@ -276,6 +276,45 @@
   margin-top: 6px;
   font-size: 13px;
 }
+.notes-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.notes-actions .icon-button {
+  width: 30px;
+  height: 30px;
+}
+/* Notes on their own: a reading width in a wide dialog. */
+.modal.notes-reader {
+  width: min(880px, calc(100vw - 48px));
+  max-height: calc(100dvh - 48px);
+}
+.modal.notes-reader .modal-body {
+  padding: 28px 32px 40px;
+}
+.reader-page {
+  max-width: 68ch;
+  margin: 0 auto;
+}
+.reader-page:focus {
+  outline: none;
+}
+.reader-page .note {
+  max-width: none;
+  font-size: 17px;
+  line-height: 1.65;
+}
+@media (max-width: 600px) {
+  .modal.notes-reader {
+    width: 100vw;
+    max-height: none;
+    height: 100dvh;
+  }
+  .modal.notes-reader .modal-body {
+    padding: 16px 18px 28px;
+  }
+}
 .stats > .info-note,
 .stats-summary > .info-note {
   padding: 0 4px;
@@ -495,28 +534,77 @@
   position: absolute;
   white-space: nowrap;
 }
-.streak-rows {
+/* Streaks: the timeline, then the best streaks. */
+.streaks {
   display: flex;
   flex-direction: column;
+  gap: 14px;
+}
+.streak-chart.rows {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
   gap: 6px;
 }
-.streak-row {
+/* Row labels line up with the plot, below the chart's reading line. */
+.streak-labels {
+  position: relative;
+  margin-top: 22px;
+}
+.streak-labels span {
+  position: absolute;
+  left: 0;
   display: flex;
-  align-items: flex-start;
-  gap: 8px;
-}
-.streak-row > .chart {
-  flex: 1;
-  min-width: 0;
-}
-.streak-label {
-  width: 30px;
-  padding-top: 20px;
+  align-items: center;
   font-size: 11px;
   color: var(--ink-quiet);
 }
-.weekday-bars,
-.category-rows {
+.streak-labels .year {
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+.best-streaks {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.best-streaks h4 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-quiet);
+}
+.best-streak {
+  display: grid;
+  grid-template-columns: 64px 74px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  min-height: 24px;
+}
+.best-track {
+  height: 6px;
+  border-radius: 3px;
+  background-color: var(--surface-raised);
+}
+.best-track span {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+}
+.best-length {
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.best-dates {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  color: var(--ink-quiet);
+}
+
+/* By day of the week: a bar and a value per weekday. */
+.weekday-bars {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -542,45 +630,91 @@
   height: 100%;
   border-radius: 3px;
 }
-.weekday-bars .value,
-.category-rows .value {
+.weekday-bars .value {
   font-size: 14px;
   font-weight: 600;
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
-.category-rows button {
+
+/* Categories: a row per category, over time or by weekday. */
+.category-matrix {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.category-matrix > .segmented {
+  align-self: flex-start;
+  margin-bottom: 6px;
+}
+.matrix-row {
   display: grid;
-  grid-template-columns: 96px 1fr 32px;
+  grid-template-columns: 104px minmax(0, 1fr) 40px;
   align-items: center;
-  gap: 8px;
-  width: 100%;
   min-height: 32px;
-  padding: 0 4px;
   border-radius: 8px;
-  font-size: 13px;
   text-align: left;
 }
-.category-rows button:hover,
-.category-rows button[aria-pressed='true'] {
-  background-color: var(--surface);
+button.matrix-row:hover {
+  background-color: var(--surface-raised);
 }
-.category-rows .dimmed {
-  opacity: 0.45;
+.matrix-row.dimmed {
+  opacity: 0.4;
 }
-.category-name {
+.matrix-head {
+  min-height: 18px;
+}
+.matrix-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  padding: 0 8px 0 4px;
+}
+.matrix-swatch {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.matrix-name {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: 13px;
+  color: var(--ink-soft);
 }
-.category-marks {
-  width: 100%;
-  height: 10px;
+.matrix-cells {
+  display: grid;
+  align-items: center;
+  gap: 2px;
+  height: 18px;
+}
+.matrix-cells span {
+  aspect-ratio: 1;
+  max-height: 18px;
   border-radius: 3px;
-  background-color: var(--surface-raised);
+}
+.matrix-cells.single span {
+  aspect-ratio: auto;
+  height: 18px;
+  border-radius: 2px;
+}
+.matrix-head .matrix-cells span {
+  aspect-ratio: auto;
+  font-size: 11px;
+  text-align: center;
+  color: var(--ink-hint);
+}
+.matrix-count {
+  text-align: right;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
 }
 
-/* Statistics calendar. */
+/* Statistics calendar: the phone's tiles. Successful days join into one
+   bar; each tile shows its date, then a number value or category dots. */
 .calendar {
   display: flex;
   flex-direction: column;
@@ -595,41 +729,80 @@
   font-size: 11px;
   color: var(--ink-hint);
 }
-.calendar-day {
-  position: relative;
-  display: grid;
-  place-items: center;
-  height: 40px;
+.calendar-cell {
+  height: 42px;
+  padding: 2px;
 }
-.calendar-day.join-left::before,
-.calendar-day.join-right::after {
-  content: '';
-  position: absolute;
-  top: 6px;
-  bottom: 6px;
-  width: 50%;
-  background-color: var(--join);
+.calendar.tall .calendar-cell {
+  height: 52px;
 }
-.calendar-day.join-left::before {
-  left: 0;
-}
-.calendar-day.join-right::after {
-  right: 0;
-}
-.calendar-day button {
-  position: relative;
-  z-index: 1;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
+.calendar-cell button {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  overflow: hidden;
+  border-radius: 9px;
   font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
-.calendar-day.today button {
-  box-shadow: 0 0 0 1.5px var(--ink-soft);
+/* Joined sides are square and reach into the neighbour, so a streak reads
+   as one bar. */
+.calendar-cell.join-left button {
+  width: calc(100% + 2px);
+  margin-left: -2px;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
 }
-.calendar-day button:not(:disabled):hover {
+.calendar-cell.join-right button {
+  width: calc(100% + 2px);
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+.calendar-cell.join-left.join-right button {
+  width: calc(100% + 4px);
+}
+.calendar-cell.today .tile-date {
+  font-weight: 700;
+}
+.calendar-cell.today button {
+  box-shadow: inset 0 0 0 1.5px var(--ink-soft);
+}
+.calendar-cell button:not(:disabled):hover {
   filter: brightness(1.2);
+}
+.tile-date {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tile-value {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.tile-dots {
+  display: flex;
+  gap: 2px;
+}
+.tile-dots span {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+}
+/* Compact months for longer ranges. */
+.calendar-day {
+  display: grid;
+  place-items: center;
+}
+.calendar-day button {
+  font-size: 12px;
 }
 .calendar-months {
   display: grid;
@@ -650,28 +823,92 @@
   height: 13px;
   border-radius: 3px;
 }
-.journal-month {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+.journal > header {
+  justify-content: space-between;
 }
-.journal-month > p {
-  margin: 8px 0 4px;
+.journal-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: 15px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.journal-month h4 {
+  margin: 16px 0 4px;
   font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-quiet);
 }
 .journal-entry {
   display: grid;
-  grid-template-columns: 64px 1fr;
-  gap: 10px;
-  padding: 8px 6px;
-  border-radius: 8px;
+  grid-template-columns: 38px minmax(0, 1fr);
+  gap: 14px;
+  width: 100%;
+  padding: 12px 6px;
+  border-top: 1px solid var(--rule);
   text-align: left;
-  font-size: 14px;
-  white-space: pre-wrap;
-  word-break: break-word;
 }
-.journal-entry:hover {
-  background-color: var(--surface);
+.journal-entry:hover:not(:disabled) {
+  background-color: var(--surface-raised);
+}
+.journal-when {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.journal-when strong {
+  font-size: 19px;
+  font-weight: 600;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+.journal-when span {
+  font-size: 11px;
+  color: var(--ink-quiet);
+}
+.journal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.journal-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 15px;
+  line-height: 22px;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+.journal-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.journal-chips span {
+  padding: 3px 9px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.journal-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--ink-quiet);
+}
+.goal-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
 }
 
 /* Narrow windows: the panel covers the grid instead of docking. */

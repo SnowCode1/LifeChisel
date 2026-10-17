@@ -1,4 +1,4 @@
-import { useMemo, useState, type ComponentType } from 'react';
+import { useEffect, useMemo, useState, type ComponentType } from 'react';
 import {
   KeyboardAvoidingView,
   Modal,
@@ -9,10 +9,17 @@ import {
   type TextProps,
   type TextInput as NativeTextInput,
 } from 'react-native';
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import { Text, TextInput } from './Typography';
 import { Icon } from './Icon';
 import { useKeyboardFocus } from './useKeyboardFocus';
-import type { EntryDay } from '@onpurpose/core/calendar';
+import { dateRangeLabel, type EntryDay } from '@onpurpose/core/calendar';
 import { parseDailyTotal, type EntryValues } from '@onpurpose/core/entries';
 import type { Habit } from '@onpurpose/core/habits';
 import { checkmarkColor } from '@onpurpose/core/colors';
@@ -29,6 +36,7 @@ export function NumericRecordDialog({
   day,
   initialValue,
   values,
+  fillDates,
   editable,
   Heading,
   onClose,
@@ -38,6 +46,8 @@ export function NumericRecordDialog({
   day: EntryDay;
   initialValue: number | null;
   values: EntryValues;
+  /** A fill: Done sets every one of these dates (drawn along the grid). */
+  fillDates?: string[];
   editable: boolean;
   Heading: ComponentType<TextProps>;
   onClose: () => void;
@@ -57,6 +67,22 @@ export function NumericRecordDialog({
     [values, habit.id, day.key],
   );
   const accent = theme.colour(habit.color);
+  // Number cells open shortly after a tap (so a second press can draw a
+  // fill); the card eases in as the backdrop fades rather than appearing.
+  const reducedMotion = useReducedMotion();
+  const entrance = useSharedValue(reducedMotion ? 1 : 0);
+  useEffect(() => {
+    entrance.set(
+      withTiming(1, { duration: 220, easing: Easing.out(Easing.cubic) }),
+    );
+  }, [entrance]);
+  const entranceStyle = useAnimatedStyle(() => ({
+    opacity: entrance.get(),
+    transform: [
+      { translateY: (1 - entrance.get()) * 12 },
+      { scale: 0.96 + entrance.get() * 0.04 },
+    ],
+  }));
   function saveNumber() {
     if (!valid || !editable) return;
     if (onSave(current)) onClose();
@@ -73,7 +99,10 @@ export function NumericRecordDialog({
         style={styles.overlay}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <View accessibilityViewIsModal style={styles.dialog}>
+        <Animated.View
+          accessibilityViewIsModal
+          style={[styles.dialog, entranceStyle]}
+        >
           <ScrollView
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
@@ -100,7 +129,9 @@ export function NumericRecordDialog({
               </Pressable>
             </View>
             <>
-              <Text style={styles.secondary}>{day.fullLabel}</Text>
+              <Text style={styles.secondary}>
+                {fillDates ? dateRangeLabel(fillDates) : day.fullLabel}
+              </Text>
               <View style={styles.inputRow}>
                 <View style={styles.field}>
                   <TextInput
@@ -192,13 +223,15 @@ export function NumericRecordDialog({
                 </View>
               )}
               <Text style={styles.secondary}>
-                {valid
-                  ? 'Leave blank to clear this entry.'
-                  : 'Enter a number of zero or more.'}
+                {!valid
+                  ? 'Enter a number of zero or more.'
+                  : fillDates
+                    ? 'Leave blank to clear these days.'
+                    : 'Leave blank to clear this entry.'}
               </Text>
             </>
           </ScrollView>
-        </View>
+        </Animated.View>
       </KeyboardAvoidingView>
     </Modal>
   );

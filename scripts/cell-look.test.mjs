@@ -20,6 +20,12 @@ import {
   cellLookOf,
   isConnectorThickness,
 } from '../packages/core/src/displayPreferences.ts';
+import { eventMeta } from '../packages/core/src/storage/newEvents.ts';
+
+// Stores stamp every new event with the current writer version, so these
+// checks follow it rather than the version that introduced each preference.
+const writer = eventMeta(1, 'writer').version;
+const afterWriter = new RegExp(`version-${writer} events`);
 
 const digest = async (text) => createHash('sha256').update(text).digest('hex');
 const habit = { id: 'read', name: 'Read', color: '#BDA5FF', type: 'number' };
@@ -133,7 +139,7 @@ test('v20 cell look preferences persist in SQLite/backup outside History and Red
     streakNumbers: true,
     roundCheckboxes: true,
     connectorThickness: 60,
-    joinedEndsOnly: true,
+    joinedEndsOnly: false,
   });
   assert.deepEqual(
     store.getSnapshot().replay.redo.map((item) => item.undoId),
@@ -146,7 +152,7 @@ test('v20 cell look preferences persist in SQLite/backup outside History and Red
     '2026-10-12T04:00:00.000Z',
     digest,
   );
-  assert.equal(JSON.parse(backup).version, 21);
+  assert.equal(JSON.parse(backup).version, writer);
   const decoded = await decodeArchive(backup, digest);
   assert.deepEqual(decoded.events, events);
   await store.exclusive(() => store.replace(decoded.events));
@@ -160,7 +166,7 @@ test('v20 cell look preferences persist in SQLite/backup outside History and Red
         type: 'preference',
         change: { kind: 'haptics', before: true, after: false },
       }),
-    /version-21/,
+    afterWriter,
   );
 
   const previous = JSON.parse(
@@ -264,7 +270,7 @@ test('v21 Streak ends only persists outside History, rejects older versions and 
     '2026-10-14T04:00:00.000Z',
     digest,
   );
-  assert.equal(JSON.parse(backup).version, 21);
+  assert.equal(JSON.parse(backup).version, writer);
   const decoded = await decodeArchive(backup, digest);
   assert.deepEqual(decoded.events, events);
   await store.exclusive(() => store.replace(decoded.events));
@@ -278,7 +284,7 @@ test('v21 Streak ends only persists outside History, rejects older versions and 
         type: 'preference',
         change: { kind: 'haptics', before: true, after: false },
       }),
-    /version-21/,
+    afterWriter,
   );
 
   const previous = JSON.parse(
@@ -301,5 +307,5 @@ test('v21 Streak ends only persists outside History, rejects older versions and 
   assert.equal(next.replay.state.joinedEndsOnly, true);
   const old = replayEvents(previous.events).replay;
   assert.equal(old.hasV21, false);
-  assert.equal(cellLookOf(old.state).joinedEndsOnly, true);
+  assert.equal(cellLookOf(old.state).joinedEndsOnly, false);
 });

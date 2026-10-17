@@ -28,6 +28,24 @@ export type GridDay = {
 
 export type EntryDay = Pick<GridDay, 'key' | 'fullLabel'>;
 
+/**
+ * The days a fill covers, for dialog titles: "Mon 6 Oct – Fri 10 Oct ·
+ * 5 days", oldest first whichever way it was drawn.
+ */
+export function dateRangeLabel(dates: string[]): string {
+  if (!dates.length) return '';
+  const sorted = [...dates].sort();
+  const format = new Intl.DateTimeFormat(undefined, {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  });
+  const first = format.format(calendarDay(sorted[0], 0));
+  if (sorted.length === 1) return first;
+  const last = format.format(calendarDay(sorted[sorted.length - 1], 0));
+  return `${first} – ${last} · ${sorted.length} days`;
+}
+
 export function entryDay(key: string): EntryDay {
   return {
     key,

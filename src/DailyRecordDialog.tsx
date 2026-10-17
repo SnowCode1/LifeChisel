@@ -33,7 +33,7 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Icon } from './Icon';
 import { themedStyles, useTheme } from './ThemeContext';
 import type { Habit, HabitCategory } from '@onpurpose/core/habits';
-import type { EntryDay } from '@onpurpose/core/calendar';
+import { dateRangeLabel, type EntryDay } from '@onpurpose/core/calendar';
 import {
   categorySelection,
   textEntry,
@@ -56,6 +56,7 @@ export function DailyRecordDialog({
   habit,
   day,
   value,
+  fillDates,
   editable,
   Heading,
   onClose,
@@ -65,6 +66,8 @@ export function DailyRecordDialog({
   habit: Habit;
   day: EntryDay;
   value: EntryValue | undefined;
+  /** A fill: Done sets every one of these dates (drawn along the grid). */
+  fillDates?: string[];
   editable: boolean;
   Heading: ComponentType<TextProps>;
   onClose: () => void;
@@ -203,7 +206,9 @@ export function DailyRecordDialog({
                       >
                         {habit.name}
                       </Heading>
-                      <Text style={styles.date}>{day.fullLabel}</Text>
+                      <Text style={styles.date}>
+                        {fillDates ? dateRangeLabel(fillDates) : day.fullLabel}
+                      </Text>
                     </View>
                     <Pressable
                       accessibilityRole="button"

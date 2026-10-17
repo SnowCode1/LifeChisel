@@ -1,4 +1,5 @@
 import { entryLabel, sameEntry } from '../entries.ts';
+import { fillSummary } from '../entryFill.ts';
 import {
   displayDefaults,
   effectiveColumnSpacing,
@@ -54,6 +55,7 @@ export const emptyReplay = (): Replay => ({
   hasV19: false,
   hasV20: false,
   hasV21: false,
+  hasV22: false,
 });
 export const GROUP_INACTIVITY_MS = 2 * 60 * 1000;
 
@@ -90,9 +92,11 @@ function sameField(left: Change, right: Change) {
     left.kind === 'deleteHabit' ||
     left.kind === 'habit' ||
     left.kind === 'order' ||
+    left.kind === 'entries' ||
     right.kind === 'deleteHabit' ||
     right.kind === 'habit' ||
-    right.kind === 'order'
+    right.kind === 'order' ||
+    right.kind === 'entries'
   )
     return false;
   return (
@@ -117,7 +121,8 @@ export function canCoalesce(
     !group ||
     change.kind === 'habit' ||
     change.kind === 'deleteHabit' ||
-    change.kind === 'order'
+    change.kind === 'order' ||
+    change.kind === 'entries'
   )
     return false;
   const elapsed = Date.parse(meta.recordedAt) - Date.parse(group.recordedAt);
@@ -183,6 +188,7 @@ function reduceEvent(
       hasV19: event.version >= 19,
       hasV20: event.version >= 20,
       hasV21: event.version >= 21,
+      hasV22: event.version >= 22,
     };
   }
   insist(
@@ -228,6 +234,10 @@ function reduceEvent(
   insist(
     !previous.hasV11 || event.version >= 11,
     'Older events cannot follow version-11 events.',
+  );
+  insist(
+    !previous.hasV22 || event.version >= 22,
+    'Older events cannot follow version-22 events.',
   );
   insist(
     !previous.hasV21 || event.version >= 21,
@@ -368,7 +378,8 @@ function reduceEvent(
       lastGroup =
         action.change.kind === 'habit' ||
         action.change.kind === 'deleteHabit' ||
-        action.change.kind === 'order'
+        action.change.kind === 'order' ||
+        action.change.kind === 'entries'
           ? null
           : action;
     } else if (event.type === 'undo') {
@@ -423,6 +434,7 @@ function reduceEvent(
     hasV19: previous.hasV19 || event.version >= 19,
     hasV20: previous.hasV20 || event.version >= 20,
     hasV21: previous.hasV21 || event.version >= 21,
+    hasV22: previous.hasV22 || event.version >= 22,
   };
 }
 const firstThemeDefaults = {
@@ -437,7 +449,7 @@ function reduceChange(
   state: StoredState,
   change: Change,
   mutable: boolean,
-  version = 21,
+  version = 22,
 ): StoredState {
   validateChange(change, version);
   let next: StoredState;
@@ -628,6 +640,31 @@ function reduceChange(
               : habit,
           ),
         };
+    } else if (change.kind === 'entries') {
+      // Every date must still hold its recorded before-value, as for one entry.
+      const dates = Object.keys(change.before);
+      for (const date of dates) {
+        insist(
+          sameEntry(
+            state.values[`${change.habitId}:${date}`] ?? null,
+            change.before[date],
+          ),
+          'Daily value precondition failed.',
+        );
+        insist(
+          entryFits(habit, change.before[date], version) &&
+            entryFits(habit, change.after[date], version),
+          'Daily value does not match habit type or categories.',
+        );
+      }
+      const values = mutable ? state.values : { ...state.values };
+      for (const date of dates) {
+        const key = `${change.habitId}:${date}`;
+        const after = change.after[date];
+        if (after === null) delete values[key];
+        else values[key] = after;
+      }
+      next = mutable ? state : { ...state, values };
     } else {
       const key = `${change.habitId}:${change.date}`;
       insist(
@@ -735,6 +772,8 @@ export function describeChange(change: Change, state: StoredState): string {
   const habit = state.habits.find((habit) => habit.id === change.habitId);
   const name = habit?.name ?? 'Habit';
   if (change.kind === 'colour') return `${name} · Colour changed`;
+  if (change.kind === 'entries')
+    return `${name} · ${fillSummary(habit, change).summary}`;
   const value =
     change.after === null
       ? 'Cleared'

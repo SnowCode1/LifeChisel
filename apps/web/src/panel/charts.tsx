@@ -1,4 +1,9 @@
-import type { WeekStart } from '@onpurpose/core/displayPreferences';
+import { useState } from 'react';
+import { checkmarkColor } from '@onpurpose/core/colors';
+import {
+  weekDayOrder,
+  type WeekStart,
+} from '@onpurpose/core/displayPreferences';
 import type { Habit } from '@onpurpose/core/habits';
 import { dateKey } from '@onpurpose/core/statistics';
 import {
@@ -9,9 +14,12 @@ import {
   statisticTickLabel,
 } from '@onpurpose/core/statisticsFormatting';
 import {
+  binSeries,
   niceMaximum,
   streakRows,
   timeTicks,
+  valueUnit,
+  weekdayOf,
   type BinUnit,
   type Observation,
   type SeriesBin,
@@ -320,7 +328,41 @@ export function ValueChart({
   );
 }
 
-/** Streaks as a timeline; longer windows stack rows by month or quarter. */
+/** A bar with independently rounded left and right ends. */
+function barPath(
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  left: number,
+  right: number,
+) {
+  const b = y + h,
+    e = x + w;
+  return [
+    `M${x + left} ${y}`,
+    `H${e - right}`,
+    right ? `A${right} ${right} 0 0 1 ${e} ${y + right}` : '',
+    `V${b - right}`,
+    right ? `A${right} ${right} 0 0 1 ${e - right} ${b}` : '',
+    `H${x + left}`,
+    left ? `A${left} ${left} 0 0 1 ${x} ${b - left}` : '',
+    `V${y + left}`,
+    left ? `A${left} ${left} 0 0 1 ${x + left} ${y}` : '',
+    'Z',
+  ].join('');
+}
+
+const STREAK_HEADING = 20;
+
+/**
+ * Streaks as a timeline, as on the phone: each bar spans the days a streak
+ * lasted and gaps are breaks, so a 5-day and a 500-day streak read equally
+ * well. Longer windows stack rows by month or quarter (with year headings
+ * across years). A streak's length sits at its end; ends stay square where
+ * it continues on another row or began before the period; the current
+ * streak is bright and finished ones are faded. Below, the best streaks.
+ */
 export function StreakChart({
   colour,
   theme,
@@ -333,80 +375,230 @@ export function StreakChart({
 }: {
   colour: string;
   theme: Theme;
+  /** Every streak in the habit's history, oldest first. */
   runs: StreakRun[];
+  /** Plural unit, e.g. "days" or "weeks". */
   noun: string;
   from: number;
   to: number;
   today: string;
   weekStart: WeekStart;
 }) {
+  const track = theme.ink(0x17);
+  // Days of a first or last month that fall outside the selected period.
+  const outside = theme.ink(0x0c);
+  const span = to - from + 1;
   const { unit, rows } = streakRows(from, to);
-  const bar = unit === 'window' ? 22 : 14;
+  const bar = unit === 'window' ? 26 : 18,
+    gap = 8;
+  const headed = unit !== 'window' && rows[0].year !== rows.at(-1)!.year;
+  const headings: { year: number; top: number }[] = [];
+  const tops: number[] = [];
+  let cursor = 2;
+  rows.forEach((row, index) => {
+    if (headed && (index === 0 || rows[index - 1].year !== row.year)) {
+      headings.push({ year: row.year, top: cursor });
+      cursor += STREAK_HEADING;
+    }
+    tops.push(cursor);
+    cursor += bar + gap;
+  });
+  const height = cursor - gap + 2;
   const amount = (value: number) =>
     `${value} ${value === 1 ? noun.replace(/s$/, '') : noun}`;
+  const dates = (run: StreakRun) =>
+    statisticSpanLabel(dateKey(run.from), dateKey(run.to), today);
+  type Segment = {
+    run: StreakRun;
+    row: number;
+    from: number;
+    to: number;
+    last: boolean;
+  };
+  const segments: Segment[] = [];
+  for (const run of runs) {
+    if (run.to < from || run.from > to) continue;
+    rows.forEach((row, index) => {
+      const a = Math.max(run.from, row.from),
+        b = Math.min(run.to, row.to);
+      if (a <= b)
+        segments.push({
+          run,
+          row: index,
+          from: a,
+          to: b,
+          last: b === Math.min(run.to, to),
+        });
+    });
+  }
+  const x = (row: (typeof rows)[number], day: number) =>
+    (day - row.start) / row.scale;
+  const slots: ChartSlot[] = segments.map((segment) => ({
+    key: `${segment.run.from}:${segment.row}`,
+    x0: x(rows[segment.row], segment.from),
+    x1: x(rows[segment.row], segment.to + 1),
+    y0: tops[segment.row] / height,
+    y1: (tops[segment.row] + bar) / height,
+    title: dates(segment.run),
+    value: `${amount(segment.run.length)}${segment.run.ongoing ? ' · ongoing' : ''}`,
+  }));
+  const ticks =
+    unit === 'window'
+      ? timeTicks(from, to, weekStart).map((tick) => ({
+          x: (tick.day - from) / span,
+          label: statisticTickLabel(dateKey(tick.day), tick.kind),
+        }))
+      : unit === 'month'
+        ? [1, 8, 15, 22, 29].map((day) => ({
+            x: (day - 1) / 31,
+            label: String(day),
+          }))
+        : [];
+  const best = [...runs]
+    .sort((a, b) => b.length - a.length || b.to - a.to)
+    .slice(0, 3);
+  const longest = best[0]?.length ?? 0;
+  const faded = theme.mix(colour, 0.72);
   return (
-    <div className="streak-rows">
-      {rows.map((row) => {
-        const segments = runs
-          .filter((run) => run.to >= row.from && run.from <= row.to)
-          .map((run) => ({
-            run,
-            from: Math.max(run.from, row.from),
-            to: Math.min(run.to, row.to),
-          }));
-        const slots: ChartSlot[] = segments.map((segment) => ({
-          key: `${segment.run.from}`,
-          x0: (segment.from - row.start) / row.scale,
-          x1: (segment.to + 1 - row.start) / row.scale,
-          title: statisticSpanLabel(
-            dateKey(segment.run.from),
-            dateKey(segment.run.to),
-            today,
-          ),
-          value: `${amount(segment.run.length)}${segment.run.ongoing ? ' · ongoing' : ''}`,
-        }));
-        return (
-          <div key={row.start} className="streak-row">
-            {unit !== 'window' && (
-              <span className="streak-label">{row.label}</span>
-            )}
-            <ChartFrame
-              name={`Streaks${row.label ? `, ${row.label} ${row.year}` : ''}`}
-              slots={slots}
-              height={bar}
-              ticks={unit === 'window' ? ticksFor(from, to, weekStart) : []}
-              axis={[]}
-              legend={unit === 'window' ? 'Each bar is one streak' : ''}
-              draw={({ width, height, selected }) => (
-                <>
-                  <rect
-                    x={((row.from - row.start) / row.scale) * width}
-                    y={0}
-                    width={((row.to + 1 - row.from) / row.scale) * width}
-                    height={height}
-                    rx={height / 2}
-                    fill={theme.ink(0x17)}
-                  />
-                  {slots.map((slot, index) => (
-                    <rect
-                      key={slot.key}
-                      x={slot.x0 * width}
-                      y={0}
-                      width={Math.max(height, (slot.x1 - slot.x0) * width)}
-                      height={height}
-                      rx={height / 2}
-                      fill={colour}
-                      opacity={
-                        selected === null || selected === index ? 1 : 0.75
-                      }
-                    />
-                  ))}
-                </>
-              )}
-            />
+    <div className="streaks">
+      <div className={unit === 'window' ? 'streak-chart' : 'streak-chart rows'}>
+        {unit !== 'window' && (
+          <div className="streak-labels" aria-hidden="true">
+            {headings.map((heading) => (
+              <span
+                key={`year:${heading.year}`}
+                className="year"
+                style={{ top: heading.top, height: STREAK_HEADING }}
+              >
+                {heading.year}
+              </span>
+            ))}
+            {rows.map((row, index) => (
+              <span
+                key={`label:${index}`}
+                style={{ top: tops[index], height: bar }}
+              >
+                {row.label}
+              </span>
+            ))}
           </div>
-        );
-      })}
+        )}
+        <ChartFrame
+          name="Streak timeline"
+          slots={slots}
+          height={height}
+          ticks={ticks}
+          axis={[]}
+          legend={
+            segments.length
+              ? `Each bar is a streak · gaps are breaks${unit === 'month' ? ' · a row per month' : unit === 'quarter' ? ' · a row per quarter' : ''}`
+              : 'No streak in this period'
+          }
+          draw={({ width, selected }) => {
+            const px = (row: (typeof rows)[number], day: number) =>
+              x(row, day) * width;
+            const chosen = selected === null ? null : segments[selected].run;
+            const dim = (segment: Segment) =>
+              chosen !== null && chosen !== segment.run ? 0.45 : 1;
+            return (
+              <>
+                {rows.map((row, index) => (
+                  <g key={`row:${index}`}>
+                    <rect
+                      x={0}
+                      y={tops[index]}
+                      width={width}
+                      height={bar}
+                      rx={bar / 3.5}
+                      fill={outside}
+                    />
+                    <rect
+                      x={px(row, row.from)}
+                      y={tops[index]}
+                      width={Math.max(
+                        1,
+                        px(row, row.to + 1) - px(row, row.from),
+                      )}
+                      height={bar}
+                      rx={bar / 3.5}
+                      fill={track}
+                    />
+                  </g>
+                ))}
+                {segments.map((segment) => {
+                  const row = rows[segment.row],
+                    x0 = px(row, segment.from),
+                    x1 = px(row, segment.to + 1),
+                    w = Math.max(2, x1 - x0 - 1.5),
+                    r = Math.min(bar / 3.5, w / 2),
+                    roundLeft = segment.from === segment.run.from,
+                    roundRight = segment.to === segment.run.to;
+                  return (
+                    <path
+                      key={`bar:${segment.run.from}:${segment.row}`}
+                      d={barPath(
+                        x0,
+                        tops[segment.row],
+                        roundRight ? w : x1 - x0,
+                        bar,
+                        roundLeft ? r : 0,
+                        roundRight ? r : 0,
+                      )}
+                      fill={segment.run.ongoing ? colour : faded}
+                      opacity={dim(segment)}
+                    />
+                  );
+                })}
+                {segments.map((segment) => {
+                  const row = rows[segment.row],
+                    label = String(segment.run.length),
+                    w = px(row, segment.to + 1) - px(row, segment.from),
+                    size = unit === 'window' ? 11 : 10;
+                  return segment.last &&
+                    w >= 10 + label.length * size * 0.62 ? (
+                    <text
+                      key={`label:${segment.run.from}`}
+                      x={px(row, segment.to + 1) - 6}
+                      y={tops[segment.row] + bar / 2 + size * 0.36}
+                      fontSize={size}
+                      fontWeight={700}
+                      textAnchor="end"
+                      fill={checkmarkColor(
+                        segment.run.ongoing ? colour : faded,
+                      )}
+                      opacity={dim(segment)}
+                    >
+                      {label}
+                    </text>
+                  ) : null;
+                })}
+              </>
+            );
+          }}
+        />
+      </div>
+      {best.length > 0 && (
+        <div className="best-streaks">
+          <h4>Best streaks</h4>
+          {best.map((run) => (
+            <div key={run.from} className="best-streak">
+              <span className="best-track" aria-hidden="true">
+                <span
+                  style={{
+                    width: `${(run.length / longest) * 100}%`,
+                    backgroundColor: run.ongoing ? colour : faded,
+                  }}
+                />
+              </span>
+              <span className="best-length">{amount(run.length)}</span>
+              <span className="best-dates">
+                {dates(run)}
+                {run.ongoing ? ' · ongoing' : ''}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -452,130 +644,206 @@ export function WeekdayBars({
   );
 }
 
-/** When entries were first recorded on the same day, by local hour. */
+/**
+ * When entries were first made on their own day, as on the phone: days per
+ * hour, with the busiest hour named above.
+ */
 export function TimeOfDayChart({
   stats,
   colour,
-  theme,
 }: {
   stats: TimeOfDayStatistics;
   colour: string;
-  theme: Theme;
 }) {
-  const maximum = Math.max(1, ...stats.hours);
-  const hour = (h: number) =>
-    new Date(2000, 0, 1, h).toLocaleTimeString(undefined, { hour: 'numeric' });
-  const slots: ChartSlot[] = stats.hours.map((count, h) => ({
-    key: String(h),
-    x0: h / 24,
-    x1: (h + 1) / 24,
-    title: `${hour(h)}–${hour((h + 1) % 24)}`,
-    value: `${count} ${count === 1 ? 'entry' : 'entries'}`,
+  const max = niceMaximum(Math.max(1, ...stats.hours));
+  const slots: ChartSlot[] = stats.hours.map((count, hour) => ({
+    key: String(hour),
+    x0: hour / 24,
+    x1: (hour + 1) / 24,
+    title: hourRange(hour),
+    value: `${count} ${count === 1 ? 'day' : 'days'}`,
   }));
   return (
     <ChartFrame
-      name="Time of day"
+      name="Time of day chart"
       slots={slots}
-      height={70}
-      ticks={[0, 6, 12, 18].map((h) => ({ x: h / 24, label: hour(h) }))}
-      axis={[]}
-      legend={
-        stats.peak === null
-          ? 'No same-day entry times yet'
-          : `Most often around ${hour(stats.peak)} · ${stats.counted} of ${stats.recorded} entries timed`
+      height={110}
+      axis={[
+        { y: 0, label: String(max) },
+        { y: 1, label: '0' },
+      ]}
+      ticks={[0, 6, 12, 18].map((hour) => ({
+        x: hour / 24,
+        label: hourLabel(hour),
+      }))}
+      legend="Days per hour"
+      draw={({ width, height, selected }) =>
+        stats.hours.map((count, hour) => {
+          if (!count) return null;
+          const step = width / 24,
+            barHeight = Math.max(2, (count / max) * (height - 2));
+          return (
+            <rect
+              key={hour}
+              x={hour * step + step * 0.16}
+              y={height - barHeight}
+              width={Math.max(1, step * 0.68)}
+              height={barHeight}
+              rx={Math.min(3, step * 0.2)}
+              fill={colour}
+              opacity={selected === null || selected === hour ? 0.9 : 0.4}
+            />
+          );
+        })
       }
-      draw={({ width, height, selected }) => (
-        <>
-          {stats.hours.map((count, h) => {
-            const slotWidth = width / 24,
-              barHeight = count
-                ? Math.max(2, (count / maximum) * (height - 2))
-                : 0;
-            return (
-              <rect
-                key={h}
-                x={h * slotWidth + 1}
-                y={height - barHeight}
-                width={Math.max(1, slotWidth - 2)}
-                height={barHeight}
-                rx={2}
-                fill={selected === h ? colour : theme.mix(colour, 0.6)}
-              />
-            );
-          })}
-        </>
-      )}
     />
   );
 }
+export const hourLabel = (hour: number) =>
+  new Date(2000, 0, 1, hour).toLocaleTimeString(undefined, { hour: 'numeric' });
+export const hourRange = (hour: number) =>
+  `${hourLabel(hour)}–${hourLabel((hour + 1) % 24)}`;
 
-/** One row per category: days chosen in the period; click to filter. */
-export function CategoryRows({
+/**
+ * One row per category in saved order, as on the phone: when it was chosen
+ * across the window (days, or weeks/months shaded by how often) or by
+ * weekday. Several categories can share a day, so rows never stack into
+ * misleading totals. Choosing a row filters the calendar and entries.
+ */
+export function CategoryMatrix({
   habit,
   days,
   colours,
+  weekStart,
+  theme,
   selected,
   onSelect,
 }: {
   habit: Habit;
   days: SeriesDay[];
   colours: Map<string, string>;
+  weekStart: WeekStart;
+  theme: Theme;
   selected: string | null;
   onSelect: (id: string | null) => void;
 }) {
-  const options = (habit.categories ?? []).filter(
-    (option) =>
-      !option.archived ||
-      days.some(
-        (day) => Array.isArray(day.value) && day.value.includes(option.id),
-      ),
+  const [mode, setMode] = useState<'timeline' | 'weekday'>('timeline');
+  const counted = days.filter(
+    (item) => item.outcome !== 'future' && item.outcome !== 'outside',
   );
-  const span = Math.max(1, days.length);
+  const has = (item: SeriesDay, id: string) =>
+    Array.isArray(item.value) && item.value.includes(id);
+  const rows = (habit.categories ?? [])
+    .map((category) => ({
+      category,
+      count: counted.filter((item) => has(item, category.id)).length,
+    }))
+    .filter((row) => !row.category.archived || row.count);
+  const bins =
+    mode === 'timeline'
+      ? binSeries(habit, days, valueUnit(days.length), weekStart)
+      : [];
+  const order = weekDayOrder(weekStart);
+  const columns = mode === 'timeline' ? bins.length : 7;
+  // Single days are tall marks; weeks, months and weekdays are squares.
+  const single = mode === 'timeline' && valueUnit(days.length) === 'day';
   return (
-    <ul className="category-rows">
-      {options.map((option) => {
-        const chosen = days.filter(
-          (day) => Array.isArray(day.value) && day.value.includes(option.id),
-        );
-        const colour = colours.get(option.id) ?? 'currentColor';
+    <div className="category-matrix">
+      <div className="segmented small" role="tablist" aria-label="Show">
+        {(['timeline', 'weekday'] as const).map((value) => (
+          <button
+            key={value}
+            type="button"
+            role="tab"
+            aria-selected={mode === value}
+            onClick={() => setMode(value)}
+          >
+            {value === 'timeline' ? 'Over time' : 'By weekday'}
+          </button>
+        ))}
+      </div>
+      {mode === 'weekday' && (
+        <div className="matrix-row matrix-head" aria-hidden="true">
+          <span />
+          <span
+            className="matrix-cells"
+            style={{ gridTemplateColumns: `repeat(${columns}, 1fr)` }}
+          >
+            {order.map((day) => (
+              <span key={day}>{['S', 'M', 'T', 'W', 'T', 'F', 'S'][day]}</span>
+            ))}
+          </span>
+          <span />
+        </div>
+      )}
+      {rows.map(({ category, count }) => {
+        const colour = colours.get(category.id) ?? theme.colour(habit.color);
+        const shares =
+          mode === 'timeline'
+            ? bins.map((bin) => {
+                const eligible = bin.days.filter(
+                  (item) =>
+                    item.outcome !== 'future' && item.outcome !== 'outside',
+                );
+                return eligible.length
+                  ? eligible.filter((item) => has(item, category.id)).length /
+                      eligible.length
+                  : null;
+              })
+            : order.map((day) => {
+                const eligible = counted.filter(
+                  (item) => weekdayOf(item.day) === day,
+                );
+                return eligible.length
+                  ? eligible.filter((item) => has(item, category.id)).length /
+                      eligible.length
+                  : null;
+              });
         return (
-          <li key={option.id}>
-            <button
-              type="button"
-              aria-pressed={selected === option.id}
-              className={
-                selected && selected !== option.id ? 'dimmed' : undefined
-              }
-              onClick={() =>
-                onSelect(selected === option.id ? null : option.id)
-              }
+          <button
+            key={category.id}
+            type="button"
+            className={
+              selected && selected !== category.id
+                ? 'matrix-row dimmed'
+                : 'matrix-row'
+            }
+            aria-pressed={selected === category.id}
+            aria-label={`${category.label}${category.archived ? ', archived' : ''}, ${count} ${count === 1 ? 'day' : 'days'}. ${selected === category.id ? 'Show all categories' : 'Show only this category in the calendar and entries'}`}
+            onClick={() =>
+              onSelect(selected === category.id ? null : category.id)
+            }
+          >
+            <span className="matrix-label">
+              <span
+                className="matrix-swatch"
+                style={{ backgroundColor: colour }}
+              />
+              <span className="matrix-name">{category.label}</span>
+            </span>
+            <span
+              className={single ? 'matrix-cells single' : 'matrix-cells'}
+              style={{ gridTemplateColumns: `repeat(${columns}, 1fr)` }}
+              aria-hidden="true"
             >
-              <span className="category-name" style={{ color: colour }}>
-                {option.label}
-                {option.archived && <span className="muted"> · archived</span>}
-              </span>
-              <svg
-                className="category-marks"
-                viewBox={`0 0 ${span} 10`}
-                preserveAspectRatio="none"
-                aria-hidden="true"
-              >
-                {chosen.map((day) => (
-                  <rect
-                    key={day.day}
-                    x={days.indexOf(day)}
-                    y={0}
-                    width={Math.max(0.6, span / 120)}
-                    height={10}
-                    fill={colour}
-                  />
-                ))}
-              </svg>
-              <span className="value">{chosen.length}</span>
-            </button>
-          </li>
+              {shares.map((share, index) => (
+                <span
+                  key={index}
+                  style={{
+                    backgroundColor:
+                      share === null
+                        ? 'transparent'
+                        : share > 0
+                          ? theme.mix(colour, 0.35 + 0.65 * share)
+                          : theme.ink(0x18),
+                  }}
+                />
+              ))}
+            </span>
+            <span className="matrix-count">{count}</span>
+          </button>
         );
       })}
-    </ul>
+    </div>
   );
 }

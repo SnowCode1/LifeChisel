@@ -5,6 +5,7 @@ import {
   StrokeCap,
   StrokeJoin,
   TextAlign,
+  TileMode,
   type SkCanvas,
   type SkParagraph,
 } from '@shopify/react-native-skia';
@@ -220,6 +221,40 @@ export function drawHeadings(
   }
 }
 
+/**
+ * Future-pull feedback: a line on the divider under the headings that grows
+ * left from the right edge with the pull. `colour` is resolved on JS.
+ */
+export function drawPullStreak(
+  canvas: SkCanvas,
+  paints: GridPaints,
+  colour: string,
+  width: number,
+  height: number,
+  distance: number,
+  opacity: number,
+  fullDistance: number,
+) {
+  'worklet';
+  const alpha = opacity * Math.min(1, distance / 16);
+  if (alpha <= 0) return;
+  const length = width * Math.min(1, distance / fullDistance);
+  paints.streak.setShader(
+    Skia.Shader.MakeLinearGradient(
+      { x: width - length, y: 0 },
+      { x: width, y: 0 },
+      [Skia.Color('transparent'), Skia.Color(colour)],
+      null,
+      TileMode.Clamp,
+    ),
+  );
+  paints.streak.setAlphaf(alpha);
+  canvas.drawRect(
+    Skia.XYWHRect(width - length, height - 1, length, 1),
+    paints.streak,
+  );
+}
+
 /** How cells are drawn; primitives so worklets capture them cheaply. */
 export type CellStyle = {
   boxes: boolean;
@@ -254,7 +289,8 @@ export function boxColour(p: HabitPaints, cell: CanvasCell | undefined) {
 /**
  * A cell's background (pressed > goal met > Today > plain), bottom rule and
  * its own halves of joins to checked neighbours (older days to the left).
- * Halves owned by a running join animation are skipped.
+ * Halves owned by a running join animation are skipped. `fade` is 1 except
+ * after a tap, when the background fades in over the pressed shade.
  */
 export function drawCellBase(
   canvas: SkCanvas,
@@ -273,14 +309,27 @@ export function drawCellBase(
   pressed: boolean,
   skipLeft: boolean,
   skipRight: boolean,
+  fade: number,
 ) {
   'worklet';
-  if (pressed)
+  if (pressed || fade < 1)
     canvas.drawRect(Skia.XYWHRect(x, top, column, height), p.pressed);
-  else if (cell?.m)
-    canvas.drawRect(Skia.XYWHRect(x, top, column, height), p.met);
-  else if (day === 0)
-    canvas.drawRect(Skia.XYWHRect(x, top, column, height), paints.today);
+  if (!pressed) {
+    // A fading cell draws even the plain background, to cover the shade.
+    const background = cell?.m
+      ? p.met
+      : day === 0
+        ? paints.today
+        : fade < 1
+          ? paints.background
+          : null;
+    if (background) {
+      const alpha = background.getAlphaf();
+      if (fade < 1) background.setAlphaf(alpha * fade);
+      canvas.drawRect(Skia.XYWHRect(x, top, column, height), background);
+      if (fade < 1) background.setAlphaf(alpha);
+    }
+  }
   canvas.drawLine(
     x,
     top + height - hairline / 2,

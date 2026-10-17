@@ -35,13 +35,14 @@ import {
   statisticMonthLabel,
   statisticSpanLabel,
 } from '@onpurpose/core/statisticsFormatting';
-import { timeOfDayStatistics } from '@onpurpose/core/timeOfDay';
+import { entryMinutes, timeOfDayStatistics } from '@onpurpose/core/timeOfDay';
 import { categoryColours } from '@onpurpose/core/categoryColours';
 import { habitSummary } from '@onpurpose/core/habitSummary';
 import type { HistoryAction, StoredEvent } from '@onpurpose/core/storage/model';
 import type { Theme } from '@onpurpose/core/theme';
 import {
-  CategoryRows,
+  CategoryMatrix,
+  hourRange,
   StreakChart,
   SuccessChart,
   TimeOfDayChart,
@@ -494,12 +495,14 @@ export function StatsView({
                   ? `Showing ${habit.categories?.find((option) => option.id === category)?.label} · select again for all`
                   : null
               }
-              info="Each row shows the days that category was chosen in this period; the number counts them. Several categories can share a day, so rows never add up. Select a row to show only that category in the calendar and entries."
+              info="Each row shows when that category was chosen; longer ranges shade each week or month by how often. Several categories can share a day, so rows are never added together. The number is days in this period. Select a row to show only that category in the calendar and entries. Renamed and archived options keep their records."
             >
-              <CategoryRows
+              <CategoryMatrix
                 habit={habit}
                 days={days}
                 colours={colours}
+                weekStart={weekStart}
+                theme={theme}
                 selected={category}
                 onSelect={setCategory}
               />
@@ -552,22 +555,34 @@ export function StatsView({
               />
             </Section>
           )}
-          {timeOfDay.recorded > 0 && (
-            <Section
-              title="Time of day"
-              info="When entries were first filled in on their own day, from your change history. Entries filled in on a later day are not counted."
-            >
-              <TimeOfDayChart stats={timeOfDay} colour={colour} theme={theme} />
-            </Section>
-          )}
+          <Section
+            title="Time of day"
+            subtitle={
+              timeOfDay.peak !== null
+                ? `Most often ${hourRange(timeOfDay.peak)}`
+                : timeOfDay.recorded
+                  ? 'No same-day entries in this period'
+                  : 'Nothing recorded in this period'
+            }
+            info={`Each bar counts days by the hour their entry was first made, in the local time where it was made. Only entries made on the day they belong to count: this period has ${timeOfDay.counted} of ${timeOfDay.recorded} ${timeOfDay.recorded === 1 ? 'day' : 'days'}${timeOfDay.recorded - timeOfDay.counted ? `; ${timeOfDay.recorded - timeOfDay.counted} added on a later day ${timeOfDay.recorded - timeOfDay.counted === 1 ? 'is' : 'are'} left out` : ''}. Corrections keep the original time and undone changes never count.`}
+          >
+            {timeOfDay.counted > 0 && (
+              <TimeOfDayChart stats={timeOfDay} colour={colour} />
+            )}
+          </Section>
         </div>
         {recordStats && (
           <Entries
             habit={habit}
             days={days}
+            actions={actions}
             category={category}
+            colours={colours}
+            colour={colour}
+            theme={theme}
             today={today}
             onDay={onDay}
+            onShowAll={() => setCategory(null)}
             editable={editable}
           />
         )}
@@ -676,18 +691,30 @@ function PeriodProgress({
   );
 }
 
-// The journal for text and category habits: newest first, grouped by month.
+// The journal for text and category habits, as on the phone: newest first,
+// grouped by month, optionally one category. Each entry shows its day, its
+// value (category chips or up to four lines of text), and whether it met the
+// goal and when it was made.
 function Entries({
   habit,
   days,
+  actions,
   category,
+  colours,
+  colour,
+  theme,
   today,
   editable,
   onDay,
+  onShowAll,
 }: {
   habit: Habit;
   days: ReturnType<typeof habitSeries>;
+  actions: HistoryAction[];
   category: string | null;
+  colours: Map<string, string>;
+  colour: string;
+  theme: Theme;
   today: string;
   editable: boolean;
   onDay: (
@@ -696,7 +723,9 @@ function Entries({
     label: string,
     anchor: HTMLElement,
   ) => void;
+  onShowAll: () => void;
 }) {
+  const minutes = useMemo(() => entryMinutes(habit, actions), [habit, actions]);
   const entries = days
     .filter(
       (item) =>
@@ -712,39 +741,138 @@ function Entries({
     const key = item.date.slice(0, 7);
     months.set(key, [...(months.get(key) ?? []), item]);
   }
+  const selectedLabel = habit.categories?.find(
+    (option) => option.id === category,
+  )?.label;
+  const time = (minute: number) =>
+    new Date(
+      2000,
+      0,
+      1,
+      Math.floor(minute / 60),
+      minute % 60,
+    ).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
   return (
     <section className="stats-section journal">
       <header>
         <h3>Entries</h3>
+        {selectedLabel && category && (
+          <button
+            type="button"
+            className="journal-filter"
+            aria-label={`Show all entries, not only ${selectedLabel}`}
+            style={{
+              color: colours.get(category) ?? colour,
+              backgroundColor: theme.mix(colours.get(category) ?? colour, 0.2),
+            }}
+            onClick={onShowAll}
+          >
+            {selectedLabel}
+            <span aria-hidden="true">×</span>
+          </button>
+        )}
       </header>
-      {!entries.length && <p className="muted">No entries in this period.</p>}
+      {entries.length > 0 && (
+        <p className="muted">
+          {selectedLabel
+            ? `Days with ${selectedLabel}, newest first`
+            : 'Newest first'}
+        </p>
+      )}
+      {!entries.length && (
+        <p className="muted">
+          {selectedLabel
+            ? `No days with ${selectedLabel} in this period.`
+            : 'Nothing recorded in this period.'}
+        </p>
+      )}
       {[...months].map(([key, items]) => (
         <div key={key} className="journal-month">
-          <p className="muted">
-            {statisticMonthLabel(`${key}-01`)} · {items.length}
-          </p>
-          {items.map((item) => (
-            <button
-              key={item.date}
-              type="button"
-              className="journal-entry"
-              disabled={!editable}
-              onClick={(event) =>
-                onDay(
-                  habit,
-                  item.date,
-                  statisticDateLabel(
-                    item.date,
-                    item.date.slice(0, 4) !== today.slice(0, 4),
-                  ),
-                  event.currentTarget,
-                )
-              }
-            >
-              <span className="muted">{statisticDateLabel(item.date)}</span>
-              <span>{entryLabel(habit, item.value)}</span>
-            </button>
-          ))}
+          <h4>
+            {statisticMonthLabel(`${key}-01`)} · {items.length}{' '}
+            {items.length === 1 ? 'entry' : 'entries'}
+          </h4>
+          {items.map((item) => {
+            const minute = minutes.get(item.date);
+            const date = new Date(`${item.date}T12:00:00`);
+            const met = item.outcome === 'met';
+            // "Record anything" goals are met by every entry: no need to say so.
+            const scheduled =
+              item.goal?.rule.kind !== 'recorded' &&
+              (met || item.outcome === 'missed' || item.outcome === 'open');
+            const label = statisticDateLabel(
+              item.date,
+              item.date.slice(0, 4) !== today.slice(0, 4),
+            );
+            return (
+              <button
+                key={item.date}
+                type="button"
+                className="journal-entry"
+                disabled={!editable}
+                aria-label={`${label}${minute === undefined ? '' : `, entered ${time(minute)}`}, ${entryLabel(habit, item.value)}${scheduled ? (met ? ', goal met' : ', goal not met') : ''}. Edit this day's entry`}
+                onClick={(event) =>
+                  onDay(habit, item.date, label, event.currentTarget)
+                }
+              >
+                <span className="journal-when" aria-hidden="true">
+                  <strong>{date.getDate()}</strong>
+                  <span>
+                    {date.toLocaleDateString(undefined, { weekday: 'short' })}
+                  </span>
+                </span>
+                <span className="journal-body" aria-hidden="true">
+                  {Array.isArray(item.value) ? (
+                    <span className="journal-chips">
+                      {item.value.map((id) => {
+                        const chip = colours.get(id) ?? colour;
+                        return (
+                          <span
+                            key={id}
+                            style={{
+                              color: chip,
+                              backgroundColor: theme.mix(chip, 0.18),
+                              opacity: !category || category === id ? 1 : 0.45,
+                            }}
+                          >
+                            {habit.categories?.find(
+                              (option) => option.id === id,
+                            )?.label ?? id}
+                          </span>
+                        );
+                      })}
+                    </span>
+                  ) : (
+                    <span className="journal-text">
+                      {entryLabel(habit, item.value)}
+                    </span>
+                  )}
+                  {(minute !== undefined || scheduled) && (
+                    <span className="journal-meta">
+                      {scheduled && (
+                        <span
+                          className="goal-dot"
+                          style={
+                            met
+                              ? { backgroundColor: colour }
+                              : {
+                                  boxShadow: `inset 0 0 0 1px ${theme.ink(0x66)}`,
+                                }
+                          }
+                        />
+                      )}
+                      {[
+                        scheduled ? (met ? 'Goal met' : 'Goal not met') : '',
+                        minute === undefined ? '' : time(minute),
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </span>
+                  )}
+                </span>
+              </button>
+            );
+          })}
         </div>
       ))}
     </section>

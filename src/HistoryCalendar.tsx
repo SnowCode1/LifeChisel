@@ -1,8 +1,7 @@
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Text, useAppWindowDimensions } from './Typography';
 import { Icon } from './Icon';
-import { InfoNote } from './InfoNote';
 import { addMonths, entryDay } from '@onpurpose/core/calendar';
 import {
   weekDayOrder,
@@ -16,6 +15,8 @@ import {
 } from '@onpurpose/core/history';
 import { monthDays } from '@onpurpose/core/statistics';
 import type { StoredState } from '@onpurpose/core/storage/model';
+import Animated from 'react-native-reanimated';
+import { appear } from './motion';
 import { useSheetScroll } from './SheetModal';
 import { themedStyles, useTheme } from './ThemeContext';
 
@@ -60,6 +61,7 @@ export function HistoryCalendar({
   const [scale, setScale] = useState<Scale>('month');
   const thisMonth = today.slice(0, 7);
   const [month, setMonth] = useState(thisMonth);
+  const [explained, setExplained] = useState(false);
   const colours = useMemo(
     () =>
       new Map(
@@ -298,13 +300,30 @@ export function HistoryCalendar({
       {!calendar.days.size && (
         <Text style={styles.note}>No changes to show.</Text>
       )}
-      {/* The explanation sits below the calendar, behind the (i) row that the
-          rest of the app uses. */}
+      {/* What the dots mean, behind a bare (i) below a separator. */}
       <View style={styles.foot}>
-        <InfoNote
-          label="What the dots mean"
-          text={historyCalendarInfo[scale]}
-        />
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="About the calendar"
+          accessibilityState={{ expanded: explained }}
+          onPress={() => setExplained((value) => !value)}
+          hitSlop={6}
+          style={({ pressed }) => [
+            styles.infoButton,
+            { opacity: pressed ? 0.5 : 1 },
+          ]}
+        >
+          <Icon
+            name="info"
+            size={18}
+            color={explained ? theme.ink(0xd0) : theme.ink(0x7a)}
+          />
+        </Pressable>
+        {explained && (
+          <Animated.View entering={appear}>
+            <Text style={styles.infoText}>{historyCalendarInfo[scale]}</Text>
+          </Animated.View>
+        )}
       </View>
     </ScrollView>
   );
@@ -396,5 +415,23 @@ const useStyles = themedStyles((t) => ({
     marginTop: 14,
     paddingHorizontal: 4,
   },
-  foot: { marginTop: 12 },
+  foot: {
+    marginTop: 12,
+    paddingTop: 6,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: t.ink(0x28),
+  },
+  infoButton: {
+    width: 36,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: -6,
+  },
+  infoText: {
+    color: t.ink(0xad),
+    fontSize: 13,
+    lineHeight: 19,
+    paddingBottom: 8,
+  },
 }));

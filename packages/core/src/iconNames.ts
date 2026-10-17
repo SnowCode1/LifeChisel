@@ -20,4 +20,8 @@ export type IconName =
   | 'archive'
   | 'info'
   | 'plus'
-  | 'calendar';
+  | 'calendar'
+  | 'modeGrid'
+  | 'modeCompact'
+  | 'modeToday'
+  | 'modeWeeks';

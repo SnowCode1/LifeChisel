@@ -18,13 +18,13 @@ import { gridRowHeight } from '@onpurpose/core/rowSpacing';
 import { screenLongSide } from './screenSize';
 import {
   type ComponentType,
+  type ReactNode,
   memo,
   useMemo,
   useState,
   useSyncExternalStore,
 } from 'react';
 import {
-  type TextProps,
   PixelRatio,
   Pressable,
   type PressableProps,
@@ -33,6 +33,7 @@ import {
   View,
 } from 'react-native';
 import type { EntryDay } from '@onpurpose/core/calendar';
+import type { EntryValue } from '@onpurpose/core/entries';
 import type { Habit } from '@onpurpose/core/habits';
 import { HabitName, type HabitAction } from './HabitName';
 import { habitRowPositions, moveHabit } from '@onpurpose/core/habitOrdering';
@@ -42,10 +43,22 @@ import { createGridPalette } from '@onpurpose/core/gridAppearance';
 import { themedStyles, useTheme } from './ThemeContext';
 import type { ChangeStore } from '@onpurpose/core/storage/store';
 import { recordPerformance } from '@onpurpose/core/performance';
-import { gridLayout } from './gridLayout';
+import { compactGridLayout, gridLayout } from './gridLayout';
 import Animated from 'react-native-reanimated';
 import { useGridDates } from './useGridDates';
-import { useCanvasGrid } from './canvasGrid/useCanvasGrid';
+import {
+  useCanvasGrid,
+  type CanvasGridProps,
+} from './canvasGrid/useCanvasGrid';
+import {
+  WEEK_COLUMN_WIDTH,
+  useWeekGrid,
+  type WeekGridProps,
+} from './canvasGrid/useWeekGrid';
+import type { GridMode } from '@onpurpose/core/gridModes';
+import { weekColumnStart, weeksAgoOf } from '@onpurpose/core/weekSummary';
+import { GridModeMenu } from './GridModeMenu';
+import { TodayTiles } from './TodayTiles';
 import { headingHeight } from './canvasGrid/gridGeometry';
 import { feedback } from './haptics';
 import { Icon } from './Icon';
@@ -66,7 +79,13 @@ type Props = {
   onWidthChange?: (width: number) => void;
   hideCompleted: boolean;
   sampleData?: boolean;
-  HeadingComponent: ComponentType<TextProps>;
+  /** How the habits are shown; see core gridModes. */
+  mode: GridMode;
+  onModeChange: (mode: GridMode) => void;
+  /** Weeks mode: a week cell was tapped (weeks ago). */
+  onWeekPress: (weeksAgo: number) => void;
+  /** The rightmost column on first appearance (days or weeks ago). */
+  startDay?: number;
   DateButtonComponent: ComponentType<PressableProps>;
   today: string;
   habits: Habit[];
@@ -76,6 +95,14 @@ type Props = {
   onReorder: (ids: string[]) => boolean;
   editable: boolean;
   onCellPress: (habit: Habit, day: EntryDay) => void;
+  /** Today tiles: record a usual total in one tap. */
+  onCellValue: (habit: Habit, day: EntryDay, value: EntryValue) => boolean;
+  /** A run drawn across one row; see useCanvasGrid's onFill. */
+  onCellFill: (
+    habit: Habit,
+    dates: string[],
+    finish: (saved: boolean) => void,
+  ) => void;
   quickUndo: QuickUndo;
   onHistoryPress: () => void;
   onSettingsPress: () => void;
@@ -95,7 +122,10 @@ export const HabitGrid = memo(function HabitGrid({
   onWidthChange,
   hideCompleted,
   sampleData = false,
-  HeadingComponent,
+  mode,
+  onModeChange,
+  onWeekPress,
+  startDay = 0,
   DateButtonComponent,
   today,
   habits: sourceHabits,
@@ -105,6 +135,8 @@ export const HabitGrid = memo(function HabitGrid({
   onReorder,
   editable,
   onCellPress,
+  onCellValue,
+  onCellFill,
   quickUndo,
   onHistoryPress,
   onSettingsPress,
@@ -115,14 +147,25 @@ export const HabitGrid = memo(function HabitGrid({
   const theme = useTheme();
   const styles = useStyles();
   const [width, setWidth] = useState(0);
-  const { visibleDays, nameWidth, dateWidth, columnWidth } = gridLayout(
-    width,
-    fontScale,
-    { nameWidth: nameWidthSize, nameFactor, columnWidth: columnWidthSize },
-    // Whole-pixel columns keep canvas cell edges crisp.
-    PixelRatio.get(),
-  );
+  const weeks = mode === 'weeks';
+  const compact = mode === 'compact';
+  const todayOnly = mode === 'today';
+  // Whole-pixel columns keep canvas cell edges crisp.
+  const { visibleDays, nameWidth, dateWidth, columnWidth } = compact
+    ? compactGridLayout(width, fontScale, columnWidthSize, PixelRatio.get())
+    : gridLayout(
+        width,
+        fontScale,
+        {
+          nameWidth: nameWidthSize,
+          nameFactor,
+          columnWidth: weeks ? WEEK_COLUMN_WIDTH : columnWidthSize,
+        },
+        PixelRatio.get(),
+      );
   const [scrollLocked, setScrollLocked] = useState(false);
+  // Rows stay put while a fill is drawn along one of them.
+  const [filling, setFilling] = useState(false);
   const {
     rightmostDay,
     unlockedFuture,
@@ -130,6 +173,8 @@ export const HabitGrid = memo(function HabitGrid({
     datePickerOpen,
     setDatePickerOpen,
     month,
+    shortMonth,
+    newestYear,
     year,
     pull,
     offset,
@@ -145,6 +190,9 @@ export const HabitGrid = memo(function HabitGrid({
     dateWidth,
     visibleDays,
     enabled: !scrollLocked,
+    unit: weeks ? 'week' : 'day',
+    weekStart,
+    initialDay: startDay,
   });
   const [completionView, setCompletionView] = useState({
     enabled: hideCompleted,
@@ -266,7 +314,7 @@ export const HabitGrid = memo(function HabitGrid({
   if (scrollLocked !== (!!habitMenu || !!dragId))
     setScrollLocked(!scrollLocked);
   const headerHeight = headingHeight(fontScale);
-  const canvas = useCanvasGrid({
+  const dayCanvas: CanvasGridProps = {
     store,
     habits: sourceHabits,
     rows: habits,
@@ -300,8 +348,52 @@ export const HabitGrid = memo(function HabitGrid({
     dragId,
     disabled: cellsDisabled,
     onCellPress,
+    onFill: onCellFill,
+    onFillActive: setFilling,
     onNavigate: navigateToDate,
-  });
+  };
+  const weekCanvas: WeekGridProps = {
+    store,
+    rows: habits,
+    tops,
+    heights: rowHeights,
+    baseHeight: baseRowHeight,
+    gridHeight,
+    headerHeight,
+    palettes,
+    theme,
+    today,
+    fontScale,
+    column: columnWidth,
+    width: dateWidth,
+    visibleDays,
+    rightmostDay,
+    unlockedFuture,
+    weekStart,
+    weekDividers,
+    missedMarks: cellLook.missedDays,
+    offset,
+    pull,
+    pan,
+    flinging,
+    rowTops,
+    dragY,
+    bodyTop,
+    scrollOffset,
+    dragId,
+    disabled: !!dragId || reorderMode,
+    onWeekPress,
+    onNavigate: navigateToDate,
+  };
+  // The newest date the date sheet opens on: a week's last day (or Today).
+  const shownDate = weeks
+    ? timingDate(
+        Math.min(
+          ordinal(today),
+          weekColumnStart(today, weekStart, rightmostDay) + 6,
+        ),
+      )
+    : timingDate(ordinal(today) - rightmostDay);
   function actOnHabit(habit: Habit, action: HabitAction) {
     if (action === 'moveUp' || action === 'moveDown') {
       const ids = habits.map((row) => row.id);
@@ -317,6 +409,197 @@ export const HabitGrid = memo(function HabitGrid({
         feedback('selection');
     } else onHabitAction(habit, action);
   }
+  const empty = !habits.length && (
+    <View style={{ paddingVertical: 24, alignItems: 'center', gap: 16 }}>
+      <Text style={{ color: theme.ink(0x88), fontSize: 14 }}>
+        {sourceHabits.length
+          ? 'Completed habits are hidden.'
+          : 'No habits yet.'}
+      </Text>
+    </View>
+  );
+  // Below the rows (or tiles): Show completed and Add habit.
+  const footer = (
+    <>
+      {hideCompleted && completedCount > 0 && rightmostDay === 0 && (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={
+            showCompleted
+              ? 'Hide completed habits'
+              : `Show ${completedCount} completed habits`
+          }
+          disabled={!!dragId || reorderMode}
+          onPress={() =>
+            setCompletionView((value) => ({
+              enabled: hideCompleted,
+              show: !value.show,
+            }))
+          }
+          style={{
+            minHeight: 48,
+            justifyContent: 'center',
+            paddingVertical: 12,
+          }}
+        >
+          <Text style={{ color: theme.ink(0xaa), fontSize: 14 }}>
+            {showCompleted
+              ? 'Hide completed'
+              : `Show completed · ${completedCount}`}
+          </Text>
+        </Pressable>
+      )}
+      <Animated.View layout={rowTransition}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Add habit"
+          accessibilityState={{
+            disabled: !editable || reorderMode || !!dragId,
+          }}
+          disabled={!editable || reorderMode || !!dragId}
+          onPress={onAddHabit}
+          style={({ pressed }) => ({
+            minHeight: 52,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 10,
+            paddingVertical: 12,
+            opacity:
+              !editable || reorderMode || dragId ? 0.3 : pressed ? 0.5 : 1,
+          })}
+        >
+          <Icon name="plus" size={18} color={theme.ink(0x77)} />
+          <Text style={{ color: theme.ink(0x88), fontSize: 14 }}>
+            Add habit
+          </Text>
+        </Pressable>
+      </Animated.View>
+    </>
+  );
+  const hidden = {
+    accessibilityElementsHidden: !!habitMenu,
+    importantForAccessibility: habitMenu
+      ? ('no-hide-descendants' as const)
+      : ('auto' as const),
+  };
+  // Day columns (Grid, Compact) or week columns (Weeks) beside the names.
+  const grid = (canvas: CanvasNodes) => (
+    <>
+      <View {...hidden} style={styles.header}>
+        <View style={[styles.namesHeader, { width: nameWidth }]}>
+          <DateButtonComponent
+            style={({ pressed }) => [
+              styles.dateButton,
+              compact && styles.compactDateButton,
+              { opacity: pressed ? 0.6 : 1 },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={`${month} ${year}, browse dates`}
+            onPress={openDateActions}
+          >
+            {compact ? (
+              <>
+                <Text numberOfLines={1} style={styles.compactMonth}>
+                  {shortMonth}
+                </Text>
+                <Text numberOfLines={1} style={styles.dateYear}>
+                  {newestYear}
+                </Text>
+              </>
+            ) : (
+              <>
+                <View style={styles.dateTitleRow}>
+                  <Text numberOfLines={1} style={styles.dateTitle}>
+                    {month}
+                  </Text>
+                  {/* A vector chevron sized with the text, flipped while open. */}
+                  <View
+                    style={
+                      datePickerOpen && { transform: [{ rotate: '180deg' }] }
+                    }
+                  >
+                    <Icon
+                      name="chevron"
+                      size={Math.round(16 * Math.max(1, fontScale))}
+                      strokeWidth={2.2}
+                      color={theme.ink(0x9c)}
+                    />
+                  </View>
+                </View>
+                <Text style={styles.dateYear}>{year}</Text>
+              </>
+            )}
+          </DateButtonComponent>
+          <HabitNameDivider />
+        </View>
+        {canvas.header}
+      </View>
+      <View
+        {...hidden}
+        collapsable={false}
+        ref={reorderViewport}
+        onLayout={() => {
+          measureReorder();
+        }}
+        style={{ flex: 1 }}
+      >
+        <ScrollView
+          ref={reorderScroll}
+          onLayout={measureReorder}
+          onScroll={(event) => {
+            const y = event.nativeEvent.contentOffset.y;
+            updateVerticalOffset(y);
+          }}
+          scrollEventThrottle={16}
+          scrollEnabled={!habitMenu && !dragId && !filling}
+          style={styles.rows}
+          directionalLockEnabled
+          nestedScrollEnabled
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.rowsContent}
+        >
+          {empty}
+          <View style={styles.gridBody}>
+            <View style={{ width: nameWidth, height: gridHeight }}>
+              {habits.map((habit) => (
+                <HabitName
+                  key={habit.id}
+                  habit={habit}
+                  height={baseRowHeight}
+                  selected={habitMenu?.id === habit.id}
+                  motion={rowMotion[habit.id]}
+                  reorder={reorderMode}
+                  compact={compact}
+                  disabled={!editable}
+                  onPress={() => {
+                    if (habitMenu) setHabitMenu(null);
+                    else onHabitPress(habit);
+                  }}
+                  onHold={(anchor) => holdHabit(habit.id, anchor)}
+                  onDrag={(pageY, startY) =>
+                    moveReorder(habit.id, pageY, startY)
+                  }
+                  onDrop={dropReorder}
+                  onCancel={cancelReorder}
+                  onAction={(action) => {
+                    if (action === 'reorder') setReorderMode(true);
+                    else actOnHabit(habit, action);
+                  }}
+                  onLayout={(event) => {
+                    const height = event.nativeEvent.layout.height;
+                    measureRow(habit.id, height, rowGeometry);
+                  }}
+                />
+              ))}
+              <HabitNameDivider />
+            </View>
+            {canvas.body}
+          </View>
+          {footer}
+        </ScrollView>
+      </View>
+    </>
+  );
   return (
     <RowPositions
       motions={rowMotion}
@@ -334,20 +617,23 @@ export const HabitGrid = memo(function HabitGrid({
         }
       }}
     >
-      <View
-        accessibilityElementsHidden={!!habitMenu}
-        importantForAccessibility={habitMenu ? 'no-hide-descendants' : 'auto'}
-        style={styles.toolbar}
-      >
+      <View {...hidden} style={styles.toolbar}>
         <View style={styles.toolbarBrand}>
-          <HeadingComponent accessibilityRole="header" style={styles.brand}>
-            {sampleData ? 'SAMPLE DATA' : 'ONPURPOSE'}
-          </HeadingComponent>
+          <GridModeMenu
+            mode={mode}
+            sampleData={sampleData}
+            ButtonComponent={DateButtonComponent}
+            onChange={(next) => {
+              cancelReorder();
+              setReorderMode(false);
+              onModeChange(next);
+            }}
+          />
         </View>
         <View style={styles.toolbarCentre}>
           <QuickUndoActions
             controller={quickUndo}
-            atToday={atTodayBoundary}
+            atToday={todayOnly || atTodayBoundary}
             todayLabel={rightmostDay < 0 ? '← Today' : 'Today →'}
             onToday={returnToToday}
             editable={editable}
@@ -381,13 +667,15 @@ export const HabitGrid = memo(function HabitGrid({
       </View>
       {datePickerOpen && (
         <DateNavigationSheet
-          date={timingDate(ordinal(today) - rightmostDay)}
+          date={shownDate}
           today={today}
           weekStart={weekStart}
           onClose={() => setDatePickerOpen(false)}
           onChoose={(date) => {
             feedback('selection');
-            const day = ordinal(today) - ordinal(date);
+            const day = weeks
+              ? weeksAgoOf(today, weekStart, date)
+              : ordinal(today) - ordinal(date);
             if (day === 0) returnToToday();
             else navigateToDate(day);
             setDatePickerOpen(false);
@@ -418,187 +706,37 @@ export const HabitGrid = memo(function HabitGrid({
           </Pressable>
         </View>
       )}
-      {width > 0 && (
-        <>
-          <View
-            accessibilityElementsHidden={!!habitMenu}
-            importantForAccessibility={
-              habitMenu ? 'no-hide-descendants' : 'auto'
-            }
-            style={styles.header}
+      {width > 0 &&
+        (todayOnly ? (
+          <ScrollView
+            style={styles.rows}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.rowsContent}
           >
-            <View style={[styles.namesHeader, { width: nameWidth }]}>
-              <DateButtonComponent
-                style={({ pressed }) => [
-                  styles.dateButton,
-                  { opacity: pressed ? 0.6 : 1 },
-                ]}
-                accessibilityRole="button"
-                accessibilityLabel={`${month} ${year}, browse dates`}
-                onPress={openDateActions}
-              >
-                <View style={styles.dateTitleRow}>
-                  <Text numberOfLines={1} style={styles.dateTitle}>
-                    {month}
-                  </Text>
-                  {/* A vector chevron sized with the text, flipped while open. */}
-                  <View
-                    style={
-                      datePickerOpen && { transform: [{ rotate: '180deg' }] }
-                    }
-                  >
-                    <Icon
-                      name="chevron"
-                      size={Math.round(16 * Math.max(1, fontScale))}
-                      strokeWidth={2.2}
-                      color={theme.ink(0x9c)}
-                    />
-                  </View>
-                </View>
-                <Text style={styles.dateYear}>{year}</Text>
-              </DateButtonComponent>
-              <HabitNameDivider />
-            </View>
-            {canvas.header}
-          </View>
-          <View
-            accessibilityElementsHidden={!!habitMenu}
-            importantForAccessibility={
-              habitMenu ? 'no-hide-descendants' : 'auto'
-            }
-            collapsable={false}
-            ref={reorderViewport}
-            onLayout={(event) => {
-              measureReorder();
-            }}
-            style={{ flex: 1 }}
-          >
-            <ScrollView
-              ref={reorderScroll}
-              onLayout={measureReorder}
-              onScroll={(event) => {
-                const y = event.nativeEvent.contentOffset.y;
-                updateVerticalOffset(y);
-              }}
-              scrollEventThrottle={16}
-              scrollEnabled={!habitMenu && !dragId}
-              style={styles.rows}
-              directionalLockEnabled
-              nestedScrollEnabled
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.rowsContent}
-            >
-              {!habits.length && (
-                <View
-                  style={{
-                    paddingVertical: 24,
-                    alignItems: 'center',
-                    gap: 16,
-                  }}
-                >
-                  <Text style={{ color: theme.ink(0x88), fontSize: 14 }}>
-                    {sourceHabits.length
-                      ? 'Completed habits are hidden.'
-                      : 'No habits yet.'}
-                  </Text>
-                </View>
-              )}
-              <View style={styles.gridBody}>
-                <View style={{ width: nameWidth, height: gridHeight }}>
-                  {habits.map((habit) => (
-                    <HabitName
-                      key={habit.id}
-                      habit={habit}
-                      height={baseRowHeight}
-                      selected={habitMenu?.id === habit.id}
-                      motion={rowMotion[habit.id]}
-                      reorder={reorderMode}
-                      disabled={!editable}
-                      onPress={() => {
-                        if (habitMenu) setHabitMenu(null);
-                        else onHabitPress(habit);
-                      }}
-                      onHold={(anchor) => holdHabit(habit.id, anchor)}
-                      onDrag={(pageY, startY) =>
-                        moveReorder(habit.id, pageY, startY)
-                      }
-                      onDrop={dropReorder}
-                      onCancel={cancelReorder}
-                      onAction={(action) => {
-                        if (action === 'reorder') setReorderMode(true);
-                        else actOnHabit(habit, action);
-                      }}
-                      onLayout={(event) => {
-                        const height = event.nativeEvent.layout.height;
-                        measureRow(habit.id, height, rowGeometry);
-                      }}
-                    />
-                  ))}
-                  <HabitNameDivider />
-                </View>
-                {canvas.body}
-              </View>
-              {hideCompleted && completedCount > 0 && rightmostDay === 0 && (
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={
-                    showCompleted
-                      ? 'Hide completed habits'
-                      : `Show ${completedCount} completed habits`
-                  }
-                  disabled={!!dragId || reorderMode}
-                  onPress={() =>
-                    setCompletionView((value) => ({
-                      enabled: hideCompleted,
-                      show: !value.show,
-                    }))
-                  }
-                  style={{
-                    minHeight: 48,
-                    justifyContent: 'center',
-                    paddingVertical: 12,
-                  }}
-                >
-                  <Text style={{ color: theme.ink(0xaa), fontSize: 14 }}>
-                    {showCompleted
-                      ? 'Hide completed'
-                      : `Show completed · ${completedCount}`}
-                  </Text>
-                </Pressable>
-              )}
-              <Animated.View layout={rowTransition}>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Add habit"
-                  accessibilityState={{
-                    disabled: !editable || reorderMode || !!dragId,
-                  }}
-                  disabled={!editable || reorderMode || !!dragId}
-                  onPress={onAddHabit}
-                  style={({ pressed }) => ({
-                    minHeight: 52,
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    gap: 10,
-                    paddingVertical: 12,
-                    opacity:
-                      !editable || reorderMode || dragId
-                        ? 0.3
-                        : pressed
-                          ? 0.5
-                          : 1,
-                  })}
-                >
-                  <Icon name="plus" size={18} color={theme.ink(0x77)} />
-                  <Text style={{ color: theme.ink(0x88), fontSize: 14 }}>
-                    Add habit
-                  </Text>
-                </Pressable>
-              </Animated.View>
-            </ScrollView>
-          </View>
-        </>
-      )}
+            {empty}
+            <TodayTiles
+              store={store}
+              habits={habits}
+              palettes={palettes}
+              today={today}
+              width={width}
+              fontScale={fontScale}
+              rowHeight={baseRowHeight}
+              checkboxStyle={checkboxStyle}
+              cellLook={cellLook}
+              disabled={!editable}
+              tapAnimations={tapAnimations}
+              onCellPress={onCellPress}
+              onCellValue={onCellValue}
+              onHabitPress={onHabitPress}
+            />
+            {footer}
+          </ScrollView>
+        ) : weeks ? (
+          <WeekCanvas {...weekCanvas}>{grid}</WeekCanvas>
+        ) : (
+          <DayCanvas {...dayCanvas}>{grid}</DayCanvas>
+        ))}
       <HabitContextMenu
         menu={habitMenu}
         habit={menuHabit}
@@ -615,6 +753,23 @@ export const HabitGrid = memo(function HabitGrid({
   );
 });
 
+type CanvasNodes = { header: ReactNode; body: ReactNode };
+
+// The canvas hooks live in their own components so the grid can switch
+// between day and week columns without calling hooks conditionally.
+function DayCanvas({
+  children,
+  ...props
+}: CanvasGridProps & { children: (canvas: CanvasNodes) => ReactNode }) {
+  return children(useCanvasGrid(props));
+}
+function WeekCanvas({
+  children,
+  ...props
+}: WeekGridProps & { children: (canvas: CanvasNodes) => ReactNode }) {
+  return children(useWeekGrid(props));
+}
+
 const useStyles = themedStyles((t) => ({
   container: { flex: 1 },
   toolbar: {
@@ -626,18 +781,17 @@ const useStyles = themedStyles((t) => ({
   },
   toolbarBrand: { flex: 1, justifyContent: 'center' },
   toolbarCentre: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  brand: {
-    color: t.ink(0x88),
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 1.5,
-    paddingVertical: 12,
-  },
   dateButton: {
     minHeight: 56,
     width: '100%',
     justifyContent: 'center',
     paddingVertical: 8,
+  },
+  compactDateButton: { alignItems: 'center' },
+  compactMonth: {
+    color: t.ink(0xed),
+    fontSize: 15,
+    fontWeight: '700',
   },
   dateTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   dateTitle: {

@@ -36,7 +36,7 @@ physical iPhone.
 
 ### Example event
 
-This entry event comes from [the v21 fixture](examples/storage-v21.json). It was
+This entry event comes from [the v22 fixture](examples/storage-v22.json). It was
 written at version 6 and still replays unchanged.
 
 ```json
@@ -81,8 +81,8 @@ introduced each feature.
 | Number                     | Where it lives     | Current | Meaning                                                                                                                                            |
 | -------------------------- | ------------------ | ------: | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 | SQL `PRAGMA user_version`  | SQLite database    |       1 | Table layout. Changes only through an explicit migration.                                                                                          |
-| Event `version`            | Each event         |      20 | Format the event was written in. Old events keep their version and that version's rules. Replay accepts 1–20; a log never returns to an older one. |
-| Export container `version` | Backup JSON header |      20 | Format of the export file. The importer accepts 1–20, and a container cannot hold events newer than its own version.                               |
+| Event `version`            | Each event         |      22 | Format the event was written in. Old events keep their version and that version's rules. Replay accepts 1–22; a log never returns to an older one. |
+| Export container `version` | Backup JSON header |      22 | Format of the export file. The importer accepts 1–22, and a container cannot hold events newer than its own version.                               |
 
 ### Glossary
 
@@ -134,7 +134,10 @@ Global preferences, saved as `preference` events outside History and Undo (see
 - week start, and date fading (still saved and replayed, but no longer shown).
 
 Outside the log: recoverable description drafts and bookmarks (a separate local
-store; see [Description drafts](#description-drafts)), Quick Undo receipts,
+store; see [Description drafts](#description-drafts)), the home view (Grid,
+Compact, Today or Weeks; each device keeps its own in `onpurpose-device.db`
+through `expo-sqlite/kv-store` on the phone and `localStorage` in the browser,
+under the key `onpurpose.gridMode`), Quick Undo receipts,
 scroll positions, open panels, typing drafts, cancelled choices, no-op saves,
 development sample data and diagnostics. Statistics are always derived from
 saved values, never stored.
@@ -342,8 +345,10 @@ previous group, preserving chronological undo. Undo/Redo also close the group,
 as do midnight, time-zone/offset changes, a backwards clock or two minutes of
 inactivity. Preferences do not break an otherwise eligible group. Reopening
 within the window preserves the group; grouping rules use captured edit-zone
-metadata, while list headings use the viewing local zone. Selective undo,
-gesture batching, comments and permanent erasure would need further rules.
+metadata, while list headings use the viewing local zone. A fill drawn along a
+row is one `entries` change, so one action (see
+[version 22](#version-22-multi-day-fills)). Selective undo, other gesture
+batching, comments and permanent erasure would need further rules.
 
 Undo is not permanent erasure. Settings → Archived habits offers confirmed,
 undoable deletion (see [version 12](#version-12-undoable-archived-habit-deletion)).
@@ -360,7 +365,7 @@ pending saves and captures a stable log. The export is a readable JSON container
 of **changes**, not a replacement snapshot of habit/day values. Every event
 version has a synthetic example in [docs/examples](examples/), from
 [the unchanged version-1 fixture](examples/storage-v1.json) to
-[the newest fixture](examples/storage-v21.json); see
+[the newest fixture](examples/storage-v22.json); see
 [Version history](#version-history).
 
 The container has `format: "onpurpose.changes"`, `version`, `exportedAt`,
@@ -491,6 +496,7 @@ version, older events cannot follow it.
 |      19 | `themeMode`, `darkBackground` and `lightBackground` preferences                          |
 |      20 | Cell look preferences (`todayOutlines` … `connectorThickness`)                           |
 |      21 | `joinedEndsOnly` cell look preference                                                    |
+|      22 | `entries` change: one fill across several days of a habit                                |
 
 ### Version 1: the original log
 
@@ -762,12 +768,28 @@ every cell look and setting a 50% connector.
 `joinedEndsOnly` is a boolean cell look preference: with Joined checkboxes on,
 a checked day between two checked neighbours draws no box, so one bar runs from
 a streak's first box to its last. As with the v20 cell look, `before` is `null`
-until the first choice; absent, it displays On (`cellLookDefaults`). Older
+until the first choice; absent, it displays Off (`cellLookDefaults`). Older
 event versions reject the kind, and v1–v20 prefixes replay unchanged with SQL
 schema 1. It stays outside History/Undo, preserves Redo and correction groups,
 and uses the ordinary serialized write/restore path. The
 [v21 fixture](examples/storage-v21.json) extends the v20 prefix by turning it
 on.
+
+### Version 22: multi-day fills
+
+Dragging along a habit's row adds one `entries` change:
+`{ kind: 'entries', habitId, before, after }`, where `before` and `after` map
+the same 2–3660 date keys to a saved value or `null` (absent), and every date
+must change. Replay checks each date's stored value against `before` (arrays
+compared by value) and that every value fits the habit, then sets or clears
+each date. A fill is one History action and one Undo/Redo step through the
+ordinary before/after inverse; it never groups with entries or other fills and
+closes the open edit group. A fill that changes one date is written as an
+ordinary `entry` change. Quick Undo accepts a fill receipt, which a later edit
+of any of its dates retires. Events v1–v21 reject `entries`, older events
+cannot follow a v22 event, backups accept container version 22, and SQL stays
+at schema 1. The [v22 fixture](examples/storage-v22.json) extends the v21
+example with a fill, its undo and redo, and a second (text) fill.
 
 ## References
 

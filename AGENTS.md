@@ -7,7 +7,7 @@ Read `PROJECT_GOALS.md`, `docs/DEVELOPMENT.md`, and `docs/DECISIONS.md`;
 (project owner and maintainer) is new to the stack: explain technical choices in
 plain language and connect them to the product goal.
 
-Current storage writers and backup exports are v21 with SQL schema 1;
+Current storage writers and backup exports are v22 with SQL schema 1;
 `docs/STORAGE.md` is the authority. Version numbers in the sections below record
 when a feature's fields arrived, and each older version must keep replaying
 unchanged.
@@ -129,11 +129,32 @@ preserve earlier icon choices/removals and raw history.
   `todayOutlines` is retired: replayed, never drawn. `canvasGrid/cellPainter.ts`
   owns all cell and heading drawing for both the grid and the Settings preview
   (`GridLivePreview`, pinned above Appearance on portrait phones); never draw
-  cells separately in the preview. A tapped join grows from or
-  retracts into the neighbour over 220 ms and the reached box bumps to 1.07 the
-  moment the bar touches it, gated like the pulse. App memoizes the look by its
+  cells separately in the preview. A tapped join grows from the neighbour
+  (ease-out, 220 ms) or retracts into it (ease-in-out, 180 ms) and the reached box
+  bumps to 1.07 the moment the bar touches it, gated like the pulse; core
+  `tapMotion.ts` owns this timing for both apps. The tapped cell's background
+  fades from the pressed shade (web: old background) to its new one, gated by
+  tapAnimations but kept under Reduce Motion. App memoizes the look by its
   fields so acknowledgements keep its identity, and the grid defers it with the
   other presentation preferences. Never shade cells by goal progress.
+- Drag to fill (v22 `entries` change): a second press on the cell just tapped
+  (within `FILL_DOUBLE_TAP_MS`; web mice `FILL_DOUBLE_CLICK_MS`) that moves along the row draws a run across
+  that habit's visible days, never down a column. The run stays highlighted
+  (pressed shade) until applied. Checkboxes paint the state the first tap gave
+  the start cell, applied on release; number/text/category runs open their
+  dialog with the range (`dateRangeLabel`) and Done applies one value to every
+  day. Core `entryFill.ts` builds one change (one Undo, one History row, a
+  Quick Undo receipt). Value cells open their dialog `VALUE_OPEN_DELAY_MS`
+  after a tap (a cancellable UI-thread delay; screen readers open at once) so
+  the second press can land, and the number dialog card eases in. A fill
+  animates as one stroke in drag order (core `fillStrokeMs`/`fillStrokeAtMs`,
+  ease-in-out): one position grows bars behind it (ticking) or erases them
+  ahead of it (clearing) through the cells, and each box keeps its old look
+  and streak number until the stroke reaches it, then fills and bumps (or
+  empties with a press); highlights fade as it passes (phone
+  `canvasGrid/fillWave.ts`, web `grid/fillWave.ts` with one animated `--p`).
+  Vertical scrolling pauses while drawing. On the web a plain mouse,
+  trackpad or pen press-and-drag also fills (see docs/WEB.md).
 - `GridAccessibilityLayer.tsx` stays mounted: invisible native views follow the
   shared offset with per-cell `cell-<habit>-<date>` testIDs, roles, checked/
   disabled states, labels, hints and activation (wording in pure
@@ -142,6 +163,20 @@ preserve earlier icon choices/removals and raw history.
   on. The Expo web preview is not developed: `useCanvasGrid.web.tsx` shows a
   notice instead. The browser product is `apps/web`, not this preview.
 - Keep the compact top bar visible, with Today centred and History/Settings at right.
+  Its left corner is the view menu (`src/GridModeMenu.tsx`, web `ModeMenu.tsx`)
+  for core `gridModes.ts`: Grid, Compact (icons via `HabitName`'s `compact` and
+  `compactGridLayout`; about a week of days), Today (`src/TodayTiles.tsx`: one
+  tile per habit, the name cell over the Today cell with `habitSummary`'s
+  line, the saved cell look on its checkbox, one "Usual" total from
+  `numericSuggestions` recording in one tap through `onCellValue`/
+  `recordValue`, core `todaySummary.ts` for "Not today" and the day count;
+  every tile has one fixed height of about 2.5 rows) and Weeks (`canvasGrid/useWeekGrid.tsx` draws week columns
+  with the same scroll engine; core `weekSummary.ts` gives each cell's number
+  and seven day dots; a tap opens that week in Grid or Compact via
+  `startDay`). `HabitGrid` keeps the day and week canvas hooks in their own
+  components (`DayCanvas`/`WeekCanvas`); App keys the grid by view, so Grid and
+  Compact share one mount. The view is per device (`storage/deviceView.ts`,
+  `expo-sqlite/kv-store`), never in the log, History or backups.
   Month/year stays beside the day headings; future pull streak grows left from the
   fixed right edge of the existing divider beneath the headings. Do not add a border.
 - `src/AppPanel.tsx` owns real change History/undo and the Settings/backup sheet; `src/SettingsScreen.tsx` owns the compact settings index and detail pages; `src/Icon.tsx` owns outline icons.

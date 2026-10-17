@@ -39,11 +39,36 @@ The founder chose this layout from mockups (see DECISIONS.md, 13 October 2026).
   can be dragged or clicked to page, and are hidden on touch screens. Wheel,
   touch, keyboard and focus scrolling stay native, and positions are written
   to the DOM directly, so scrolling never re-renders React.
+- **Drag to fill:** with a mouse, trackpad or pen, press a cell and drag along
+  its row to fill it; the row is fixed, the grid scrolls itself near its
+  edges, and touch keeps native scrolling. A trackpad's tap-and-drag reaches
+  the page as one press (its first tap never arrives as a click), so a plain
+  press-and-drag fills too. When the press continues a click on the same cell
+  (within `FILL_DOUBLE_CLICK_MS`, the usual 500 ms double-click time, even on
+  an entry popover's backdrop over that cell, which it closes), checkbox runs
+  take the state that click gave the start cell; otherwise they take its
+  opposite, start cell included. The run stays highlighted until the fill
+  completes. Number, text and category cells open their popover
+  `VALUE_OPEN_DELAY_MS` after a click (the keyboard opens at once); a drawn
+  run opens that popover in fill mode, titled with `dateRangeLabel`, and Done
+  saves one change. Escape cancels. `grid/fillWave.ts` maps the pointer to
+  days and plans the fill as one stroke (core `fillStrokeAtMs`): every moving
+  bar half animates the same registered `--p` and shows its part of the bar
+  from where it starts along the stroke, so the bar grows (or is erased)
+  through the cells in one motion. Each box keeps its old look and streak
+  number until the stroke reaches it, then fills and bumps (or empties with a
+  press), and highlights fade as it passes. A press-and-drag that changed the
+  start box moves its join with a ticked day behind as a tap would. Popovers
+  ease in from their cell (a fade with Reduce motion).
 - **Tap animations** (the shared v16 preference, also off under Reduce
   Motion): a tapped box pulses (1 → 0.94 → 1); a join grows out of the
-  checked neighbour into it, half by half over 220 ms, and the box it reaches
-  bumps to 1.07; clearing retracts the join into the neighbour. Only taps in
-  the grid animate, never Undo, other edits or loading.
+  checked neighbour into it with ease-out over 220 ms, and clearing retracts
+  it into the neighbour with ease-in-out over 180 ms (timing in core
+  `tapMotion.ts`). Both halves follow one registered `--reach` property, so
+  the bar moves on one curve across the cell boundary. The box it reaches
+  bumps to 1.07 when the bar touches it. The tapped cell's background fades
+  to its new one (kept under Reduce Motion). Only taps in the grid animate,
+  never Undo, other edits or loading.
 - **Values:** numbers shrink to fit their column (to about 65%); text and
   category cells use the phone's 12 px text in one to three lines from core
   `gridEntryText.ts`, at a fixed width so columns stay equal, with the full
@@ -71,6 +96,38 @@ lines.
 Rows redraw only when their own saved values, the cell look or the visible
 days change (`HabitRow` compares a per-habit value signature), so an edit
 redraws one row rather than the whole grid.
+
+## Views
+
+The top bar's left corner holds the view menu (`ModeMenu.tsx`), with the same
+four views as the phone (core `gridModes.ts`). Each browser remembers its own
+choice in `localStorage` (`onpurpose.gridMode`); it is not a saved preference.
+
+- **Grid**: the home grid above.
+- **Compact**: the same `HabitGrid` with `compact`. Icons (or initials)
+  replace names in a 56 px column, so the same width holds more days. The
+  icon opens Notes and Statistics; right-click or Shift+F10 opens the actions.
+- **Today**: `grid/TodayTiles.tsx` shows one tile per displayed habit in the
+  saved order, under the date and a quiet count ("5 of 13 done · 1 not
+  today", core `todaySummary.ts`). A tile is the name cell over the Today
+  cell: icon, name and the grid's line (`habitSummary`: schedule, rule or
+  quota progress; "Not today" dims a tile that is unscheduled and not done),
+  then the checkbox drawn with the saved cell look (round, streak number,
+  Ticks & crosses, tap pulse), the recorded value with its unit, or, for a
+  blank number, its most usual total as one "Usual" chip with the unit that
+  records in one tap (`GridHandlers.saveValue`, with a Quick Undo receipt)
+  beside "…" for the popover. Other types open the entry popover. Every
+  tile has the same fixed height (about 2.5 Rows sizes; a two-line name, one
+  summary line and the cell), so rows never stretch. Arrow keys move one
+  roving focus between tiles (up and down by a row of tiles), Home and End
+  to the ends. The (i) opens Notes and
+  Statistics, and a right-click opens the habit's actions.
+- **Weeks**: `grid/WeekGrid.tsx`, a table in the same frame with one column
+  per calendar week (the current one at the right; 53 weeks at first, more
+  load near the oldest, up to about ten years). Each cell shows a number over
+  seven day dots from core `weekSummary.ts`. Choosing a cell opens that week
+  in Grid or Compact (whichever was used last) through `HabitGrid`'s
+  `startAgo`. Weeks is read-only.
 
 ## Sidebar and shortcuts
 
@@ -216,7 +273,9 @@ Preferences save immediately as ordinary preference changes, outside History
 and Undo, with the phone's before-value rules (newer kinds start from null).
 
 - **Appearance:** a live preview drawn by the grid's own `HabitRow` (never a
-  separate drawing), theme mode, dark and light backgrounds (presets or a hex,
+  separate drawing), pinned above the scrolling controls and collapsible to
+  its heading (remembered while the app is open, as on the phone), starting
+  scrolled to Today; theme mode, dark and light backgrounds (presets or a hex,
   fitted at display time), checkbox style (Squares, Circles, Ticks & crosses),
   streak numbers, joined checkboxes with streak ends only and connector
   thickness (saved on release), missed day crosses, week dividers and tap animations.

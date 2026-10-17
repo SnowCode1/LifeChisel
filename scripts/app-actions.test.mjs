@@ -14,6 +14,8 @@ import * as habits from '../packages/core/src/habits.ts';
 import * as goals from '../packages/core/src/habitGoals.ts';
 import * as colors from '../packages/core/src/colors.ts';
 import * as suggestions from '../packages/core/src/numericSuggestions.ts';
+import * as calendar from '../packages/core/src/calendar.ts';
+import * as entryFill from '../packages/core/src/entryFill.ts';
 import { themeContextModule } from './theme-fixture.mjs';
 
 // Execute the actual controllers/components with small native mocks. Never print
@@ -122,6 +124,8 @@ async function fixture() {
     receipts = [];
   const { useDailyEntryActions } = load('useDailyEntryActions.ts', {
     ...common,
+    '@onpurpose/core/calendar': calendar,
+    '@onpurpose/core/entryFill': entryFill,
     '@onpurpose/core/entries': entries,
     '@onpurpose/core/habits': habits,
     '@onpurpose/core/habitGoals': goals,
@@ -176,6 +180,17 @@ test('numeric drafts stay local; Close cancels, invalid input cannot save, and D
         return null;
       },
     },
+    // The card's entrance animation; values settle at once here.
+    'react-native-reanimated': {
+      default: { View: Container },
+      __esModule: true,
+      Easing: { out: (easing) => easing, cubic: (t) => t },
+      useAnimatedStyle: () => ({}),
+      useReducedMotion: () => false,
+      useSharedValue: (value) => ({ get: () => value, set: () => {} }),
+      withTiming: (value) => value,
+    },
+    '@onpurpose/core/calendar': calendar,
     '@onpurpose/core/colors': colors,
     './Icon': { Icon: () => null },
     './ThemeContext': themeContextModule(),

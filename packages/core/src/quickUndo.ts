@@ -51,7 +51,7 @@ export function createQuickUndo(store: ChangeStore) {
   }
   function correction(current: Receipt): Change | null {
     const snapshot = store.getSnapshot();
-    if (current.change.kind === 'entry')
+    if (current.change.kind === 'entry' || current.change.kind === 'entries')
       return receiptIsCurrent(snapshot.events, current as EntryReceipt)
         ? entryCorrection(snapshot.replay.state, current.change)
         : null;
@@ -98,7 +98,8 @@ export function createQuickUndo(store: ChangeStore) {
         sequence: snapshot.events.length,
         eventId: event.id,
         label: habit.name,
-        action: change.kind === 'entry' ? 'entry' : 'archive',
+        // A fill reads like one entry: Undo restores every filled day.
+        action: change.kind === 'habit' ? 'archive' : 'entry',
       };
       timer = setTimeout(clear, QUICK_UNDO_MS);
       notify();

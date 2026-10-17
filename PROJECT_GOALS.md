@@ -57,6 +57,15 @@ and uncertainty about whether something was saved.
   future dates. Future entries are allowed. This supersedes the initial
   past-only rule. Adaptive density replaces the three-column idea.
 - Jump to a chosen date through the month/year control.
+- Offer four home views from a menu in the top bar's left corner, which
+  replaced the app name there (16 October 2026): Grid (names beside days);
+  Compact (icons instead of names, leaving room for about a week of days);
+  Today (one tile per habit for Today, with no date or name axes: the name
+  cell over the Today cell, the grid's schedule/goal line under the name,
+  the most usual total recording a number in one tap, and a quiet "4 of 9
+  done" count under the date, 17 October 2026); and Weeks
+  (one column per week; each cell shows a number over seven day dots, and
+  choosing one opens that week's days). Each device remembers its own view.
 - Keep a compact top bar always visible, with Today in the centre and change
   history/settings at right. Keep the month/year date control beside the day
   headings. Future-pull feedback should grow leftwards from a fixed right edge

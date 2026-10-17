@@ -49,7 +49,7 @@ test('the shared repository creates schema 1 and keeps saved entries across reop
   const snapshot = second.getSnapshot();
   assert.equal(snapshot.status, 'ready');
   assert.equal(snapshot.events.length, 2);
-  assert.equal(snapshot.events[0].version, 21);
+  assert.equal(snapshot.events[0].version, 22);
   assert.equal(snapshot.replay.state.values[`${habit.id}:2026-10-13`], 1);
   db.close();
 });

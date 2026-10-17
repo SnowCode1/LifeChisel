@@ -64,6 +64,9 @@ import { usePersistentStore, useStoreOpening } from './src/usePersistentStore';
 import type { ChangeStore } from '@onpurpose/core/storage/store';
 import { applyPresetIcons } from '@onpurpose/core/storage/presetIcons';
 import { useBackupActions } from './src/useBackupActions';
+import { loadGridMode, saveGridMode } from './src/storage/deviceView';
+import type { GridMode } from '@onpurpose/core/gridModes';
+import { weekJumpDay } from '@onpurpose/core/weekSummary';
 
 // Metro removes this branch (and its module) from release JavaScript.
 const PreviewHeading: ComponentType<TextProps> =
@@ -314,6 +317,8 @@ function PersistentApp({
     editing,
     recording,
     pressCell,
+    fillCells,
+    recordValue,
     saveNumber,
     saveRecord,
     closeNumber,
@@ -343,6 +348,33 @@ function PersistentApp({
     setStatsId(habit.id);
     feedback('selection');
   }, []);
+
+  // The home view is this phone's own choice, outside the change log.
+  const [gridMode, setGridMode] = useState<GridMode>(loadGridMode);
+  // Where a day grid opens: a week tapped in Weeks mode, otherwise Today.
+  const [jump, setJump] = useState({ day: 0, mode: 'grid' as GridMode });
+  const changeGridMode = useCallback((mode: GridMode) => {
+    setGridMode(mode);
+    saveGridMode(mode);
+    setJump((current) => ({
+      day: 0,
+      mode: mode === 'compact' || mode === 'grid' ? mode : current.mode,
+    }));
+  }, []);
+  // A week cell opens that week in the day grid last used (Grid or Compact).
+  const showWeek = useCallback(
+    (weeksAgo: number) => {
+      feedback('selection');
+      const mode = jump.mode;
+      setJump({
+        day: weekJumpDay(today, gridDisplay.weekStart, weeksAgo),
+        mode,
+      });
+      setGridMode(mode);
+      saveGridMode(mode);
+    },
+    [jump.mode, today, gridDisplay.weekStart],
+  );
 
   const openHistory = useCallback(() => {
     feedback('selection');
@@ -593,6 +625,7 @@ function PersistentApp({
             typeof editing.value === 'number' ? editing.value : null
           }
           values={values}
+          fillDates={editing.fill?.dates}
           editable={editable}
           Heading={PreviewHeading}
           onClose={closeNumber}
@@ -605,6 +638,7 @@ function PersistentApp({
           habit={recording.habit}
           day={recording.day}
           value={values[recording.key]}
+          fillDates={recording.fill?.dates}
           editable={editable}
           Heading={PreviewHeading}
           onClose={closeRecord}
@@ -836,9 +870,14 @@ function PersistentApp({
                         weekStart={gridDisplay.weekStart}
                         hideCompleted={gridDisplay.hideCompleted}
                         sampleData={sampleData}
-                        HeadingComponent={PreviewHeading}
+                        mode={gridMode}
+                        onModeChange={changeGridMode}
+                        onWeekPress={showWeek}
+                        startDay={jump.day}
                         DateButtonComponent={PreviewDateButton}
-                        key={today}
+                        // Day and week columns (and Today's tiles) each start
+                        // fresh; Grid and Compact share one mounted grid.
+                        key={`${today}:${gridMode === 'compact' ? 'grid' : gridMode}`}
                         today={today}
                         habits={activeHabits}
                         editable={editable}
@@ -848,6 +887,8 @@ function PersistentApp({
                         onHabitPress={openDetails}
                         quickUndo={quickUndo}
                         onCellPress={pressCell}
+                        onCellValue={recordValue}
+                        onCellFill={fillCells}
                         onHistoryPress={openHistory}
                         onSettingsPress={openSettings}
                         onAddHabit={addHabit}

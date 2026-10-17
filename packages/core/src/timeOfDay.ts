@@ -38,19 +38,30 @@ export function entryMinutes(
     const change = action.change;
     if (!('habitId' in change) || change.habitId !== habit.id) continue;
     if (change.kind === 'deleteHabit' && !change.after) minutes.clear();
-    if (change.kind !== 'entry') continue;
-    if (!recorded(habit, change.after)) minutes.delete(change.date);
-    else if (!recorded(habit, change.before)) {
-      // Use the offset captured with the edit: travel keeps the local time
-      // where the entry was made.
-      const local =
-        Date.parse(action.firstRecordedAt) + action.utcOffsetMinutes * MINUTE;
-      const sameDay =
-        new Date(local).toISOString().slice(0, 10) === change.date;
-      minutes.set(
-        change.date,
-        sameDay ? Math.floor((((local % DAY) + DAY) % DAY) / MINUTE) : null,
-      );
+    // A fill (v22) records each of its days at the fill's time.
+    const days =
+      change.kind === 'entry'
+        ? [change]
+        : change.kind === 'entries'
+          ? Object.keys(change.after).map((date) => ({
+              date,
+              before: change.before[date],
+              after: change.after[date],
+            }))
+          : [];
+    for (const day of days) {
+      if (!recorded(habit, day.after)) minutes.delete(day.date);
+      else if (!recorded(habit, day.before)) {
+        // Use the offset captured with the edit: travel keeps the local time
+        // where the entry was made.
+        const local =
+          Date.parse(action.firstRecordedAt) + action.utcOffsetMinutes * MINUTE;
+        const sameDay = new Date(local).toISOString().slice(0, 10) === day.date;
+        minutes.set(
+          day.date,
+          sameDay ? Math.floor((((local % DAY) + DAY) % DAY) / MINUTE) : null,
+        );
+      }
     }
   }
   const sameDay = new Map<string, number>();

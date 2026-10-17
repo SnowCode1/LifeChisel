@@ -9,9 +9,11 @@
   padding: 0;
   overflow: hidden;
 }
-/* The section list stays put; only the open page scrolls. */
+/* The section list stays put; only the open page scrolls. Neither may grow
+   past the dialog to fit wide content such as the preview. */
 .settings-layout {
   flex: 1;
+  min-width: 0;
   min-height: 0;
   display: flex;
 }
@@ -39,14 +41,56 @@
   color: var(--ink);
   background-color: var(--surface-raised);
 }
+/* The open page, under the pinned preview on Appearance. */
+.settings-main {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+.settings-pinned {
+  flex-shrink: 0;
+  padding: 14px 24px 12px;
+  border-bottom: 1px solid var(--rule);
+}
+.preview-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  margin-bottom: 6px;
+  padding: 0 4px;
+  border-radius: 8px;
+  color: var(--ink-quiet);
+}
+.preview-toggle:hover {
+  color: var(--ink);
+}
+.preview-toggle .field-label {
+  margin: 0;
+}
+/* The chevron points up while the preview shows (tap to hide it). */
+.preview-toggle[aria-expanded='true'] svg {
+  transform: rotate(180deg);
+}
+.preview-toggle[aria-expanded='false'] {
+  margin-bottom: 0;
+}
 .settings-page {
   display: flex;
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   flex-direction: column;
   gap: 18px;
   min-width: 0;
   padding: 18px 24px 32px;
+}
+/* The page scrolls instead of squeezing its sections (the preview, a
+   scrolling box, would otherwise shrink to its scrollbar). */
+.settings-page > * {
+  flex-shrink: 0;
 }
 .setting-group {
   margin: 0;

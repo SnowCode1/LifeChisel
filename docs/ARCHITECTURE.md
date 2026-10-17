@@ -74,6 +74,7 @@ Grid
     useCanvasGridScroll.ts     UI-thread pan, release and future pull
     gridMotion.ts              release planning: momentum that ends exactly on a column
     withFling.ts               runs a planned release as a Reanimated animation
+    fillWave.ts                plans and evaluates a drag-to-fill's wave animation
     useGridModel.ts            JS-thread cell records in 30-day chunks, Skia paragraphs
     GridAccessibilityLayer.tsx invisible native views for screen readers
     cellAccessibility.ts       cell state, roles and labels
@@ -85,6 +86,8 @@ Grid
   src/useMeasuredRowHeights.ts batched native row measurement
   packages/core/src/gridAppearance.ts        cached per-habit grid colours
   packages/core/src/gridEntryText.ts         text/category cell line count (both apps)
+  packages/core/src/tapMotion.ts             tap/fill timing, bar contact time (both apps)
+  packages/core/src/entryFill.ts             one change for a run filled along a row
   src/ReorderRow.tsx           RowPositions: shared row movement
   src/DateNavigationSheet.tsx  date picker sheet (src/DateCalendar.tsx on Android)
   packages/core/src/calendar.ts              local date keys and signed date arithmetic
@@ -165,9 +168,10 @@ scripts/
   preview-server.mjs             local preview and performance receiver
   android-screenshot.mjs         adb screenshot helper
   generate-phosphor.mjs, generate-tabler.mjs, generate-editor-icons.mjs  icon generators
+  generate-app-icons.mjs         app icon, Android layers and favicons from one geometry
 
 docs/                            project documentation; docs/examples holds storage fixtures
-assets/                          placeholder icons; replace before release
+assets/                          app icon, Android icon layers, favicon and splash image
 ```
 
 Generated icon catalogues (`phosphorPaths.ts`, `tablerPaths.ts`,
@@ -217,8 +221,11 @@ styles (boxes and marks) draw as paths.
 row (reading live row positions) and shows the pressed highlight; release on the
 same cell calls `useDailyEntryActions.pressCell`, so haptics, dialogs and Quick
 Undo are unchanged. The checkbox pulse (scale 1 → 0.94 → 1 over 45 + 135 ms)
-runs only when the checked state actually flipped, gated by Tap animations and
-Reduce Motion. Taps are disabled while editing is blocked, during a drag and in
+and join motion run only when the checked state actually flipped, gated by Tap
+animations and Reduce Motion; their timing is in core `tapMotion.ts`. An
+accepted tap keeps the pressed shade on the UI thread until `activate` applies
+it, then fades it into the cell's new background (`drawCellBase`'s `fade`), or
+clears it at once when nothing flipped. Taps are disabled while editing is blocked, during a drag and in
 reorder mode; scrolling is locked while the menu is open or a drag is active.
 
 **Accessibility.** The canvas itself is invisible to screen readers.

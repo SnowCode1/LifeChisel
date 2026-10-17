@@ -46,14 +46,25 @@ export type DeletedHabit = {
   habit: Habit;
   entries: Record<string, EntryValue>;
 };
+/** One saved value for one habit and date. */
+export type EntryChange = {
+  kind: 'entry';
+  habitId: string;
+  date: string;
+  before: EntryValue | null;
+  after: EntryValue | null;
+};
+/** One fill across several days of one habit (v22): one undoable action. */
+export type EntriesChange = {
+  kind: 'entries';
+  habitId: string;
+  /** Saved values before, by date key (null: absent). Same dates as `after`. */
+  before: Record<string, EntryValue | null>;
+  after: Record<string, EntryValue | null>;
+};
 export type Change =
-  | {
-      kind: 'entry';
-      habitId: string;
-      date: string;
-      before: EntryValue | null;
-      after: EntryValue | null;
-    }
+  | EntryChange
+  | EntriesChange
   | { kind: 'colour'; habitId: string; before: string; after: string }
   | {
       kind: 'habit';
@@ -154,7 +165,8 @@ export type EventMeta = {
     | 18
     | 19
     | 20
-    | 21;
+    | 21
+    | 22;
   id: string;
   sequence: number;
   recordedAt: string;
@@ -186,7 +198,8 @@ export type CurrentChangeEvent = EventMeta & {
     | 18
     | 19
     | 20
-    | 21;
+    | 21
+    | 22;
 } & (
     | { type: 'change'; groupId: string; change: HabitChange }
     | { type: 'undo' | 'redo'; targetId: string; change: HabitChange }
@@ -231,4 +244,5 @@ export type Replay = {
   hasV19: boolean;
   hasV20: boolean;
   hasV21: boolean;
+  hasV22: boolean;
 };

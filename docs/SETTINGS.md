@@ -28,9 +28,9 @@ automatic rules in `gridSizing.ts`.
 | Appearance     | Checkbox style       | Circles | Squares, Circles or Ticks & crosses (Circles saves Round checkboxes with the Checkboxes style).                |
 | Appearance     | Streak numbers       | On      | Checked boxes show their place in the streak instead of a tick (Squares and Circles). See [Cells](#cells).     |
 | Appearance     | Joined checkboxes    | On      | Consecutive checked boxes joined by a bar (Squares and Circles).                                               |
-| Appearance     | Streak ends only     | On      | Boxes only on a streak's first and last days, one bar between; shown with Joined checkboxes.                   |
+| Appearance     | Streak ends only     | Off     | Boxes only on a streak's first and last days, one bar between; shown with Joined checkboxes.                   |
 | Appearance     | Connector thickness  | 55%     | Bar height, 20–100% of the checkbox in 5% steps; shown with Joined checkboxes.                                 |
-| Appearance     | Tap animations       | On      | A short pulse on the tapped checkbox or mark.                                                                  |
+| Appearance     | Tap animations       | On      | A short pulse on the tapped checkbox or mark, moving joins and a background fade.                              |
 | Appearance     | Missed day crosses   | On      | A quiet cross on past scheduled days that missed; unscheduled days stay blank.                                 |
 | Appearance     | Week dividers        | On      | Faint alternating week backgrounds in the date headings.                                                       |
 | Daily tracking | Hide completed today | Off     | Hide rows meeting their dated success goal at Today, with Show completed for corrections.                      |
@@ -184,9 +184,14 @@ border is continuous in either mode, preserving contrast for the future-pull
 streak, and habit cells are never shaded. The fixed name/day separator stays
 visible regardless of this setting.
 
-**Tap animations** Off suppresses checkbox and mark pulses; it does not affect
-haptics or navigation. Reduce Motion suppresses the pulse even when the toggle
-is On. A separate rest-day setting was declined; scheduling belongs to dated
+**Tap animations** Off suppresses checkbox and mark pulses and the background
+fade below; it does not affect haptics or navigation. Reduce Motion suppresses
+the pulse and join motion even when the toggle is On, but keeps the fade: a
+cross-fade is not motion. After a tap that flips a checkbox, the cell's
+background fades (ease-out) from what the finger showed to its new one, 180 ms
+when the goal becomes met and 120 ms otherwise; on the phone the pressed shade
+stays until the tap is applied and then fades. Undo, loading and other edits
+switch backgrounds instantly. A separate rest-day setting was declined; scheduling belongs to dated
 habit goals ([GOALS.md](GOALS.md)).
 
 ## Cells
@@ -206,10 +211,12 @@ without rewriting saved data.
 - **Joined checkboxes:** consecutive checked boxes are joined by a bar thinner
   than the boxes, so the boxes stand out from it; cell backgrounds stay full
   squares. A tap that makes or breaks a join animates it: the bar grows out of
-  the neighbour into the tapped box, or retracts into the neighbour, and the box
-  it reaches bumps slightly at the moment of contact. Tap animations and Reduce
-  Motion gate this like the pulse.
-- **Streak ends only** (v21, default On; shown with Joined checkboxes):
+  the neighbour into the tapped box with ease-out (220 ms; it starts at once
+  and settles into the box), or retracts into the neighbour with ease-in-out
+  (180 ms; it eases away and settles into the neighbour), and the box it reaches bumps slightly at the moment
+  of contact. Core `tapMotion.ts` holds the timing for both apps. Tap
+  animations and Reduce Motion gate this like the pulse.
+- **Streak ends only** (v21, default Off; shown with Joined checkboxes):
   a checked day between two checked neighbours draws no box, so a streak
   shows its first and last boxes with one bar between (with Streak numbers,
   the last box shows the length). A single checked day keeps its box. When a

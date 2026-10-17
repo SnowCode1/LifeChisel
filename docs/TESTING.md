@@ -144,6 +144,17 @@ docs hold the design behind each check.
 
 ### Grid and entries
 
+- Drag to fill: tap a cell, then press it again and drag along the row. Every
+  day passed stays highlighted; releasing on checkboxes paints the state the
+  first tap gave (start on empty to tick, on ticked to clear) as one stroke:
+  the bar grows (or is erased) through the cells and each box fills, bumps and
+  renumbers as it arrives, and one Undo reverses it all
+  (one History row). On number, text and category rows the dialog shows the
+  range and Done fills every day; Close leaves them unchanged. Dragging
+  vertically scrolls as usual; a fill never leaves its row. A single tap on a
+  value cell opens its dialog after a short delay with an eased entrance; a
+  plain double tap on a checkbox still toggles twice. Try Tap animations off
+  and Reduce Motion (fades only).
 - Check/uncheck five habits rapidly: immediate feedback and one short haptic per
   accepted tap, nothing queued. A pressed cell highlights; a swipe starting on
   a cell, or releasing on a different cell, must not toggle it. Only a tapped
@@ -203,7 +214,9 @@ docs hold the design behind each check.
   closes. Choices survive a restart. Missed day crosses mark only past
   scheduled days (try a 5-on/2-off habit); Streak numbers count back across
   scrolled-off days and renumber after checking a gap; Joined checkboxes grow
-  or retract their bar with a bump on contact. With Streak ends only, a run of
+  their bar (settling into the box) or ease it back into the neighbour, with a
+  bump on contact, and the tapped cell's background fades rather than
+  switching; Undo switches it instantly. With Streak ends only, a run of
   three or more shows only its end boxes and one bar; checking the gap
   between two runs shrinks the boxes that become middles into the bar, and
   clearing a middle day brings back the two new end boxes. The
@@ -396,7 +409,8 @@ See [GOALS.md](GOALS.md).
 - **Text size:** 85–150% app text with the phone's larger text, both
   orientations, every screen: content scrolls rather than clipping.
 - **Reduce Motion:** Today return, future reveal, row movement, tap pulses,
-  island taps, Next change and menus follow it; direct gesture feedback remains.
+  joins, island taps, Next change and menus follow it; direct gesture feedback
+  and the tapped cell's background fade remain.
 - **No gesture-only essentials:** reorder, close and page switching have buttons
   or accessibility actions. Check contrast in both themes, safe areas and long
   names.

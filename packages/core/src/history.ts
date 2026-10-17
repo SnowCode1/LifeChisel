@@ -3,6 +3,7 @@ import { sameValue } from './storage/model.ts';
 import { entryLabel } from './entries.ts';
 import { localDateKey } from './calendar.ts';
 import { habitType, isNumericHabit } from './habits.ts';
+import { fillRange, fillSummary } from './entryFill.ts';
 import type { HistoryAction, StoredState } from './storage/model.ts';
 import type { IconName } from './iconNames.ts';
 
@@ -72,7 +73,7 @@ export function historyKind(action: HistoryAction): HistoryKind {
   if (kind === undefined) {
     const change = action.change;
     kind =
-      change.kind === 'entry'
+      change.kind === 'entry' || change.kind === 'entries'
         ? 'entries'
         : change.kind === 'habit' && isDescriptionEdit(change)
           ? 'notes'
@@ -448,6 +449,18 @@ export function historyPresentation(event: HistoryAction, state: StoredState) {
   }
   const habit = state.habits.find((habit) => habit.id === change.habitId);
   const title = habit?.name ?? 'Habit';
+  if (change.kind === 'entries') {
+    // One row per fill: what was set, how many days, and which days.
+    const { summary, icon } = fillSummary(habit, change);
+    const { from, to } = fillRange(change);
+    return {
+      title,
+      summary: `${summary} · ${fillRangeLabel(from, to, event.recordedAt)}`,
+      icon,
+      color: habit?.color ?? '#ACB8C5',
+      effectiveDate: null,
+    };
+  }
   let icon: IconName;
   let summary: string;
   if (change.kind === 'colour') {
@@ -493,4 +506,26 @@ export function historyPresentation(event: HistoryAction, state: StoredState) {
     color: habit?.color ?? '#ACB8C5',
     effectiveDate,
   };
+}
+
+// "6–10 Oct" where the platform formats ranges, else "6 Oct – 10 Oct"; the
+// year appears only when the range is outside the year it was recorded in.
+export function fillRangeLabel(
+  from: string,
+  to: string,
+  recordedAt: string,
+): string {
+  const year = String(new Date(recordedAt).getFullYear());
+  const format = new Intl.DateTimeFormat(undefined, {
+    day: 'numeric',
+    month: 'short',
+    ...(from.slice(0, 4) !== year || to.slice(0, 4) !== year
+      ? { year: 'numeric' }
+      : {}),
+  });
+  const start = new Date(`${from}T12:00:00`);
+  const end = new Date(`${to}T12:00:00`);
+  return typeof format.formatRange === 'function'
+    ? format.formatRange(start, end)
+    : `${format.format(start)} – ${format.format(end)}`;
 }
