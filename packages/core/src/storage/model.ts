@@ -4,7 +4,13 @@ import {
   displayDefaults,
   effectiveColumnSpacing,
 } from '../displayPreferences.ts';
-import { habitType, isNumericHabit } from '../habits.ts';
+import { habitType, isNumericHabit, type Habit } from '../habits.ts';
+import {
+  LEGACY_NOTE_ID,
+  LEGACY_NOTE_TITLE,
+  MAX_NOTES,
+  noteChangeSummary,
+} from '../notes.ts';
 import { inverse, isPreference, sameValue } from './changeUtils.ts';
 import {
   entryFits,
@@ -16,6 +22,8 @@ import type {
   Change,
   EventMeta,
   HabitChange,
+  HabitNote,
+  NoteChange,
   HistoryAction,
   Replay,
   StoredEvent,
@@ -56,6 +64,7 @@ export const emptyReplay = (): Replay => ({
   hasV20: false,
   hasV21: false,
   hasV22: false,
+  hasV23: false,
 });
 export const GROUP_INACTIVITY_MS = 2 * 60 * 1000;
 
@@ -93,10 +102,12 @@ function sameField(left: Change, right: Change) {
     left.kind === 'habit' ||
     left.kind === 'order' ||
     left.kind === 'entries' ||
+    left.kind === 'note' ||
     right.kind === 'deleteHabit' ||
     right.kind === 'habit' ||
     right.kind === 'order' ||
-    right.kind === 'entries'
+    right.kind === 'entries' ||
+    right.kind === 'note'
   )
     return false;
   return (
@@ -122,7 +133,8 @@ export function canCoalesce(
     change.kind === 'habit' ||
     change.kind === 'deleteHabit' ||
     change.kind === 'order' ||
-    change.kind === 'entries'
+    change.kind === 'entries' ||
+    change.kind === 'note'
   )
     return false;
   const elapsed = Date.parse(meta.recordedAt) - Date.parse(group.recordedAt);
@@ -167,6 +179,16 @@ function reduceEvent(
         habits: event.habits.map((habit) => ({ ...habit })),
         values: {},
         hapticsEnabled: true,
+        ...(event.notes && Object.keys(event.notes).length
+          ? {
+              notes: Object.fromEntries(
+                Object.entries(event.notes).map(([id, notes]) => [
+                  id,
+                  notes.map((note) => ({ ...note })),
+                ]),
+              ),
+            }
+          : {}),
       },
       hasV2: event.version !== 1,
       hasV3: event.version >= 3,
@@ -189,6 +211,7 @@ function reduceEvent(
       hasV20: event.version >= 20,
       hasV21: event.version >= 21,
       hasV22: event.version >= 22,
+      hasV23: event.version >= 23,
     };
   }
   insist(
@@ -234,6 +257,10 @@ function reduceEvent(
   insist(
     !previous.hasV11 || event.version >= 11,
     'Older events cannot follow version-11 events.',
+  );
+  insist(
+    !previous.hasV23 || event.version >= 23,
+    'Older events cannot follow version-23 events.',
   );
   insist(
     !previous.hasV22 || event.version >= 22,
@@ -379,7 +406,8 @@ function reduceEvent(
         action.change.kind === 'habit' ||
         action.change.kind === 'deleteHabit' ||
         action.change.kind === 'order' ||
-        action.change.kind === 'entries'
+        action.change.kind === 'entries' ||
+        action.change.kind === 'note'
           ? null
           : action;
     } else if (event.type === 'undo') {
@@ -435,6 +463,7 @@ function reduceEvent(
     hasV20: previous.hasV20 || event.version >= 20,
     hasV21: previous.hasV21 || event.version >= 21,
     hasV22: previous.hasV22 || event.version >= 22,
+    hasV23: previous.hasV23 || event.version >= 23,
   };
 }
 const firstThemeDefaults = {
@@ -449,7 +478,7 @@ function reduceChange(
   state: StoredState,
   change: Change,
   mutable: boolean,
-  version = 22,
+  version = 23,
 ): StoredState {
   validateChange(change, version);
   let next: StoredState;
@@ -555,35 +584,48 @@ function reduceChange(
     );
     const habits = [...state.habits];
     const values = { ...state.values };
+    const stored = state.notes?.[change.habitId];
+    let notes = state.notes;
     if (change.before) {
       insist(
         sameValue(habits[change.index], change.before.habit) &&
-          sameValue(entries, change.before.entries),
+          sameValue(entries, change.before.entries) &&
+          sameValue(stored, change.before.notes),
         'Deleted habit precondition failed.',
       );
       habits.splice(change.index, 1);
       for (const date of Object.keys(entries))
         delete values[`${prefix}${date}`];
+      if (stored) notes = withNotes(state.notes, change.habitId, []);
     } else {
       insist(
         change.index <= habits.length &&
           habits.length < 1000 &&
           !habits.some((habit) => habit.id === change.habitId) &&
-          !Object.keys(entries).length,
+          !Object.keys(entries).length &&
+          !stored,
         'Deleted habit restore precondition failed.',
       );
       habits.splice(change.index, 0, { ...change.after!.habit });
       for (const [date, entry] of Object.entries(change.after!.entries))
         values[`${prefix}${date}`] = entry;
+      if (change.after!.notes)
+        notes = withNotes(
+          state.notes,
+          change.habitId,
+          change.after!.notes.map((note) => ({ ...note })),
+        );
     }
-    next = { ...state, habits, values };
+    next = withStateNotes({ ...state, habits, values }, notes);
   } else if (change.kind === 'habit') {
     const current = state.habits[change.index] ?? null;
+    const stored = state.notes?.[change.habitId];
     if (change.before === null) {
       insist(
         change.index <= state.habits.length &&
           !state.habits.some((habit) => habit.id === change.habitId) &&
-          state.habits.length < 1000,
+          state.habits.length < 1000 &&
+          !stored,
         'Habit already exists or position is invalid.',
       );
     } else
@@ -592,8 +634,19 @@ function reduceChange(
       insist(
         !Object.keys(state.values).some((key) =>
           key.startsWith(`${change.habitId}:`),
-        ),
+        ) && !stored,
         'Cannot remove a habit with entries.',
+      );
+    // A description reads as the first note, so it cannot appear beside a
+    // saved note that took its place (Undo reaches that note first).
+    if (
+      change.after?.description !== undefined &&
+      change.before?.description === undefined
+    )
+      insist(
+        !stored?.some((note) => note.id === LEGACY_NOTE_ID) &&
+          (stored?.length ?? 0) < MAX_NOTES,
+        'Habit precondition failed.',
       );
     if (
       change.before &&
@@ -640,6 +693,8 @@ function reduceChange(
               : habit,
           ),
         };
+    } else if (change.kind === 'note') {
+      next = reduceNote(state, habit, change);
     } else if (change.kind === 'entries') {
       // Every date must still hold its recorded before-value, as for one entry.
       const dates = Object.keys(change.before);
@@ -684,6 +739,92 @@ function reduceChange(
     }
   }
   return next;
+}
+function withNotes(
+  notes: StoredState['notes'],
+  habitId: string,
+  list: HabitNote[],
+): StoredState['notes'] {
+  const next = { ...notes };
+  if (list.length) next[habitId] = list;
+  else delete next[habitId];
+  return Object.keys(next).length ? next : undefined;
+}
+function withStateNotes(
+  state: StoredState,
+  notes: StoredState['notes'],
+): StoredState {
+  if (notes === state.notes) return state;
+  const { notes: _notes, ...rest } = state;
+  return notes ? { ...rest, notes } : rest;
+}
+// Notes apply to the list as shown: a v7 description first (the `legacy`
+// slot), then saved notes. The description must stay first while it lives in
+// the definition; any other slot moves the note into the saved list.
+function reduceNote(
+  state: StoredState,
+  habit: Habit,
+  change: NoteChange,
+): StoredState {
+  type Item = { note: HabitNote; legacy: boolean };
+  const items: Item[] = [
+    ...(habit.description !== undefined
+      ? [
+          {
+            note: {
+              id: LEGACY_NOTE_ID,
+              title: LEGACY_NOTE_TITLE,
+              text: habit.description,
+            },
+            legacy: true,
+          },
+        ]
+      : []),
+    ...(state.notes?.[habit.id] ?? []).map((note) => ({
+      note,
+      legacy: false,
+    })),
+  ];
+  if (change.before) {
+    const current = items[change.before.index];
+    insist(
+      current &&
+        current.legacy === !!change.before.legacy &&
+        sameValue(current.note, change.before.note),
+      'Note precondition failed.',
+    );
+    items.splice(change.before.index, 1);
+  }
+  if (change.after) {
+    const { index, note } = change.after;
+    insist(
+      index <= items.length &&
+        items.length < MAX_NOTES &&
+        !items.some((item) => item.note.id === note.id),
+      'Note position or identity is invalid.',
+    );
+    items.splice(index, 0, {
+      note: { ...note },
+      legacy: !!change.after.legacy,
+    });
+  }
+  insist(
+    items.every((item, index) => !item.legacy || index === 0),
+    'A description note must stay first.',
+  );
+  const description = items[0]?.legacy ? items[0].note.text : undefined;
+  const stored = items.filter((item) => !item.legacy).map((item) => item.note);
+  let habits = state.habits;
+  if (description !== habit.description) {
+    const { description: _description, ...definition } = habit;
+    const updated: Habit =
+      description === undefined ? definition : { ...definition, description };
+    habits = state.habits.map((item) => (item === habit ? updated : item));
+  }
+  return withStateNotes(
+    habits === state.habits ? state : { ...state, habits },
+    withNotes(state.notes, habit.id, stored),
+  );
 }
 export function replayEvents(input: unknown): {
   events: StoredEvent[];
@@ -772,6 +913,7 @@ export function describeChange(change: Change, state: StoredState): string {
   const habit = state.habits.find((habit) => habit.id === change.habitId);
   const name = habit?.name ?? 'Habit';
   if (change.kind === 'colour') return `${name} · Colour changed`;
+  if (change.kind === 'note') return `${name} · ${noteChangeSummary(change)}`;
   if (change.kind === 'entries')
     return `${name} · ${fillSummary(habit, change).summary}`;
   const value =

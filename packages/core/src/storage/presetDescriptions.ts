@@ -3,10 +3,12 @@ import {
   genericPlaceholderDescription,
   presetDescriptions,
 } from '../presetDescriptions.ts';
+import { addNote, habitNotes, LEGACY_NOTE_TITLE } from '../notes.ts';
 import type { ChangeStore } from './store.ts';
 
 // Requested one-time population of habits that existed before descriptions.
 // Raw history remembers an assignment/removal/Undo so it never reappears.
+// From v23 the placeholder is an ordinary undoable Info note.
 export function applyPlaceholderDescriptions(store: ChangeStore): number {
   if (!store.canEdit()) return 0;
   const { events, replay } = store.getSnapshot();
@@ -16,8 +18,11 @@ export function applyPlaceholderDescriptions(store: ChangeStore): number {
     if (event.type === 'initialize')
       for (const habit of event.habits) {
         if (event.version < 7) eligible.add(habit.id);
-        if (habit.description !== undefined) previouslyChosen.add(habit.id);
+        if (habit.description !== undefined || event.notes?.[habit.id])
+          previouslyChosen.add(habit.id);
       }
+    else if (event.change.kind === 'note')
+      previouslyChosen.add(event.change.habitId);
     else if (event.change.kind === 'habit') {
       if (
         event.version < 7 &&
@@ -33,10 +38,10 @@ export function applyPlaceholderDescriptions(store: ChangeStore): number {
     }
   }
   let applied = 0;
-  for (const [index, before] of replay.state.habits.entries()) {
+  for (const before of replay.state.habits) {
     if (
       !eligible.has(before.id) ||
-      before.description !== undefined ||
+      habitNotes(replay.state, before).length ||
       previouslyChosen.has(before.id)
     )
       continue;
@@ -46,16 +51,14 @@ export function applyPlaceholderDescriptions(store: ChangeStore): number {
     const description = preset
       ? presetDescriptions[before.id]
       : genericPlaceholderDescription;
-    if (
-      !store.change({
-        kind: 'habit',
-        habitId: before.id,
-        index,
-        before,
-        after: { ...before, description },
-      })
-    )
-      break;
+    const note = addNote(
+      store.getSnapshot().replay.state,
+      before.id,
+      LEGACY_NOTE_TITLE,
+      description,
+      'info',
+    );
+    if (!note || !store.change(note)) break;
     applied++;
   }
   return applied;

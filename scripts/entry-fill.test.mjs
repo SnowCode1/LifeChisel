@@ -104,7 +104,7 @@ async function storeFixture(t, habits = [walk, read, mood]) {
   let id = 0;
   let clock = Date.parse('2026-10-14T04:00:00.000Z');
   const meta = (sequence) => ({
-    version: 22,
+    version: 23,
     id: `fill_${++id}`,
     sequence,
     // Ten seconds apart: well inside the two-minute grouping window.
@@ -122,8 +122,8 @@ async function storeFixture(t, habits = [walk, read, mood]) {
   return { store, repo, meta };
 }
 
-test('the writer version is 22 and fills validate their exact shape', () => {
-  assert.equal(eventMeta(1, 'x').version, 22);
+test('the writer version is 23 and fills validate their exact shape', () => {
+  assert.equal(eventMeta(1, 'x').version, 23);
   validateChange(ticked);
   validateChange(
     fill(
@@ -342,7 +342,7 @@ test('a fill is one Undo/Redo step, never coalesces, and survives SQLite and bac
         type: 'preference',
         change: { kind: 'haptics', before: true, after: false },
       }),
-    /version-22/,
+    /version-23/,
   );
   const v21 = replayEvents([
     { ...meta(1), version: 21, type: 'initialize', habits: [walk] },
@@ -373,7 +373,7 @@ test('a fill is one Undo/Redo step, never coalesces, and survives SQLite and bac
     '2026-10-14T06:00:00.000Z',
     digest,
   );
-  assert.equal(JSON.parse(backup).version, 22);
+  assert.equal(JSON.parse(backup).version, 23);
   const decoded = await decodeArchive(backup, digest);
   assert.deepEqual(decoded.events, events());
   assert.deepEqual(decoded.replay.state, store.getSnapshot().replay.state);

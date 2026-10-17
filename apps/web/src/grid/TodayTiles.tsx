@@ -21,6 +21,8 @@ import { habitInitial } from '@onpurpose/core/gridModes';
 import { habitSummary } from '@onpurpose/core/habitSummary';
 import { habitType, type Habit } from '@onpurpose/core/habits';
 import { recentNumericTotals } from '@onpurpose/core/numericSuggestions';
+import { habitNotes, type HabitNote } from '@onpurpose/core/notes';
+import type { StoredState } from '@onpurpose/core/storage/model';
 import type { Theme } from '@onpurpose/core/theme';
 import {
   todayCount,
@@ -37,11 +39,13 @@ import type { CellLookStyle, GridHandlers } from './types.ts';
 // (drawn with the saved cell look) toggles, a blank number records in one
 // tap from its usual totals, other types open the entry popover. Under the
 // name sits the grid's line (schedule, rule or quota progress), and a habit
-// not scheduled today dims. The (i) opens Notes and Statistics; a right-click
-// opens the habit's actions.
+// not scheduled today dims. The (i) opens Notes and Statistics; a habit with
+// notes shows a notes button there instead, always visible, which opens its
+// Notes (an experiment, 17 October 2026). A right-click opens the actions.
 export function TodayTiles({
   habits,
   values,
+  notes,
   today,
   theme,
   look,
@@ -51,6 +55,7 @@ export function TodayTiles({
 }: {
   habits: Habit[];
   values: EntryValues;
+  notes: StoredState['notes'];
   today: string;
   theme: Theme;
   look: CellLookStyle;
@@ -138,6 +143,7 @@ export function TodayTiles({
               index={index}
               value={values[`${habit.id}:${today}`]}
               values={values}
+              notes={habitNotes({ notes }, habit)}
               signature={signatures.get(habit.id) ?? ''}
               today={today}
               todayOrdinal={todayOrdinal}
@@ -174,6 +180,7 @@ type TileProps = {
   value: EntryValue | undefined;
   /** Every saved value; the tile reads only its own habit's. */
   values: EntryValues;
+  notes: readonly HabitNote[];
   /** Changes exactly when this habit's saved values change. */
   signature: string;
   today: string;
@@ -196,6 +203,7 @@ function TodayTileView({
   index,
   value,
   values,
+  notes,
   today,
   todayOrdinal,
   palette,
@@ -354,16 +362,29 @@ function TodayTileView({
           </span>
         </span>
       )}
-      <button
-        type="button"
-        className="today-tile-more"
-        tabIndex={-1}
-        aria-label={`Notes and statistics for ${habit.name}`}
-        title="Notes and statistics"
-        onClick={() => on.openHabit(habit)}
-      >
-        <Icon name="info" size={16} />
-      </button>
+      {notes.length ? (
+        <button
+          type="button"
+          className="today-tile-more has-notes"
+          tabIndex={-1}
+          aria-label={`Notes for ${habit.name}: ${notes.map((note) => note.title).join(', ')}`}
+          title={`Notes: ${notes.map((note) => note.title).join(', ')}`}
+          onClick={() => on.openHabit(habit)}
+        >
+          <Icon name="text" size={15} />
+        </button>
+      ) : (
+        <button
+          type="button"
+          className="today-tile-more"
+          tabIndex={-1}
+          aria-label={`Notes and statistics for ${habit.name}`}
+          title="Notes and statistics"
+          onClick={() => on.openHabit(habit)}
+        >
+          <Icon name="info" size={16} />
+        </button>
+      )}
     </div>
   );
 }

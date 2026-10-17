@@ -3,7 +3,7 @@ import { categorySelection, type EntryValue } from '../entries.ts';
 import { allWeekdays, type HabitGoal } from '../habitGoals.ts';
 import { ordinal, weekAnchor } from '../goalTiming.ts';
 import type { Habit } from '../habits.ts';
-import type { StoredEvent } from '../storage/model.ts';
+import type { HabitNote, StoredEvent } from '../storage/model.ts';
 import { eventMeta } from '../storage/newEvents.ts';
 import { athlete } from './presets/athlete.ts';
 import { everyday } from './presets/everyday.ts';
@@ -28,7 +28,14 @@ export const PRESET_DAYS = 180;
 const TODAY_CUTOFF = 20;
 
 function definition(habit: SampleHabit, start: string, today: string): Habit {
-  const { at: _at, value: _value, goals, ...fields } = habit;
+  const {
+    at: _at,
+    value: _value,
+    goals,
+    description: _description,
+    notes: _notes,
+    ...fields
+  } = habit;
   const anchor = weekAnchor(start, 'monday');
   return {
     ...fields,
@@ -63,6 +70,19 @@ function definition(habit: SampleHabit, start: string, today: string): Habit {
   };
 }
 
+// A preset's description is its Info note; any other notes follow it.
+function presetNotes(habit: SampleHabit): HabitNote[] {
+  return [
+    ...(habit.description
+      ? [{ id: 'info', title: 'Info', text: habit.description }]
+      : []),
+    ...(habit.notes ?? []).map((note, index) => ({
+      id: `note-${index + 1}`,
+      ...note,
+    })),
+  ];
+}
+
 /** A deterministic event log for one preset, ending on `today`. */
 export function createPresetEvents(id: string, today: string): StoredEvent[] {
   const preset = samplePresets.find((item) => item.id === id);
@@ -76,6 +96,11 @@ export function createPresetEvents(id: string, today: string): StoredEvent[] {
       ...eventMeta(1, `sample_${id}_1`, first),
       type: 'initialize',
       habits: preset.habits.map((habit) => definition(habit, start, today)),
+      notes: Object.fromEntries(
+        preset.habits
+          .map((habit) => [habit.id, presetNotes(habit)] as const)
+          .filter(([, notes]) => notes.length),
+      ),
     },
   ];
   for (let ago = PRESET_DAYS - 1; ago >= 0; ago--) {

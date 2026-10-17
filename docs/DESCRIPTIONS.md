@@ -1,25 +1,87 @@
-# Habit descriptions
+# Habit notes
 
-A habit can have an optional note in plain text or Markdown, keeping motivation,
-reminders and links one tap away from the grid. Tapping a habit's name opens
-the note on its own Notes tab, beside Statistics. Notes are written in a
-full-screen formatted editor, and every applied change can be compared with
-earlier versions and restored.
+A habit can have up to eight named notes in plain text or Markdown, keeping
+motivation, rules, reminders and links one tap away from the grid. Tapping a
+habit's name opens its notes on their own Notes page, beside Statistics. Notes
+are written in a full-screen formatted editor, and every applied change to a
+note's words can be compared with earlier versions and restored.
 
-Requested by the founder and implemented 5 October 2026. The founder confirmed
-formatting selection and the link-sheet spacing on the iPhone that day; broader
-keyboard, accessibility and recovery acceptance remains pending.
+A single note per habit (then called its description) was requested by the
+founder and implemented 5 October 2026. The founder confirmed formatting
+selection and the link-sheet spacing on the iPhone that day; broader keyboard,
+accessibility and recovery acceptance remains pending. Several named notes
+replaced the single note on 17 October 2026 (below). Code and older History
+rows still say "description" in places.
+
+## Several named notes
+
+Founder request, 17 October 2026, after feedback that one note forces
+everything into one place: each habit has its own short list of notes, such
+as Info, Why or Rules. Nothing is created automatically. The founder agreed to
+the assistant's concept (a cap of eight notes per habit, preset names as
+suggestions only, a wrapping row of note names on the phone, and a Today tile
+trial), asked for notes to be saved apart from the habit definition so habit
+edits never copy them, and chose the web layout: notes in the habit dialog with
+a Notes/Statistics switch, not a sidebar.
+
+- **Presets** are suggested names, each with a line about what it is for:
+  Info (anything worth keeping), Why (the reason, for the days it feels hard),
+  Rules (what counts and what doesn't), How (steps, routine or setup), Cues
+  (when, where and what reminds you), Links (articles, videos, tools), Ideas
+  (variations to try) and Obstacles (what gets in the way, and the plan).
+  Only the chosen title is saved. A preset's line is the empty note's prompt
+  in the reader and the editor; any other name gets a general prompt. Names
+  already used by the habit are not offered again, and a name of your own
+  (up to 40 characters) works the same way. Names are unique per habit,
+  ignoring case. Core `notes.ts` holds the presets, rules and builders.
+- **Adding** a note names it first (a preset or your own name), then opens the
+  editor. Done saves the new note as one action, even before anything is
+  written, so a habit can be given an empty Rules note to fill in later. Close
+  creates nothing.
+- **Each note** can be edited, renamed, moved earlier or later, and removed.
+  Removal asks first; Undo brings the note back, and History keeps its text.
+  A note's text can be empty; its title stays.
+- **Order** is the user's. The first note is the one a name tap shows.
+- **An older single note** (a v7 description) reads as the first note, named
+  Info, with no change to saved data. Editing, renaming, moving or removing it
+  moves it out of the habit definition in that same action; Undo puts it back
+  exactly. See [STORAGE.md](STORAGE.md) (version 23).
+- **The habit editor** no longer has a Description field (both apps): notes
+  are written from the habit's Notes page.
+
+**Phone.** The Notes page keeps its place beside Statistics, with the same
+bottom Notes/Statistics switch and paging. Under the header, the note names
+wrap onto as many lines as needed rather than scrolling sideways, so they never
+compete with the pager; the shown note's name is tinted with the habit colour,
+and a dashed + adds a note. Under them, Versions (when the note has any) and
+Rename or move. Holding a name opens the same actions. The header's Edit edits
+the shown note (Add a note when there are none). Adding, renaming and the
+note's actions use one small sheet drawn inside the habit sheet, not another
+native modal, so the editor can open the moment it closes. Removal uses a
+native confirmation. A habit without notes shows "No notes yet" and Add a
+note; an empty note shows its prompt and Write.
+
+**Web.** The habit dialog switches between Notes and Statistics in its
+toolbar, like the phone (founder decision, 17 October 2026, replacing the
+Notes card beside the statistics, which squeezed the note). It opens on Notes
+when the habit has any, otherwise on Statistics. See [WEB.md](WEB.md).
+
+**Today tiles (experiment, 17 October 2026).** A habit with notes shows a
+quiet notes button in its tile's corner, on both apps, which opens the habit
+straight onto its Notes. The phone tile also gives screen readers one action
+per note ("Open Why note"). Whether to show a note's first line on the tile
+(for example a rule, at the moment of recording) is still to be tried.
 
 ## Reading and editing
 
 Notes and Statistics are two tabs in the same habit sheet (founder request for
 the full note one tap from the grid; this replaced an earlier compact note card
 after the founder found the long-note reader instant at all three sample sizes).
-Name taps open Notes when a description exists and Statistics otherwise. Notes
+Name taps open Notes when the habit has any note and Statistics otherwise. Notes
 shows the full formatted reader immediately, with no preview or second Open
-step. Empty Notes offers Add a note. The common header shows the habit with
-Close and an Edit control: Edit description on Notes, Edit habit on Statistics.
-Versions sits at the top of Notes once description history exists.
+step. Without notes it offers Add a note. The common header shows the habit
+with Close and an Edit control: the shown note on Notes, the habit on
+Statistics. Versions sits under the note names once that note has history.
 
 The tabs are switched by a compact floating Notes/Statistics island inside the
 sheet's bottom safe area and by native horizontal paging (assistant choice,
@@ -45,9 +107,10 @@ failure/retry is visible there. The tabs are a founder-authorised phone trial,
 not a final navigation decision. Edit and version-list summaries parse at most
 600 source characters.
 
-Creation and Edit have one compact Description control, showing a two-line text
-summary or an optional-note hint. It opens a full-screen editor with fixed Close
-and Done controls. The founder requested live formatted editing, replacing
+The editor is full screen with fixed Close and Done controls, the habit's name
+as its title and the note's name under it. (Until 17 October 2026, Create and
+Edit habit also had a compact Description control that opened it; that control
+is superseded by the Notes page.) The founder requested live formatted editing, replacing
 Write/Preview tabs. Bold and italic toggle the selected formatting rather than
 nesting Markdown markers. One compact toolbar provides local Undo/Redo, Bold,
 Italic, text/list options, links and highlight colours. Text options group headings,
@@ -115,11 +178,10 @@ holds at most 100 steps and is not recovered with a draft or exported. Done stil
 applies one normal habit change. Opening and closing without edits, or undoing
 back to the initial document, retains the original Markdown bytes.
 
-Done from a creation/edit dialog updates that dialog's draft. The habit is only
-saved when the outer Done is used; outer Close discards it. Done from statistics
-applies one normal undoable habit edit immediately. Close asks before discarding
-changed text. Blank/whitespace-only text removes the optional field. Newline
-normalization preserves indentation and other meaningful Markdown whitespace.
+Done applies one normal undoable note change immediately. Close asks before
+discarding changed text. Blank/whitespace-only text leaves the note empty
+(Remove deletes a note). Newline normalization preserves indentation and other
+meaningful Markdown whitespace.
 Notes are limited to 20,000 UTF-16 characters; the counter appears near the limit.
 These preview/size choices are implementation decisions, not new product goals.
 
@@ -175,19 +237,24 @@ Upstream: [markdown-it](https://github.com/markdown-it/markdown-it).
 
 ## History and durable storage
 
-Descriptions are an optional `description` string on habit definitions, added
-in v7.
-Before/after definitions use the existing atomic event/projection transaction,
-serialized writes and visible failure/retry. Creation, ordinary editing, clearing,
-Undo/Redo, archive/restore and full backups retain descriptions. Statistics read
-the applied description; unfinished text never changes the grid or statistics.
-See [STORAGE.md](STORAGE.md).
+From v23 each note is saved by its own `note` change (add, edit, rename, move
+or remove), apart from the habit definition, so editing a habit or another
+note never copies it. A v7 `description` on a definition reads as the Info
+note until its first note action moves it out. Note changes use the existing
+atomic event/projection transaction, serialized writes and visible
+failure/retry. Undo/Redo, archive/restore, undoable deletion and full backups
+retain notes; unfinished text never changes the grid or statistics. See
+[STORAGE.md](STORAGE.md).
 
-A description change has a compact Description edited/cleared History row.
-Tap it to compare Before and After in a full-screen reader. Restore copies just
-the selected description onto the current habit, preserving its current name,
-colour, icon, entries and archive status, as a new undoable edit. Restoring an
-empty version clears the description. Before/After highlights changed complete
+Each note action has a compact History row naming the note: "Rules note
+added", "Rules note edited", "Rules note cleared", "Why note renamed Reasons",
+"Rules note moved", "Rules note removed". Older rows still read Description
+edited/cleared. The History filter's Notes chip covers both. Rows that changed
+a note's words open Before and After in a full-screen reader; renames and
+moves do not. Restore copies just the selected text onto that note of the
+current habit, preserving its current name and position and everything else
+about the habit, as a new undoable change. A removed note comes back at the
+end under its old name (with a number if that name is now taken). Before/After highlights changed complete
 Markdown passages with a subdued background and edge marker: earlier text in
 Before, new text in After. The compact Changes switch hides the markers without
 changing the text or passage layout. Style/link-destination changes count;
@@ -199,16 +266,16 @@ ends unchanged. This prevents quadratic memory growth for unrelated long notes. 
 restored redundantly. Visible History continues to contain active actions only;
 Undo removes rows and Redo restores them, while the raw log remains complete.
 
-Versions, at the top of Notes, opens a compact, virtualized list of this habit's
-active description changes, newest by sequence first. It uses the same Before/After
-reader and Restore path as History. Rows include saved time and a short text
-summary; only the latest matching applied version is marked Current. Repeated
-text is retained because different Before versions may contain recoverable notes.
-A cleared note keeps Versions above the empty Notes tab. The control is absent
-until a description action exists. Initial/seed text is available as Before the
-first edit; this is not a second snapshot store. Undo/Redo affect the rows exactly
-as in History, with all raw events retained in export. Opening Versions from the
-Notes tab keeps restoring separate from unfinished creation/edit-form drafts.
+Versions, under the note names, opens a compact, virtualized list of the shown
+note's active text changes, newest by sequence first (core `noteVersions`; for
+the Info note this includes its older description edits). It uses the same
+Before/After reader and Restore path as History. Rows include saved time and a
+short text summary; only the latest matching applied version is marked
+Current. Repeated text is retained because different Before versions may
+contain recoverable notes. The control is absent until that note has a text
+change. Initial/seed text is available as Before the first edit; this is not a
+second snapshot store. Undo/Redo affect the rows exactly as in History, with all
+raw events retained in export.
 
 ## Interrupted drafts
 
@@ -226,9 +293,12 @@ cannot resurrect them. Draft errors are visible in the editor and do not prevent
 Done from using the main store's normal durability/retry path. An abrupt kill
 before a debounce/background write completes can lose the most recent keystrokes.
 
-Creation uses one recoverable new-habit description slot; it does not recover the
-whole name/icon/colour form. Sample-mode notes and drafts stay entirely in memory
-and disappear on full reload. They cannot write to real drafts or real habit data.
+Each note has its own draft slot (core `noteDraftKey`); the Info note made
+from a v7 description keeps that habit's original key, so older drafts still
+recover. A new note's draft is keyed by the ID it will have. The earlier
+new-habit slot is no longer written. Sample-mode notes and drafts stay entirely
+in memory and disappear on full reload. They cannot write to real drafts or
+real habit data.
 
 Version-2 local draft JSON optionally includes validated anchor/head/scrollTop;
 version-1 drafts remain readable without being rewritten. No draft SQL schema or
@@ -257,17 +327,22 @@ large-text restoration still need physical-iPhone acceptance.
 ## Requested placeholder notes
 
 Each preset has a short fictional Markdown note and a clearly illustrative
-`example.com` link. The development statistics sample includes these notes.
-Fresh real-store initialization includes them once.
+`example.com` link. Fresh real-store initialization includes them once, as
+each preset's Info note (in the v23 first event). The development statistics
+sample keeps them as v7 descriptions, read as Info, and adds a few fictional
+v23 notes (Why and Rules on Go for a walk, Links on Read, How on Meditate;
+`dev/sampleNotes.ts`). The marketing presets turn each habit's text into its
+Info note and can list further notes.
 
 For a pre-description store, `storage/presetDescriptions.ts` adds placeholders
-through normal undoable edits to existing habits, including custom and archived
-habits. Custom habits receive a generic note rather than an invented motivation.
-Existing descriptions and any past assignment/removal/Undo are preserved. Raw
-history prevents repeating the update after Undo or reload. New custom habits
-start with an optional empty description and receive no automatic placeholder.
-No store is reset or reseeded. Older backups may receive the one-time update on
-next opening; a restore itself still reproduces the validated archive exactly.
+through normal undoable changes to existing habits, including custom and
+archived habits; from v23 each is an Info note. Custom habits receive a generic
+note rather than an invented motivation. Existing notes or descriptions and any
+past assignment/removal/Undo are preserved. Raw history prevents repeating the
+update after Undo or reload. New custom habits start with no notes and receive
+no automatic placeholder. No store is reset or reseeded. Older backups may
+receive the one-time update on next opening; a restore itself still reproduces
+the validated archive exactly.
 
 ## Change navigation and editing icons
 

@@ -123,3 +123,242 @@
     height: 100dvh;
   }
 }
+
+/* A habit's page: Notes and Statistics switch in the toolbar, like the
+   phone's habit sheet. The statistics range bar follows the switch. */
+.details-toolbar-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+.details-views {
+  flex: none;
+  padding: 2px;
+}
+.details-views button {
+  flex: none;
+  height: 30px;
+  padding: 0 14px;
+  font-size: 13px;
+}
+.details-toolbar {
+  flex: 1;
+  min-width: 0;
+}
+.details-toolbar[hidden] {
+  display: none;
+}
+@media (max-width: 600px) {
+  .details-views {
+    width: 100%;
+  }
+  .details-views button {
+    flex: 1;
+  }
+}
+
+/* The Notes view: note names down the side, the chosen note at a reading
+   width. Narrow dialogs put the names in a wrapping row above the note. */
+.notes-view {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  align-items: start;
+  gap: 24px;
+}
+.note-list {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.note-list [role='tab'],
+.note-add {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 10px;
+  overflow: hidden;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  color: var(--ink-soft);
+}
+.note-list [role='tab'][aria-selected='true'] {
+  font-weight: 600;
+}
+.note-list [role='tab']:hover:not([aria-selected='true']),
+.note-add:hover:not(:disabled) {
+  background-color: var(--surface-raised);
+}
+.note-add {
+  margin-top: 6px;
+  color: var(--ink-quiet);
+}
+.note-add:disabled {
+  opacity: 0.4;
+}
+.note-pane {
+  min-width: 0;
+  max-width: 70ch;
+}
+.note-pane-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 12px;
+  margin-bottom: 12px;
+}
+.note-pane-header h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+.note-pane-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 6px;
+}
+.note-pane-actions .text-button {
+  align-self: center;
+  font-size: 13px;
+}
+.note-pane-actions .icon-button {
+  width: 32px;
+  height: 32px;
+}
+.note-pane-actions .icon-button:disabled {
+  opacity: 0.3;
+}
+.icon-button.flip .icon {
+  transform: rotate(180deg);
+}
+.note-pane .note {
+  max-width: none;
+  font-size: 17px;
+  line-height: 1.65;
+}
+.note-blank {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+.note-blank p {
+  margin: 0;
+}
+.note-version-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.note-version-list button {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  text-align: left;
+}
+.note-version-list button:hover {
+  background-color: var(--surface-raised);
+}
+.note-version-list .muted {
+  font-size: 12px;
+}
+@container details (max-width: 639px) {
+  .notes-view {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  .note-list {
+    position: static;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .note-list [role='tab'],
+  .note-add {
+    border: 1px solid var(--rule);
+    border-radius: 999px;
+  }
+  .note-add {
+    margin-top: 0;
+    border-style: dashed;
+  }
+}
+
+/* Without notes: suggested names to start from. */
+.notes-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+  max-width: 760px;
+}
+.notes-empty > p {
+  margin: 0;
+  color: var(--ink-soft);
+}
+.note-presets {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px;
+  width: 100%;
+}
+.note-preset {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 12px 14px;
+  border: 1px solid var(--card-edge);
+  border-radius: 14px;
+  background-color: var(--surface);
+  text-align: left;
+}
+.note-preset:hover:not(:disabled) {
+  background-color: var(--surface-raised);
+}
+.note-preset:disabled {
+  opacity: 0.4;
+}
+.note-preset strong {
+  font-size: 15px;
+}
+.note-preset span {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--ink-quiet);
+}
+
+/* Naming a note: your own name, or a suggestion. */
+.modal.note-name {
+  width: min(560px, calc(100vw - 32px));
+}
+.note-name-row {
+  display: flex;
+  gap: 8px;
+}
+.note-name-row .text-input {
+  flex: 1;
+  min-width: 0;
+}
+.note-name-heading {
+  margin: 18px 0 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+.modal.note-name .note-presets {
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}

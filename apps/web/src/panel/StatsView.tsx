@@ -73,11 +73,9 @@ export function StatsView({
   editable,
   onDay,
   onEditGoal,
-  aside,
   toolbarHost,
 }: {
   /** Shown in the overview column below the summary (the habit's notes). */
-  aside?: ReactNode;
   /** Where the range tabs and period stepper render (the dialog's toolbar). */
   toolbarHost?: HTMLElement | null;
   habit: Habit;
@@ -384,7 +382,6 @@ export function StatsView({
             <PeriodProgress data={periodGoals} colour={colour} />
           )}
         </div>
-        {aside}
         <details className="info-note">
           <summary>How statistics work</summary>
           <p>

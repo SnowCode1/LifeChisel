@@ -1,6 +1,7 @@
 import { localDateKey } from '../calendar.ts';
 import { demoHabits } from '../habits.ts';
 import { presetDescriptions } from '../presetDescriptions.ts';
+import { LEGACY_NOTE_TITLE } from '../notes.ts';
 import type { EventMeta, StoredEvent } from './model.ts';
 
 // Every app writes new events with the current writer version; keep the phone
@@ -11,7 +12,7 @@ export function eventMeta(
   now = new Date(),
 ): EventMeta {
   return {
-    version: 22,
+    version: 23,
     id,
     sequence,
     recordedAt: now.toISOString(),
@@ -21,14 +22,28 @@ export function eventMeta(
 }
 
 // The one-time first event of a new store (development presets for now).
+// Each preset's placeholder text is its first note, titled Info.
 export function initialEvent(id: string, now = new Date()): StoredEvent {
   return {
     ...eventMeta(1, id, now),
     type: 'initialize',
     habits: demoHabits.map((habit) => ({
       ...habit,
-      description: presetDescriptions[habit.id],
       startDate: localDateKey(now),
     })),
+    notes: Object.fromEntries(
+      demoHabits
+        .filter((habit) => presetDescriptions[habit.id])
+        .map((habit) => [
+          habit.id,
+          [
+            {
+              id: 'info',
+              title: LEGACY_NOTE_TITLE,
+              text: presetDescriptions[habit.id]!,
+            },
+          ],
+        ]),
+    ),
   };
 }

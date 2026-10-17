@@ -327,12 +327,26 @@ See [STATISTICS.md](STATISTICS.md).
 - Close or a drag down from the top returns to the same grid position; a fling up
   from deep content must not dismiss.
 
-### Notes and the description editor
+### Notes and the note editor
 
-See [DESCRIPTIONS.md](DESCRIPTIONS.md). Sample data has long notes on Go for a
-walk (1,874 characters), Read (7,723) and Meditate (17,657).
+See [DESCRIPTIONS.md](DESCRIPTIONS.md). Sample data has long Info notes on Go
+for a walk (1,874 characters), Read (7,723) and Meditate (17,657), plus Why and
+Rules on Go for a walk, Links on Read and How on Meditate.
 
-- Name taps open Notes when present, Statistics otherwise. Swipe or use the
+- Several notes: the note names wrap under the header (no sideways scrolling
+  that fights the pager); tapping one shows it, holding one or Rename or move
+  opens the note sheet. + opens New note with your own name or the
+  suggestions (used names are not offered; a repeated name is refused). Done
+  saves the new note even empty; Close creates nothing. Rename, Move earlier
+  and later, and Remove (with its confirmation) work, and Undo reverses each.
+  The sheet's keyboard stays clear of the name field, and Android Back closes
+  it.
+- Editing the sample walk's Info note for the first time keeps its place and
+  text everywhere; Undo restores it; its Versions list includes the older
+  description edits.
+- Today view: tiles of habits with notes show the notes button in the corner;
+  it opens the habit on its Notes, and VoiceOver offers one action per note.
+- Name taps open Notes when the habit has any note, Statistics otherwise. Swipe or use the
   floating island to switch: partial drags settle, vertical reading stays
   vertical, swipes over links/charts do not activate them, and each panel keeps
   its position. The final line clears the island at 150% text in landscape.
@@ -349,11 +363,12 @@ walk (1,874 characters), Read (7,723) and Meditate (17,657).
   links it; tapping link text offers Open, Edit, Remove and Close.
 - Done straight after typing keeps the last keystroke as one undoable action.
   Close with changes asks first. Blank text clears. Try the character limit.
-- Unfinished text survives backgrounding or force quit as a recoverable draft;
-  Discard is final. Add/Edit habit outer Done transfers it; outer Close does not.
+- Unfinished text survives backgrounding or force quit as a recoverable draft,
+  per note; Discard is final. Add/Edit habit no longer has a Description field.
 - Versions: Before/After marks changed passages; Changes off shows plain text;
-  Next change wraps. Restore changes only the description, is undoable and
-  survives reload and backup; only the latest matching row says Current.
+  Next change wraps. Restore changes only that note's text (or brings a
+  removed note back), is undoable and survives reload and backup; only the
+  latest matching row says Current.
 - With the keyboard up, in landscape and at larger text, toolbar targets work,
   Done/Close stay reachable and text never hides behind the keyboard.
 

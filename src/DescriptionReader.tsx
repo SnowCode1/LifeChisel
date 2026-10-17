@@ -1,4 +1,4 @@
-import { memo, useCallback, useMemo } from 'react';
+import { memo, useCallback, useMemo, type ReactNode } from 'react';
 import { FlatList, Pressable, View } from 'react-native';
 import { Text } from './Typography';
 import { DescriptionText } from './DescriptionText';
@@ -16,6 +16,9 @@ export const DescriptionReader = memo(function DescriptionReader({
   editable,
   onEdit,
   onVersions,
+  header,
+  emptyText = 'No note yet.',
+  emptyAction = 'Add a note',
   bottomInset = 40,
 }: {
   description?: string;
@@ -23,6 +26,10 @@ export const DescriptionReader = memo(function DescriptionReader({
   editable: boolean;
   onEdit: () => void;
   onVersions?: () => void;
+  /** Above the note, scrolling with it (the note switcher). */
+  header?: ReactNode;
+  emptyText?: string;
+  emptyAction?: string;
   bottomInset?: number;
 }) {
   const styles = useStyles();
@@ -54,31 +61,35 @@ export const DescriptionReader = memo(function DescriptionReader({
       contentContainerStyle={[styles.body, { paddingBottom: bottomInset }]}
       showsVerticalScrollIndicator={false}
       ListHeaderComponent={
-        onVersions ? (
-          <View style={styles.history}>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Previous description versions"
-              onPress={onVersions}
-              style={styles.action}
-            >
-              <Text style={styles.actionText}>Versions</Text>
-            </Pressable>
-          </View>
+        header || onVersions ? (
+          <>
+            {header}
+            {!header && onVersions && (
+              <View style={styles.history}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Previous note versions"
+                  onPress={onVersions}
+                  style={styles.action}
+                >
+                  <Text style={styles.actionText}>Versions</Text>
+                </Pressable>
+              </View>
+            )}
+          </>
         ) : null
       }
       ListEmptyComponent={
         <View style={{ gap: 8 }}>
-          <Text style={styles.empty}>No note yet.</Text>
+          <Text style={styles.empty}>{emptyText}</Text>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Add description"
             accessibilityState={{ disabled: !editable }}
             disabled={!editable}
             onPress={onEdit}
             style={[styles.action, { opacity: editable ? 1 : 0.35 }]}
           >
-            <Text style={styles.actionText}>Add a note</Text>
+            <Text style={styles.actionText}>{emptyAction}</Text>
           </Pressable>
         </View>
       }

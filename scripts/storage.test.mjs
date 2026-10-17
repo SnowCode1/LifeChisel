@@ -13,6 +13,7 @@ import {
 } from '../packages/core/src/storage/model.ts';
 import { sqliteRepository } from '../packages/core/src/storage/repository.ts';
 import { ChangeStore } from '../packages/core/src/storage/store.ts';
+import { addNote, habitNotes, removeNote } from '../packages/core/src/notes.ts';
 import {
   encodeArchive,
   decodeArchive,
@@ -641,7 +642,7 @@ test('v5 start dates and spacing survive SQLite reload, undo/redo and backup rou
     '2026-10-04T06:00:00.000Z',
     digest,
   );
-  assert.equal(JSON.parse(text).version, 22);
+  assert.equal(JSON.parse(text).version, 23);
   const decoded = await decodeArchive(text, digest);
   assert.deepEqual(decoded.replay, reopened.getSnapshot().replay);
   const archive = JSON.parse(text);
@@ -816,7 +817,7 @@ test('v6 display settings persist through SQLite, preserve Redo and round-trip w
     '2026-10-04T08:00:00.000Z',
     digest,
   );
-  assert.equal(JSON.parse(archive).version, 22);
+  assert.equal(JSON.parse(archive).version, 23);
   const decoded = await decodeArchive(archive, digest);
   assert.deepEqual(decoded.replay, reopened.getSnapshot().replay);
   assert.equal(decoded.replay.state.values['walk:2026-10-04'], 1);
@@ -940,82 +941,57 @@ test('documented v6 backup restores display choices and a habit redo across pref
   assert.equal(replay.undo[0].id, 'v6-check');
 });
 
-test('v7 descriptions survive native reload, Undo/Redo, archive/restore, clear and a full backup', async (t) => {
+test('v23 notes survive native reload, Undo/Redo, archive/restore, removal and a full backup', async (t) => {
   const { store, repository } = await fixture(t);
   store.change(entry(null, 1));
-  const before = store.getSnapshot().replay.state.habits[0];
-  const description =
+  const text =
     '**My reason**\n\n- A small start\n\n[My notes](obsidian://open?vault=Personal)';
-  const withNote = { ...before, description };
-  store.change({
-    kind: 'habit',
-    habitId: before.id,
-    index: 0,
-    before,
-    after: withNote,
-  });
+  const state = () => store.getSnapshot().replay.state;
+  assert.ok(store.change(addNote(state(), 'walk', 'Why', text, 'why')));
   await store.flush();
   const reopened = new ChangeStore(repository, metadata);
   await reopened.load();
-  assert.equal(
-    reopened.getSnapshot().replay.state.habits[0].description,
-    description,
-  );
+  const current = () => reopened.getSnapshot().replay.state;
+  const notesOf = () => habitNotes(current(), current().habits[0]);
+  assert.deepEqual(notesOf(), [{ id: 'why', title: 'Why', text }]);
+  // The definition never carries the note, so habit edits do not copy it.
+  assert.equal(current().habits[0].description, undefined);
   assert.ok(reopened.undo());
   await reopened.flush();
-  assert.equal(
-    reopened.getSnapshot().replay.state.habits[0].description,
-    undefined,
-  );
+  assert.deepEqual(notesOf(), []);
   assert.ok(reopened.redo());
-  await reopened.flush();
-  const archived = { ...withNote, archived: true };
+  const before = current().habits[0];
+  const archived = { ...before, archived: true };
   reopened.change({
     kind: 'habit',
     habitId: before.id,
     index: 0,
-    before: withNote,
+    before,
     after: archived,
   });
-  reopened.undo();
-  reopened.redo();
   reopened.change({
     kind: 'habit',
     habitId: before.id,
     index: 0,
     before: archived,
-    after: { ...archived, archived: false },
+    after: before,
   });
   await reopened.flush();
-  const restoredHabit = reopened.getSnapshot().replay.state.habits[0];
-  assert.equal(restoredHabit.description, description);
-  assert.equal(
-    reopened.getSnapshot().replay.state.values['walk:2026-10-04'],
-    1,
-  );
-  reopened.undo();
-  reopened.redo(); // close correction group
-  const { description: _description, ...cleared } = restoredHabit;
-  reopened.change({
-    kind: 'habit',
-    habitId: before.id,
-    index: 0,
-    before: restoredHabit,
-    after: cleared,
-  });
+  assert.deepEqual(notesOf(), [{ id: 'why', title: 'Why', text }]);
+  assert.equal(current().values['walk:2026-10-04'], 1);
+  assert.ok(reopened.change(removeNote(current(), 'walk', 'why')));
   await reopened.flush();
   const again = new ChangeStore(repository, metadata);
   await again.load();
-  assert.equal(
-    again.getSnapshot().replay.state.habits[0].description,
-    undefined,
-  );
+  const latest = again.getSnapshot().replay.state;
+  assert.deepEqual(habitNotes(latest, latest.habits[0]), []);
+  assert.equal(latest.notes, undefined);
   assert.ok(again.undo());
   await again.flush();
-  assert.equal(
-    again.getSnapshot().replay.state.habits[0].description,
-    description,
-  );
+  const undone = again.getSnapshot().replay.state;
+  assert.deepEqual(habitNotes(undone, undone.habits[0]), [
+    { id: 'why', title: 'Why', text },
+  ]);
   const decoded = await decodeArchive(
     await encodeArchive(
       again.getSnapshot().events,
@@ -1027,7 +1003,7 @@ test('v7 descriptions survive native reload, Undo/Redo, archive/restore, clear a
   assert.deepEqual(decoded.replay, again.getSnapshot().replay);
   assert.deepEqual(decoded.events, again.getSnapshot().events);
 });
-test('failed description save rolls back event and projection together, then retries without losing the note', async (t) => {
+test('failed note save rolls back event and projection together, then retries without losing the note', async (t) => {
   let fail = false;
   const { store, repository, raw } = await fixture(t, (sql) => {
     if (fail && sql.startsWith('INSERT INTO current_state')) {
@@ -1035,33 +1011,36 @@ test('failed description save rolls back event and projection together, then ret
       throw new Error('Unavailable');
     }
   });
-  const before = store.getSnapshot().replay.state.habits[0];
   fail = true;
-  store.change({
-    kind: 'habit',
-    habitId: before.id,
-    index: 0,
-    before,
-    after: { ...before, description: 'My unfinished thought, now applied.' },
-  });
+  store.change(
+    addNote(
+      store.getSnapshot().replay.state,
+      'walk',
+      'Info',
+      'My unfinished thought, now applied.',
+      'info',
+    ),
+  );
   await assert.rejects(store.flush());
   assert.equal(
     raw.prepare('SELECT COUNT(*) AS count FROM changes').get().count,
     1,
   );
-  assert.equal(
-    (await repository.load()).replay.state.habits[0].description,
-    undefined,
-  );
+  assert.equal((await repository.load()).replay.state.notes, undefined);
   assert.ok(store.getSnapshot().error);
   await store.retry();
   await store.flush();
   const reopened = new ChangeStore(repository, metadata);
   await reopened.load();
-  assert.equal(
-    reopened.getSnapshot().replay.state.habits[0].description,
-    'My unfinished thought, now applied.',
-  );
+  assert.deepEqual(reopened.getSnapshot().replay.state.notes, {
+    walk: [
+      {
+        id: 'info',
+        title: 'Info',
+        text: 'My unfinished thought, now applied.',
+      },
+    ],
+  });
 });
 
 test('v8 text size persists across reload and backup without breaking habit grouping or Redo', async (t) => {
@@ -1088,7 +1067,7 @@ test('v8 text size persists across reload and backup without breaking habit grou
     '2026-10-05T03:00:00.000Z',
     digest,
   );
-  assert.equal(JSON.parse(text).version, 22);
+  assert.equal(JSON.parse(text).version, 23);
   const decoded = await decodeArchive(text, digest);
   assert.deepEqual(decoded.events, snapshot.events);
   assert.deepEqual(decoded.replay, snapshot.replay);
@@ -1234,7 +1213,7 @@ test('v9 completion preference survives SQLite reload and backup while preservin
     '2026-10-05T08:00:00.000Z',
     digest,
   );
-  assert.equal(JSON.parse(text).version, 22);
+  assert.equal(JSON.parse(text).version, 23);
   const decoded = await decodeArchive(text, digest);
   assert.equal(decoded.replay.state.hideCompleted, true);
   assert.equal(decoded.replay.redo.length, 1);

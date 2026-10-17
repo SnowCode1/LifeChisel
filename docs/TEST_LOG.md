@@ -2087,3 +2087,29 @@ habit checked on an unscheduled day counted as done rather than "Not today"
 tiles stretched by wrapped chips and a two-line summary; every tile now has
 one fixed height and rows stayed level at both widths. The phone tiles are
 unchecked on a device.
+
+### Several named notes per habit (storage v23)
+
+Automated: `npm run check` passed; `npm test` passed 417 of 417 (new
+`scripts/notes.test.mjs`; the v7 description tests now build their legacy
+actions as v7 events, since v23 rejects new description edits, and the SQLite
+description tests became note tests); `npm run web:build` built; Android and
+iOS bundles exported. The new `docs/examples/storage-v23.json` extends the v22
+fixture exactly.
+
+Headless desktop Chrome with sample data at 1400 and 390 px: Go for a walk
+opened on Notes with Info, Why and Rules down the side and the note at a
+reading width; Statistics opened from the switch with the range bar in the
+toolbar. A habit without notes opened on Statistics, and its Notes view
+offered the eight suggestions. Choosing Why opened the editor with Why's
+prompt, and Done saved it; a custom "Gear" note saved empty; renaming it to
+"why" was refused as a duplicate, then "Kit" worked; Move up, and Remove with
+its confirmation, worked. Editing the walk's Info note moved it out of the
+definition; its Versions list and Before/After worked, and Restore before
+brought the old text back. History named each action ("Gear note renamed
+Kit", "Why note removed"), and only text changes were links. Today tiles of
+habits with notes showed the notes button. Found and fixed: the dialog
+shrank when switching to a short note (now a steady height), and switching
+habits behind an open naming dialog kept that dialog (the page now resets
+per habit). The phone Notes page, note sheet, editor prompt and Today tile
+button are unchecked on a device.

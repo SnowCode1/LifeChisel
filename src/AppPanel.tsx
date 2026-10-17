@@ -27,6 +27,7 @@ import { Pressable, type TextProps, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Icon } from './Icon';
 import { SheetModal } from './SheetModal';
+import type { NoteRestore } from './DescriptionHistory';
 import { HistoryView } from './HistoryView';
 import type { StoreSnapshot } from '@onpurpose/core/storage/store';
 
@@ -63,7 +64,7 @@ export function AppPanel({
   onDismiss,
   snapshot,
   backupBusy,
-  onRestoreDescription,
+  onRestoreNote,
   onUndo,
   onRedo,
   onExport,
@@ -114,7 +115,7 @@ export function AppPanel({
   onDismiss: () => void;
   snapshot: StoreSnapshot;
   backupBusy: boolean;
-  onRestoreDescription: (id: string, text: string | undefined) => boolean;
+  onRestoreNote: NoteRestore;
   onUndo: () => void;
   onRedo: () => void;
   onExport: () => void;
@@ -218,7 +219,7 @@ export function AppPanel({
                   weekStart={weekStart}
                   calendarOpen={calendarOpen}
                   onCalendarClose={() => setCalendar({ context, open: false })}
-                  onRestoreDescription={onRestoreDescription}
+                  onRestoreNote={onRestoreNote}
                   onUndo={onUndo}
                   onRedo={onRedo}
                   onRetry={onRetry}
@@ -231,6 +232,7 @@ export function AppPanel({
                   onRestore={onRestoreHabit}
                   onDelete={onDeleteHabit}
                   values={snapshot.replay.state.values}
+                  notes={snapshot.replay.state.notes}
                   pending={snapshot.pending}
                   error={snapshot.error}
                   onRetry={onRetry}

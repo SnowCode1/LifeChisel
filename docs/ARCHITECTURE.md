@@ -118,9 +118,12 @@ Habits, entries and goals
   src/HabitGoalsEditor.tsx       goal sheet and timeline (GoalVersionForm.tsx and others)
   src/ArchivedHabits.tsx         archive, restore and undoable delete
 
-Descriptions
+Notes
   src/HabitDetailsScreen.tsx     Notes/Statistics pager (with useHabitPages.ts)
+  packages/core/src/notes.ts                   named notes: presets, rules, builders, versions
   packages/core/src/description.ts             Markdown parsing, validation and previews
+  src/HabitNotes.tsx             note names and the shown note on the Notes page
+  src/NoteSheet.tsx              add, rename, move or remove a note (in-sheet overlay)
   src/DescriptionReader.tsx      virtualized native note reading
   src/DescriptionEditor.tsx      full-screen editor host
   src/RichDescription.tsx        Expo DOM/Tiptap editing surface
@@ -404,7 +407,7 @@ regular same-day entry rows avoid repeating the date.
 
 ## Habits, entries and goals
 
-Habit names open full Notes when a habit has a description, and Statistics
+Habit names open full Notes when a habit has any note, and Statistics
 otherwise; holding a name opens an anchored menu and drag-to-reorder. HabitName
 combines Pressable taps/holds with native PanResponder drag recognition. The menu
 overlay stays in the grid tree, so opening it does not transfer a held touch to
@@ -488,9 +491,11 @@ text, and draft writes stay serialized separately from main History.
 for unmeasured passages. Editor icons come from the generated fourteen-icon
 `editorIconPaths.ts` subset rendered by `richText/EditorIcon.tsx`.
 
-Applied descriptions are ordinary habit-definition edits.
+Each note is saved by its own v23 `note` change, apart from the habit
+definition; a v7 description reads as the Info note until its first note
+action moves it out (core `notes.ts`, [STORAGE.md](STORAGE.md)).
 `DescriptionHistory.tsx` and `DescriptionVersions.tsx` compare and restore
-earlier versions. Recoverable drafts live in a separate local store outside
+one note's earlier versions (core `noteVersions`). Recoverable drafts live in a separate local store outside
 History and backups: `storage/descriptionDraftModel.ts` is the pure model, and
 platform modules select SQLite, browser storage or (in sample mode) memory. Keep
 the pure model's name distinct from the platform adapters so Metro cannot

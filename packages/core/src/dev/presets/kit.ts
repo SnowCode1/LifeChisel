@@ -51,6 +51,8 @@ export type SampleHabit = Omit<
 > & {
   type: NonNullable<Habit['type']>;
   goals?: SampleGoal[];
+  /** Notes after the Info note (the description), in order. */
+  notes?: { title: string; text: string }[];
   /** Usual local logging time in hours, and its spread in minutes. */
   at: [hours: number, spread: number];
   /** The day's saved value, or null to leave it blank. */

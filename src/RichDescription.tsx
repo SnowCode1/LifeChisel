@@ -61,6 +61,7 @@ export default function RichDescription({
   onReady,
   onLimit,
   onOpenLink,
+  placeholder,
 }: {
   ref: Ref<RichDescriptionRef>;
   initialValue: string;
@@ -81,6 +82,8 @@ export default function RichDescription({
   onReady: () => Promise<void>;
   onLimit: () => Promise<void>;
   onOpenLink: (url: string) => Promise<void>;
+  /** The empty note's prompt (the preset hint for its title). */
+  placeholder?: string;
   dom?: DOMProps;
 }) {
   const [menu, setMenu] = useState<'text' | 'colour' | 'link' | null>(null);
@@ -110,8 +113,8 @@ export default function RichDescription({
     () =>
       descriptionExtensions(() => {
         void onLimit();
-      }),
-    [onLimit],
+      }, placeholder),
+    [onLimit, placeholder],
   );
   const updates = useRef<ReturnType<typeof descriptionUpdateQueue> | null>(
     null,

@@ -11,14 +11,10 @@ import { HabitGoalsEditor } from './HabitGoalsEditor';
 import { GoalSummary } from './GoalSummary';
 import { validGoalTimeline, type HabitGoal } from '@onpurpose/core/habitGoals';
 import { TextInput, Text, useAppWindowDimensions } from './Typography';
-import { completeDescriptionDraft } from '@onpurpose/core/storage/descriptionBookmarks';
-import { DescriptionEditor } from './DescriptionEditor';
-import { descriptionExcerpt } from '@onpurpose/core/descriptionReading';
-import { draftsFor, descriptionDraftKey } from './descriptionDrafts';
 import { StartDateField } from './StartDateField';
 import { useKeyboardFocus } from './useKeyboardFocus';
 import { validDate } from '@onpurpose/core/storage/model';
-import { useMemo, useState, type ComponentType } from 'react';
+import { useState, type ComponentType } from 'react';
 import {
   KeyboardAvoidingView,
   Modal,
@@ -45,7 +41,6 @@ import { habitIconLabel, type HabitIcon } from '@onpurpose/core/habitIcons';
 
 export type HabitDialogMode = 'colour' | 'edit' | 'create';
 export function HabitDialog({
-  temporary,
   habit,
   initialStartDate,
   weekStart,
@@ -57,7 +52,6 @@ export function HabitDialog({
   onColour,
   editable,
 }: {
-  temporary: boolean;
   habit: Habit;
   initialStartDate: string;
   weekStart: WeekStart;
@@ -71,22 +65,9 @@ export function HabitDialog({
 }) {
   const theme = useTheme();
   const styles = useStyles();
-  const [description, setDescription] = useState(habit.description);
-  const descriptionText = useMemo(
-    () => descriptionExcerpt(description ?? ''),
-    [description],
-  );
-  const [descriptionOpen, setDescriptionOpen] = useState(false);
-  const draftKey = descriptionDraftKey(
-    mode === 'create' ? undefined : habit.id,
-  );
-  function discard() {
-    if (mode !== 'colour')
-      void draftsFor(temporary)
-        .remove(draftKey)
-        .catch(() => {});
-    onClose();
-  }
+  // Notes are kept apart from the definition (v23) and edited from the
+  // habit's Notes page, so this form never writes them.
+  const discard = onClose;
   const { fontScale } = useAppWindowDimensions();
   const [startDate, setStartDate] = useState(
     habit.startDate ?? initialStartDate,
@@ -135,7 +116,6 @@ export function HabitDialog({
     const {
       unit: _unit,
       icon: _icon,
-      description: _description,
       categories: _categories,
       goals: _goals,
       ...base
@@ -146,7 +126,6 @@ export function HabitDialog({
       ...(startDate !== initialStartDate || habit.startDate || mode === 'create'
         ? { startDate }
         : {}),
-      ...(description ? { description } : {}),
       color: colour,
       ...(icon ? { icon } : {}),
       ...(numeric && unit.trim() ? { unit: unit.trim() } : {}),
@@ -154,15 +133,7 @@ export function HabitDialog({
       ...(type === 'categorical' ? { categories } : {}),
       ...(goals ? { goals } : {}),
     };
-    if (onSave(after)) {
-      void completeDescriptionDraft(
-        draftsFor(temporary),
-        draftKey,
-        description ?? '',
-        descriptionDraftKey(habit.id),
-      ).catch(() => {});
-      onClose();
-    }
+    if (onSave(after)) onClose();
   }
   const button = (label: string, onPress: () => void, disabled = false) => (
     <Pressable
@@ -425,27 +396,6 @@ export function HabitDialog({
                         }
                         onPress={() => setGoalsOpen(true)}
                       />
-                      <Pressable
-                        accessibilityRole="button"
-                        accessibilityLabel={
-                          description ? 'Edit description' : 'Add description'
-                        }
-                        onPress={() => setDescriptionOpen(true)}
-                        style={({ pressed }) => [
-                          styles.descriptionControl,
-                          { opacity: pressed ? 0.6 : 1 },
-                        ]}
-                      >
-                        <View style={{ flex: 1, gap: 4 }}>
-                          <Text style={styles.buttonText}>Description</Text>
-                          <Text numberOfLines={2} style={styles.description}>
-                            {description
-                              ? descriptionText
-                              : 'Notes, motivation or a link · optional'}
-                          </Text>
-                        </View>
-                        <Icon name="edit" size={17} color={theme.ink(0x88)} />
-                      </Pressable>
                       <StartDateField
                         value={startDate}
                         onChange={setStartDate}
@@ -543,24 +493,6 @@ export function HabitDialog({
                   setGoals(next);
                   return true;
                 }}
-              />
-            )}
-            {descriptionOpen && (
-              <DescriptionEditor
-                title={name || 'New habit'}
-                colour={displayColour}
-                initialValue={description ?? ''}
-                baseValue={habit.description ?? ''}
-                draftKey={draftKey}
-                temporary={temporary}
-                keepDraftOnApply
-                editable={editable}
-                Heading={Heading}
-                onApply={(value) => {
-                  setDescription(value);
-                  return true;
-                }}
-                onClose={() => setDescriptionOpen(false)}
               />
             )}
           </KeyboardAvoidingView>

@@ -10,15 +10,19 @@ import {
   type TextProps,
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { DescriptionHistory } from './DescriptionHistory';
+import { DescriptionHistory, type NoteRestore } from './DescriptionHistory';
 import { descriptionExcerpt } from '@onpurpose/core/descriptionReading';
 import type { Habit } from '@onpurpose/core/habits';
+import type { NoteVersion } from '@onpurpose/core/notes';
 import type { HistoryAction, StoredState } from '@onpurpose/core/storage/model';
 import { themedStyles, useTheme } from './ThemeContext';
 
+// One note's earlier versions, newest first, each opening Before/After.
 export function DescriptionVersions({
   habit,
-  actions,
+  title,
+  text,
+  versions,
   state,
   editable,
   Heading,
@@ -26,21 +30,20 @@ export function DescriptionVersions({
   onClose,
 }: {
   habit: Habit;
-  actions: HistoryAction[];
+  /** The note's current title and text (text undefined once removed). */
+  title: string;
+  text: string | undefined;
+  versions: NoteVersion[];
   state: StoredState;
   editable: boolean;
   Heading: ComponentType<TextProps>;
-  onRestore: (id: string, text: string | undefined) => boolean;
+  onRestore: NoteRestore;
   onClose: () => void;
 }) {
   const theme = useTheme();
   const styles = useStyles();
   const [selected, setSelected] = useState<HistoryAction | null>(null);
-  const currentVersion = actions.find(
-    (action) =>
-      action.change.kind === 'habit' &&
-      action.change.after?.description === habit.description,
-  );
+  const currentVersion = versions.find((version) => version.after === text);
   const accent = theme.colour(habit.color);
   return (
     <Modal
@@ -69,36 +72,41 @@ export function DescriptionVersions({
               >
                 {habit.name}
               </Heading>
-              <Text style={styles.subtitle}>Previous versions</Text>
+              <Text style={styles.subtitle}>{title} · Previous versions</Text>
             </View>
             <View style={{ width: 60 }} />
           </View>
           <FlatList
-            data={actions}
-            keyExtractor={(action) => action.id}
+            data={versions}
+            keyExtractor={(version) => version.action.id}
             contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 24 }}
             ListEmptyComponent={
-              <Text style={styles.empty}>No description changes yet.</Text>
+              <Text style={styles.empty}>No changes to this note yet.</Text>
             }
             renderItem={({ item }) => {
-              if (item.change.kind !== 'habit') return null;
-              const text = item.change.after?.description;
-              const current = item.id === currentVersion?.id;
-              const summary = text
-                ? descriptionExcerpt(text)
-                : 'Description cleared';
-              const date = new Date(item.recordedAt).toLocaleString(undefined, {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric',
-                hour: 'numeric',
-                minute: '2-digit',
-              });
+              const current = item === currentVersion;
+              const removed =
+                item.action.change.kind === 'note' && !item.action.change.after;
+              const summary = item.after
+                ? descriptionExcerpt(item.after)
+                : removed
+                  ? 'Note removed'
+                  : 'Note cleared';
+              const date = new Date(item.action.recordedAt).toLocaleString(
+                undefined,
+                {
+                  year: 'numeric',
+                  month: 'short',
+                  day: 'numeric',
+                  hour: 'numeric',
+                  minute: '2-digit',
+                },
+              );
               return (
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel={`${summary}, ${date}${current ? ', current version' : ''}`}
-                  onPress={() => setSelected(item)}
+                  onPress={() => setSelected(item.action)}
                   style={({ pressed }) => [
                     styles.row,
                     pressed && { opacity: 0.6 },

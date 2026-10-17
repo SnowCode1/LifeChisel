@@ -65,7 +65,12 @@ const ImageNote = Node.create({
     `![${String(node.attrs?.alt ?? '').replace(/([\\\[\]])/g, '\\$1')}](${node.attrs?.src ?? ''}${node.attrs?.title ? ` "${String(node.attrs.title).replace(/"/g, '\\"')}"` : ''})`,
 });
 // Bound stored Markdown, including formatting, rather than only visible text.
-export function descriptionExtensions(onLimit: () => void = () => {}) {
+export const DEFAULT_PLACEHOLDER =
+  'Why this matters, a simple starting point, or a link to my notes…';
+export function descriptionExtensions(
+  onLimit: () => void = () => {},
+  placeholder = DEFAULT_PLACEHOLDER,
+) {
   return [
     StarterKit.configure({
       underline: false,
@@ -88,10 +93,7 @@ export function descriptionExtensions(onLimit: () => void = () => {}) {
         return [selectionLinkPaste(this.editor)];
       },
     }),
-    Placeholder.configure({
-      placeholder:
-        'Why this matters, a simple starting point, or a link to my notes…',
-    }),
+    Placeholder.configure({ placeholder }),
     Extension.create({
       name: 'descriptionLimit',
       addProseMirrorPlugins() {

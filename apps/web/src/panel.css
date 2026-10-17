@@ -114,11 +114,13 @@
   gap: 16px;
 }
 
-/* A habit's page: a wide dialog (full screen on phones) that is only as tall
-   as its content needs, up to the window. Charts stay about 360 px wide:
-   the dialog is capped and the cards flow in two columns. */
+/* A habit's page: a wide dialog (full screen on phones) with a steady height,
+   so switching between Notes and Statistics or between notes never resizes
+   it. Charts stay about 360 px wide: the dialog is capped and the cards flow
+   in two columns. */
 .modal.habit-details {
   width: min(1160px, calc(100vw - 48px));
+  height: min(calc(100dvh - 48px), 1100px);
   max-height: calc(100dvh - 48px);
 }
 .modal.habit-details .modal-body {
@@ -230,106 +232,17 @@
 .overview-card .tile strong {
   font-size: 18px;
 }
-.notes-card header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-.notes-card h3 {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  color: var(--ink-soft);
-}
-.notes-card .note {
-  font-size: 15px;
-  line-height: 1.55;
-}
-.notes-card .note :is(h1, h2, h3, h4) {
-  margin: 1em 0 0.4em;
-  font-size: 15px;
-  font-weight: 650;
-}
-.notes-card > p {
-  margin: 10px 0 0;
-  font-size: 13px;
-}
-.note-body {
-  position: relative;
-  margin-top: 8px;
-}
-.note-body.clamped {
-  max-height: 260px;
-  overflow: hidden;
-}
-.note-body.faded::after {
-  content: '';
-  position: absolute;
-  inset: auto 0 0 0;
-  height: 64px;
-  background: linear-gradient(transparent, var(--surface));
-  pointer-events: none;
-}
-.show-all {
-  margin-top: 6px;
-  font-size: 13px;
-}
-.notes-actions {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
-.notes-actions .icon-button {
-  width: 30px;
-  height: 30px;
-}
-/* Notes on their own: a reading width in a wide dialog. */
-.modal.notes-reader {
-  width: min(880px, calc(100vw - 48px));
-  max-height: calc(100dvh - 48px);
-}
-.modal.notes-reader .modal-body {
-  padding: 28px 32px 40px;
-}
-.reader-page {
-  max-width: 68ch;
-  margin: 0 auto;
-}
-.reader-page:focus {
-  outline: none;
-}
-.reader-page .note {
-  max-width: none;
-  font-size: 17px;
-  line-height: 1.65;
-}
-@media (max-width: 600px) {
-  .modal.notes-reader {
-    width: 100vw;
-    max-height: none;
-    height: 100dvh;
-  }
-  .modal.notes-reader .modal-body {
-    padding: 16px 18px 28px;
-  }
-}
 .stats > .info-note,
 .stats-summary > .info-note {
   padding: 0 4px;
 }
 
-/* Medium widths: overview and notes side by side; the chart cards flow
-   down two columns, so cards of different heights leave no holes. */
+/* Medium widths: the overview spans the page with four tiles a row; the
+   chart cards flow down two columns, so cards of different heights leave no
+   holes. */
 @container details (min-width: 640px) {
-  .stats-summary {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-items: start;
-  }
-  .stats-summary > .info-note {
-    grid-column: 1 / -1;
+  .overview-card .tiles {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
   .stats-columns {
     display: block;
@@ -356,6 +269,9 @@
     display: flex;
     position: sticky;
     top: 0;
+  }
+  .overview-card .tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 .stats-overview p {

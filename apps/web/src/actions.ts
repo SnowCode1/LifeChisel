@@ -114,10 +114,17 @@ export function useHabitActions(store: ChangeStore, quickUndo: QuickUndo) {
         return saveEntry(habit, date, toggleCheckboxValue(habit, before, date));
       },
       /** Creates or replaces a habit definition; unchanged saves do nothing. */
-      saveHabit(after: Habit) {
+      saveHabit(edited: Habit) {
         if (!store.canEdit()) return false;
         const habits = store.getSnapshot().replay.state.habits;
-        const before = habits.find((habit) => habit.id === after.id) ?? null;
+        const before = habits.find((habit) => habit.id === edited.id) ?? null;
+        // Notes are saved on their own (v23); a definition edit keeps
+        // whatever older description the saved habit still has, unchanged.
+        const { description: _description, ...rest } = edited;
+        const after: Habit =
+          before?.description !== undefined
+            ? { ...rest, description: before.description }
+            : rest;
         if (before && sameValue(before, after)) return true;
         if (!before && habits.length >= MAX_HABITS) return false;
         const change = {

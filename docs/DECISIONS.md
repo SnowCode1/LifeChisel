@@ -2335,3 +2335,46 @@ at 1400 and 390 px wide with sample data, not yet on a phone.
   stepping to earlier days from the Today view, reordering tiles. Declined
   by the assistant as against the product rules: sorting tiles by usual
   logging time, moving done tiles to the end, progress rings.
+
+## 17 October 2026 — Several named notes per habit (storage v23)
+
+Status: implemented on the `web-app` branch for both apps. The web app was
+checked in headless desktop Chrome at 1400 and 390 px wide with sample data;
+the phone app passes type checks, tests and both exports but has not been
+tried on a device.
+
+- Feedback the founder passed on: someone would not like one note per habit,
+  because it forces everything into one note. The founder did not mind it but
+  asked for the freedom to keep separate notes (such as "Why" or "Rules"),
+  with "Info" as the default name, preset names to choose from, a good way to
+  see them on both apps, and a trial of linking them from the Today view.
+- Assistant concept, which the founder agreed to: a short ordered list of
+  named Markdown notes per habit, capped at eight; nothing created
+  automatically; preset names as suggestions only (Info, Why, Rules, How,
+  Cues, Links, Ideas, Obstacles), each with a line that becomes the empty
+  note's prompt; on the phone the Notes page keeps its place beside
+  Statistics, with the note names as a wrapping row (a sideways strip would
+  fight the Notes/Statistics pager).
+- Founder decisions: on the web, notes belong in the habit dialog with a
+  switch between Notes and Statistics, as on the phone, not in a sidebar
+  (which would squeeze the grid) and not beside the statistics (you read one
+  or the other). Notes are stored "more properly", so habit edits do not copy
+  them: the coding effort is worth it to keep storage and users unaffected.
+- Assistant implementation: storage v23 adds a `note` change (add, edit,
+  rename, move or remove one note, as one undoable action) and keeps notes
+  apart from habit definitions. An existing description reads as the Info
+  note; its first note action moves it out of the definition in that same
+  change, and Undo puts it back, so older logs replay unchanged and nothing is
+  migrated at load. New stores, presets and the placeholder update write Info
+  notes. The habit editors lose their Description field; notes are written
+  from the Notes page. A new note is named first, then written; Done saves it
+  even empty. Titles are unique per habit ignoring case and at most 40
+  characters. History rows name the note, and only changes to a note's words
+  open Before/After. The web dialog now has a steady height so switching
+  views or notes never resizes it.
+- Today tile trial (assistant's first step): a habit with notes shows a notes
+  button in its tile corner on both apps, opening its Notes directly; the
+  phone tile also offers one screen-reader action per note. Showing a note's
+  first line on the tile is the possible next step, after a phone trial.
+- Open for the founder: whether to keep the Today notes button, and whether
+  a note's first line belongs on its tile.

@@ -27,8 +27,19 @@ import {
   decodeArchive,
 } from '../packages/core/src/storage/archive.ts';
 import { applyPlaceholderDescriptions } from '../packages/core/src/storage/presetDescriptions.ts';
-import { descriptionVersions } from '../packages/core/src/descriptionVersionFilter.ts';
-import { historyPresentation } from '../packages/core/src/history.ts';
+import {
+  historyKind,
+  historyPresentation,
+} from '../packages/core/src/history.ts';
+import {
+  addNote,
+  habitNotes,
+  moveNote,
+  noteVersions,
+  removeNote,
+  restoreNote,
+  updateNote,
+} from '../packages/core/src/notes.ts';
 
 let counter = 0;
 const metadata = (sequence) => ({
@@ -54,16 +65,6 @@ async function fixture(habits = demoHabits, version = 6) {
   const store = new ChangeStore(repository, metadata);
   await store.load();
   return { store, repository };
-}
-function edit(store, after, index = 0) {
-  const before = store.getSnapshot().replay.state.habits[index];
-  return store.change({
-    kind: 'habit',
-    habitId: before.id,
-    index,
-    before,
-    after,
-  });
 }
 
 test('plain text and Markdown keep whitespace meaning while blank notes become absent', () => {
@@ -162,19 +163,90 @@ test('stats previews retain complete Markdown blocks and expose long notes for e
   // A single block's cutoff is based on actual rendered height in the card.
   assert.equal(descriptionPreview('x'.repeat(500), false).truncated, false);
 });
-test('v7 rejects malformed descriptions and older definitions reject the new field', async () => {
-  const { store } = await fixture();
-  const before = store.getSnapshot().replay.state.habits[0];
+// A store over a log written directly at older versions (here v6/v7), so
+// legacy description actions exist exactly as older apps saved them. New
+// actions from the store are v23.
+function legacyStore(habits, changes) {
+  const events = [{ ...metadata(1), version: 6, type: 'initialize', habits }];
+  for (const change of changes) {
+    const meta = metadata(events.length + 1);
+    events.push(
+      change.kind === 'haptics'
+        ? { ...meta, type: 'preference', change }
+        : { ...meta, type: 'change', groupId: meta.id, change },
+    );
+  }
+  let log = replayEvents(events);
+  const repository = {
+    async load() {
+      return { ...replayEvents(log.events), hasRecovery: false };
+    },
+    async append(event) {
+      log = { events: [...log.events, event], replay: null };
+    },
+    async replace() {},
+    async recoveryEvents() {
+      return [];
+    },
+  };
+  const store = new ChangeStore(repository, metadata);
+  return { store, repository, events: () => log.events, ready: store.load() };
+}
+// A v7 definition edit of `habit`, chained from its previous definition.
+function legacyEdits(habit, ...descriptions) {
+  const changes = [];
+  let before = habit;
+  for (const description of descriptions) {
+    const { description: _description, ...rest } = before;
+    const after =
+      typeof description === 'object'
+        ? description
+        : description === undefined
+          ? rest
+          : { ...rest, description };
+    changes.push({ kind: 'habit', habitId: habit.id, index: 0, before, after });
+    before = after;
+  }
+  return changes;
+}
+// One change event whose group is itself, as every first edit is.
+function changeEvent(sequence, change, version) {
+  const meta = metadata(sequence);
+  return {
+    ...meta,
+    ...(version ? { version } : {}),
+    type: 'change',
+    groupId: meta.id,
+    change,
+  };
+}
+const notesOf = (store, index = 0) => {
+  const state = store.getSnapshot().replay.state;
+  return habitNotes(state, state.habits[index]);
+};
+
+test('v7 rejects malformed descriptions and older definitions reject the new field', () => {
+  const habit = demoHabits[0];
   for (const description of [
     '',
     '  ',
     null,
-    undefined,
     1,
     {},
     'x'.repeat(MAX_DESCRIPTION_LENGTH + 1),
   ])
-    assert.throws(() => edit(store, { ...before, description }));
+    assert.throws(() =>
+      replayEvents([
+        { ...metadata(1), version: 6, type: 'initialize', habits: [habit] },
+        changeEvent(2, {
+          kind: 'habit',
+          habitId: habit.id,
+          index: 0,
+          before: habit,
+          after: { ...habit, description },
+        }),
+      ]),
+    );
   for (const version of [1, 2, 3, 4, 5, 6])
     assert.throws(() =>
       replayEvents([
@@ -188,12 +260,13 @@ test('v7 rejects malformed descriptions and older definitions reject the new fie
         },
       ]),
     );
-  assert.ok(
-    edit(store, { ...before, description: 'x'.repeat(MAX_DESCRIPTION_LENGTH) }),
-  );
+  const long = replayEvents([
+    { ...metadata(1), version: 6, type: 'initialize', habits: [habit] },
+    changeEvent(2, legacyEdits(habit, 'x'.repeat(MAX_DESCRIPTION_LENGTH))[0]),
+  ]);
   assert.throws(
     () =>
-      applyEvent(store.getSnapshot().replay, {
+      applyEvent(long.replay, {
         ...metadata(3),
         version: 6,
         type: 'preference',
@@ -201,31 +274,35 @@ test('v7 rejects malformed descriptions and older definitions reject the new fie
       }),
     /version-7/,
   );
+  // From v23 a new definition edit cannot rewrite the description.
+  assert.throws(
+    () =>
+      applyEvent(
+        long.replay,
+        changeEvent(
+          3,
+          legacyEdits(long.replay.state.habits[0], 'Rewritten')[0],
+          23,
+        ),
+      ),
+    /note changes from version 23/,
+  );
 });
 test('description edits and clears have concise History labels', async () => {
-  const { store } = await fixture();
-  const habit = store.getSnapshot().replay.state.habits[0];
-  edit(store, { ...habit, description: 'Purpose' });
-  assert.equal(
-    historyPresentation(
-      store.getSnapshot().replay.undo.at(-1),
-      store.getSnapshot().replay.state,
-    ).summary,
-    'Description edited',
+  const habit = demoHabits[0];
+  const { store, ready } = legacyStore(
+    [habit],
+    legacyEdits(habit, 'Purpose', undefined),
   );
-  // Separate Undo/Redo closes the correction group before a second edit.
-  store.undo();
-  store.redo();
-  edit(store, habit);
-  assert.equal(
-    historyPresentation(
-      store.getSnapshot().replay.undo.at(-1),
-      store.getSnapshot().replay.state,
-    ).summary,
-    'Description cleared',
+  await ready;
+  const { undo, state } = store.getSnapshot().replay;
+  assert.deepEqual(
+    undo.map((action) => historyPresentation(action, state).summary),
+    ['Description edited', 'Description cleared'],
   );
+  assert.ok(undo.every((action) => historyKind(action) === 'notes'));
 });
-test('every existing preset and custom/archived habit gets an undoable placeholder without losing entries', async () => {
+test('every existing preset and custom/archived habit gets an undoable placeholder note without losing entries', async () => {
   const custom = {
     id: 'custom',
     name: 'My custom habit',
@@ -242,51 +319,47 @@ test('every existing preset and custom/archived habit gets an undoable placehold
   });
   assert.equal(applyPlaceholderDescriptions(store), 13);
   await store.flush();
-  assert.deepEqual(
-    store.getSnapshot().replay.state.habits.slice(0, 12),
-    demoHabits.map((habit) => ({
-      ...habit,
-      description: presetDescriptions[habit.id],
-    })),
-  );
-  assert.equal(
-    store.getSnapshot().replay.state.habits.at(-1).description,
-    genericPlaceholderDescription,
-  );
-  assert.equal(store.getSnapshot().replay.state.habits.at(-1).archived, true);
-  assert.equal(store.getSnapshot().replay.state.values['read:2026-10-04'], 25);
+  const state = store.getSnapshot().replay.state;
+  // Definitions stay as they were; each placeholder is an Info note.
+  assert.deepEqual(state.habits, [...demoHabits, custom]);
+  for (const habit of demoHabits)
+    assert.deepEqual(habitNotes(state, habit), [
+      { id: 'info', title: 'Info', text: presetDescriptions[habit.id] },
+    ]);
+  assert.deepEqual(habitNotes(state, state.habits.at(-1)), [
+    { id: 'info', title: 'Info', text: genericPlaceholderDescription },
+  ]);
+  assert.equal(state.habits.at(-1).archived, true);
+  assert.equal(state.values['read:2026-10-04'], 25);
   assert.equal(store.getSnapshot().replay.undo.length, 14);
   const reopened = new ChangeStore(repository, metadata);
   await reopened.load();
   assert.equal(applyPlaceholderDescriptions(reopened), 0);
   assert.ok(reopened.undo());
   await reopened.flush();
-  assert.equal(
-    reopened.getSnapshot().replay.state.habits.at(-1).description,
-    undefined,
-  );
+  assert.deepEqual(notesOf(reopened, 12), []);
   assert.equal(applyPlaceholderDescriptions(reopened), 0);
 });
-test('placeholder population respects descriptions, removals, Undo, and new intentionally blank habits', async () => {
+test('placeholder population respects notes, removals, Undo, and new intentionally blank habits', async () => {
   const { store } = await fixture();
-  edit(store, { ...demoHabits[0], description: 'My real purpose' });
-  store.undo(); // Raw log still remembers an explicit description decision.
+  const state = () => store.getSnapshot().replay.state;
+  store.change(addNote(state(), demoHabits[0].id, 'Why', 'My real purpose'));
+  store.undo(); // Raw log still remembers an explicit note decision.
   assert.equal(applyPlaceholderDescriptions(store), 11);
-  assert.equal(
-    store.getSnapshot().replay.state.habits[0].description,
-    undefined,
-  );
-  store.undo();
-  store.redo();
-  const before = store.getSnapshot().replay.state.habits[1];
-  const { description: _description, ...without } = before;
-  edit(store, without, 1);
+  assert.deepEqual(notesOf(store, 0), []);
+  store.change(removeNote(state(), demoHabits[1].id, 'info'));
   assert.equal(applyPlaceholderDescriptions(store), 0);
+  assert.deepEqual(notesOf(store, 1), []);
   const fresh = await fixture(
     [{ id: 'new', name: 'New habit', color: '#82E6BC' }],
     7,
   );
   assert.equal(applyPlaceholderDescriptions(fresh.store), 0);
+  // A v7 description already reads as the habit's Info note.
+  const habit = demoHabits[0];
+  const legacy = legacyStore([habit], legacyEdits(habit, 'Mine'));
+  await legacy.ready;
+  assert.equal(applyPlaceholderDescriptions(legacy.store), 0);
 });
 test('legacy v1–v6 backups accept v7 descriptions and retain every original raw event', async () => {
   for (const version of [1, 2, 3, 4, 5, 6]) {
@@ -352,62 +425,104 @@ test('documented v7 backup restores descriptions while keeping its legacy prefix
   assert.equal(replay.state.values['walk:2026-10-04'], 1);
 });
 
-test('description versions filter only changed notes, keep sequence order and preserve earlier Before versions', async () => {
-  const { store } = await fixture();
-  const initial = store.getSnapshot().replay.state.habits[0];
-  edit(store, { ...initial, description: 'First' });
-  edit(store, { ...initial, description: 'Second' });
-  edit(store, { ...initial, description: 'First' });
-  edit(store, { ...initial, name: 'Renamed', description: 'First' });
-  edit(store, {
+test('note versions filter only changed text, keep sequence order and preserve earlier Before versions', async () => {
+  const initial = demoHabits[0];
+  const other = demoHabits[1];
+  const archived = {
     ...initial,
     name: 'Renamed',
     archived: true,
     description: 'First',
-  });
-  const other = store.getSnapshot().replay.state.habits[1];
-  edit(store, { ...other, description: 'Other habit' }, 1);
-  store.change({
-    kind: 'entry',
-    habitId: initial.id,
-    date: '2026-10-04',
-    before: null,
-    after: 1,
-  });
-  store.change({ kind: 'haptics', before: true, after: false });
+  };
+  const { store, ready } = legacyStore(
+    [initial, other],
+    [
+      ...legacyEdits(
+        initial,
+        'First',
+        'Second',
+        'First',
+        { ...initial, name: 'Renamed', description: 'First' },
+        archived,
+      ),
+      {
+        kind: 'habit',
+        habitId: other.id,
+        index: 1,
+        before: other,
+        after: { ...other, description: 'Other habit' },
+      },
+      {
+        kind: 'entry',
+        habitId: initial.id,
+        date: '2026-10-04',
+        before: null,
+        after: 1,
+      },
+      { kind: 'haptics', before: true, after: false },
+    ],
+  );
+  await ready;
   const actions = store.getSnapshot().replay.undo;
   // Wall-clock rollback never changes the authoritative action order.
   const withClockRollback = actions.map((action, i) => ({
     ...action,
     recordedAt: i % 2 ? '2026-10-01T01:00:00.000Z' : '2026-10-05T01:00:00.000Z',
   }));
-  const versions = descriptionVersions(withClockRollback, initial.id);
+  const versions = noteVersions(withClockRollback, initial.id, 'description');
   assert.deepEqual(
-    versions.map((action) => action.change.after.description),
+    versions.map((version) => version.after),
     ['First', 'Second', 'First'],
   );
-  assert.equal(versions[0].id, actions[2].id);
-  assert.equal(actions.length, store.getSnapshot().replay.undo.length);
-  edit(store, { ...initial, name: 'Renamed', archived: true });
-  assert.deepEqual(
-    descriptionVersions(store.getSnapshot().replay.undo, initial.id).map(
-      (action) => action.change.after.description,
+  assert.equal(versions[0].action.id, actions[2].id);
+  assert.deepEqual(noteVersions(actions, initial.id, 'other'), []);
+  // The first v23 edit moves the description into a note; renames and moves
+  // keep the same words, so they are not versions.
+  const state = () => store.getSnapshot().replay.state;
+  assert.ok(
+    store.change(
+      updateNote(state(), initial.id, 'description', { text: 'Third' }),
     ),
-    [undefined, 'First', 'Second', 'First'],
+  );
+  assert.equal(state().habits[0].description, undefined);
+  assert.ok(
+    store.change(
+      updateNote(state(), initial.id, 'description', { title: 'Purpose' }),
+    ),
+  );
+  assert.ok(store.change(addNote(state(), initial.id, 'Rules', 'One rule')));
+  assert.ok(store.change(moveNote(state(), initial.id, 'description', 1)));
+  assert.deepEqual(
+    noteVersions(
+      store.getSnapshot().replay.undo,
+      initial.id,
+      'description',
+    ).map((version) => [version.before, version.after, version.title]),
+    [
+      ['First', 'Third', 'Info'],
+      ['Second', 'First', 'Info'],
+      ['First', 'Second', 'Info'],
+      ['', 'First', 'Info'],
+    ],
   );
 });
 
 test('version restores preserve current fields and entries through Undo, Redo, reopening and backup replay', async () => {
   const { store, repository } = await fixture();
-  const initial = store.getSnapshot().replay.state.habits[0];
-  edit(store, { ...initial, description: '**First motivation**' });
-  edit(store, { ...initial, description: 'Second motivation' });
-  edit(store, {
-    ...initial,
-    name: 'My habit',
-    color: '#ABCDEF',
-    icon: 'emoji:🌱',
-    description: 'Second motivation',
+  const state = () => store.getSnapshot().replay.state;
+  const initial = state().habits[0];
+  store.change(
+    addNote(state(), initial.id, 'Why', '**First motivation**', 'why'),
+  );
+  store.change(
+    updateNote(state(), initial.id, 'why', { text: 'Second motivation' }),
+  );
+  store.change({
+    kind: 'habit',
+    habitId: initial.id,
+    index: 0,
+    before: initial,
+    after: { ...initial, name: 'My habit', color: '#ABCDEF', icon: 'emoji:🌱' },
   });
   store.change({
     kind: 'entry',
@@ -416,41 +531,48 @@ test('version restores preserve current fields and entries through Undo, Redo, r
     before: null,
     after: 1,
   });
-  const before = store.getSnapshot().replay.state;
-  const old = descriptionVersions(
+  // The definition edit carried no note text.
+  assert.equal(
+    store.getSnapshot().events.at(-2).change.after.description,
+    undefined,
+  );
+  const before = state();
+  const old = noteVersions(
     store.getSnapshot().replay.undo,
     initial.id,
+    'why',
   )[1];
-  // Restore only description onto the current definition, never the old habit.
-  edit(store, {
-    ...before.habits[0],
-    description: old.change.after.description,
-  });
-  const restored = store.getSnapshot().replay.state;
-  assert.deepEqual(restored.habits[0], {
-    ...before.habits[0],
-    description: '**First motivation**',
-  });
+  assert.equal(old.after, '**First motivation**');
+  // Restore only the text onto the current note, never the old habit.
+  assert.ok(
+    store.change(
+      restoreNote(state(), initial.id, {
+        id: 'why',
+        title: old.title,
+        text: old.after,
+      }),
+    ),
+  );
+  const restored = state();
+  assert.deepEqual(restored.habits, before.habits);
   assert.deepEqual(restored.values, before.values);
-  const rows = descriptionVersions(store.getSnapshot().replay.undo, initial.id);
+  assert.deepEqual(restored.notes, {
+    [initial.id]: [{ id: 'why', title: 'Why', text: '**First motivation**' }],
+  });
+  const rows = noteVersions(store.getSnapshot().replay.undo, initial.id, 'why');
   assert.deepEqual(
-    rows.map((action) => action.change.after.description),
+    rows.map((version) => version.after),
     ['**First motivation**', 'Second motivation', '**First motivation**'],
   );
   assert.equal(store.undo(), true);
-  assert.deepEqual(store.getSnapshot().replay.state, before);
-  assert.equal(
-    descriptionVersions(store.getSnapshot().replay.undo, initial.id)[0].change
-      .after.description,
-    'Second motivation',
-  );
+  assert.deepEqual(state(), before);
   assert.equal(store.redo(), true);
   await store.flush();
   const reopened = new ChangeStore(repository, metadata);
   await reopened.load();
   assert.deepEqual(
-    descriptionVersions(reopened.getSnapshot().replay.undo, initial.id),
-    descriptionVersions(store.getSnapshot().replay.undo, initial.id),
+    noteVersions(reopened.getSnapshot().replay.undo, initial.id, 'why'),
+    noteVersions(store.getSnapshot().replay.undo, initial.id, 'why'),
   );
   const events = store.getSnapshot().events;
   const backup = await decodeArchive(
@@ -458,43 +580,57 @@ test('version restores preserve current fields and entries through Undo, Redo, r
     digest,
   );
   assert.deepEqual(backup.events, events);
-  assert.deepEqual(
-    descriptionVersions(backup.replay.undo, initial.id),
-    descriptionVersions(store.getSnapshot().replay.undo, initial.id),
-  );
   assert.deepEqual(backup.replay.state, restored);
+  // A removed note comes back at the end under its old title.
+  store.change(removeNote(state(), initial.id, 'why'));
+  store.change(addNote(state(), initial.id, 'Why', 'A new why', 'why-2'));
+  assert.ok(
+    store.change(
+      restoreNote(state(), initial.id, {
+        id: 'why',
+        title: 'Why',
+        text: 'Second motivation',
+      }),
+    ),
+  );
+  assert.deepEqual(
+    notesOf(store).map((note) => note.title),
+    ['Why', 'Why 2'],
+  );
 });
 
 test('creation notes are available in versions while deleted, empty and unrelated definitions are omitted', async () => {
-  const { store } = await fixture([]);
   const habit = {
     id: 'new',
     name: 'New habit',
     color: '#ABCDEF',
     description: 'My purpose',
   };
-  store.change({
-    kind: 'habit',
-    habitId: habit.id,
-    index: 0,
-    before: null,
-    after: habit,
-  });
-  const creation = store.getSnapshot().replay.undo[0];
-  assert.deepEqual(descriptionVersions([creation], habit.id), [creation]);
-  assert.deepEqual(descriptionVersions([creation], 'other'), []);
-  assert.equal(creation.change.before, null);
-  store.change({
-    kind: 'habit',
-    habitId: habit.id,
-    index: 0,
-    before: habit,
-    after: null,
-  });
-  assert.deepEqual(
-    descriptionVersions(store.getSnapshot().replay.undo, habit.id),
-    [creation],
+  const seed = { id: 'seed', name: 'Seed', color: '#82E6BC' };
+  const { store, ready } = legacyStore(
+    [seed],
+    [
+      {
+        kind: 'habit',
+        habitId: habit.id,
+        index: 1,
+        before: null,
+        after: habit,
+      },
+    ],
   );
+  await ready;
+  const creation = store.getSnapshot().replay.undo[0];
+  assert.deepEqual(
+    noteVersions([creation], habit.id, 'description').map((v) => v.after),
+    ['My purpose'],
+  );
+  assert.deepEqual(noteVersions([creation], 'other', 'description'), []);
+  const removal = {
+    ...creation,
+    change: { ...creation.change, before: habit, after: null },
+  };
+  assert.deepEqual(noteVersions([removal], habit.id, 'description'), []);
   const empty = {
     ...creation,
     change: {
@@ -502,5 +638,5 @@ test('creation notes are available in versions while deleted, empty and unrelate
       after: { id: 'new', name: 'New habit', color: '#ABCDEF' },
     },
   };
-  assert.deepEqual(descriptionVersions([empty], habit.id), []);
+  assert.deepEqual(noteVersions([empty], habit.id, 'description'), []);
 });

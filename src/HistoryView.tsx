@@ -1,5 +1,6 @@
 import { Text } from './Typography';
-import { DescriptionHistory } from './DescriptionHistory';
+import { DescriptionHistory, type NoteRestore } from './DescriptionHistory';
+import { noteVersion } from '@onpurpose/core/notes';
 import {
   memo,
   useCallback,
@@ -53,7 +54,7 @@ const emptyFilter: Record<HistoryKind | 'all', string> = {
   entries: 'Checks, numbers and other daily records appear here.',
   edits:
     'New habits, renames, colours, goals, archiving and order changes appear here.',
-  notes: 'Description edits appear here.',
+  notes: 'Note changes appear here.',
 };
 
 function timeLabel(recordedAt: string) {
@@ -100,17 +101,14 @@ const HistoryRow = memo(function HistoryRow({
     event.change.kind === 'colour'
       ? `, ${event.change.before} to ${event.change.after}`
       : '';
-  const descriptionChanged =
-    event.change.kind === 'habit' &&
-    event.change.before?.description !== event.change.after?.description;
+  // Rows that changed a note's words open Before/After.
+  const descriptionChanged = noteVersion(event) !== null;
   return (
     <Pressable
       onPress={descriptionChanged ? () => onDescriptionPress(event) : undefined}
       accessibilityRole={descriptionChanged ? 'button' : undefined}
       accessibilityHint={
-        descriptionChanged
-          ? 'Compare description versions and restore'
-          : undefined
+        descriptionChanged ? 'Compare note versions and restore' : undefined
       }
       accessible
       accessibilityLabel={`${row.title}, ${row.summary}${colourDescription}${date ? `, entry for ${date}` : ''}, ${time}${pending ? ', saving' : ''}`}
@@ -404,7 +402,7 @@ export function HistoryView({
   weekStart,
   calendarOpen,
   onCalendarClose,
-  onRestoreDescription,
+  onRestoreNote,
   onUndo,
   onRedo,
   onRetry,
@@ -417,7 +415,7 @@ export function HistoryView({
   // Days or Calendar: the switch is in the sheet header, which AppPanel owns.
   calendarOpen: boolean;
   onCalendarClose: () => void;
-  onRestoreDescription: (id: string, text: string | undefined) => boolean;
+  onRestoreNote: NoteRestore;
   onUndo: () => void;
   onRedo: () => void;
   onRetry: () => void;
@@ -691,7 +689,7 @@ export function HistoryView({
           action={descriptionAction}
           state={snapshot.replay.state}
           editable={editable}
-          onRestore={onRestoreDescription}
+          onRestore={onRestoreNote}
           onClose={() => setDescriptionAction(null)}
         />
       )}

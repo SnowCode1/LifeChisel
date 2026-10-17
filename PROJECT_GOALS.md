@@ -1,6 +1,6 @@
 # OnPurpose — project goals
 
-Status: living product brief. Last updated: 10 October 2026.
+Status: living product brief. Last updated: 17 October 2026.
 “OnPurpose” is a working name, not a final brand or reserved App Store name.
 
 This brief states what OnPurpose is for and what has been confirmed. In these
@@ -119,7 +119,7 @@ and uncertainty about whether something was saved.
   are primarily a daily total, rather than repeated increments throughout the
   day. Categories have stable options with optional short grid labels, and
   several can be selected on one day. Free text is a daily value, separate from
-  the habit description.
+  the habit's notes.
 - Hold the habit name for a compact Colour/Edit/Reorder/Archive overlay. Continue
   holding and drag to reorder; include an explicit mode and accessible move actions.
   Keep date-cell recording gestures separate. Add habits at the end of the grid;
@@ -160,8 +160,13 @@ and uncertainty about whether something was saved.
   Statistics retains streaks, completion charts and numeric charts.
 - Tap days in the statistics calendar to toggle checkboxes or edit numeric totals
   using the same entry behaviour as the grid. Today navigation scrolls back quickly.
-- Give each habit an optional Markdown/plain-text description with links, available
-  during creation and editing. Keep the full note one name tap away through the
+- Give each habit up to eight optional named notes (17 October 2026; earlier,
+  one description per habit), in Markdown/plain text with links. Nothing is
+  created automatically; suggested names (Info, Why, Rules, How, Cues, Links,
+  Ideas, Obstacles) help choose one, and any name works. Save notes apart from
+  the habit definition, so habit edits never copy them. On the web, notes sit in
+  the habit dialog with a Notes/Statistics switch, like the phone. Try a notes
+  button on Today tiles. Keep the full notes one name tap away through the
   Notes tab, with a full-screen live formatted editor, local temporary Undo/Redo,
   reversible formatting controls and optional highlight colours. Retain applied
   changes in incremental storage and Undo/Redo. Populate existing habits with
@@ -170,7 +175,7 @@ and uncertainty about whether something was saved.
   shifting the document, and let pasting a URL onto selected words create a link.
   Use consistent outline controls from an existing icon pack.
   Show current highlight colour, offer explicit link Open/Edit/Remove inspection,
-  and provide description Versions beside Edit with undoable text-only restore.
+  and provide per-note Versions with undoable text-only restore.
   Clear formatting preserves links. Remember matching-text editing positions,
   including recoverable drafts, and highlight changed passages in Before/After,
   with Next change to find them quickly.
@@ -261,8 +266,8 @@ deliberate pull, jumps to any date, and rolls over at local midnight. It records
 checkbox, numeric, categorical and free-text values, with optional icons and
 preset or custom row colours.
 
-Tapping a name opens Notes and Statistics; holding it opens actions and drag
-reordering. Goals support dated daily rules, period quotas and on/off cycles
+Tapping a name opens Notes and Statistics; each habit can keep several named
+notes. Holding a name opens actions and drag reordering. Goals support dated daily rules, period quotas and on/off cycles
 ([GOALS.md](docs/GOALS.md)); statistics rules are in
 [STATISTICS.md](docs/STATISTICS.md). History lists active habit actions with
 grouped Undo/Redo, filters and a date calendar. Everything persists locally in

@@ -9,6 +9,13 @@ import {
 import { isTextScale } from '../textSize.ts';
 import { validDescription } from '../description.ts';
 import {
+  LEGACY_NOTE_ID,
+  LEGACY_NOTE_TITLE,
+  MAX_NOTES,
+  validNoteText,
+  validNoteTitle,
+} from '../notes.ts';
+import {
   isCheckboxStyle,
   isColumnSpacing,
   isConnectorThickness,
@@ -21,7 +28,7 @@ import { isThemeMode } from '../theme.ts';
 import { isHabitIcon } from '../habitIcons.ts';
 import { habitType, type Habit } from '../habits.ts';
 import { isPreference, sameValue } from './changeUtils.ts';
-import type { Change, StoredEvent } from './types.ts';
+import type { Change, HabitNote, StoredEvent } from './types.ts';
 
 // Exact field/version validation stays independent of state transitions. Keep
 // historical version gates and rejection messages unchanged during refactoring.
@@ -72,6 +79,26 @@ function amount(value: unknown): asserts value is number | null {
         value <= Number.MAX_SAFE_INTEGER),
     'Invalid daily value.',
   );
+}
+function validateNote(value: unknown): asserts value is HabitNote {
+  object(value);
+  keys(value, ['id', 'title', 'text']);
+  id(value.id);
+  insist(validNoteTitle(value.title), 'Invalid note title.');
+  insist(validNoteText(value.text), 'Invalid note text.');
+}
+// A saved list is never empty: a habit without notes has no entry at all.
+function validateNoteList(value: unknown): asserts value is HabitNote[] {
+  insist(
+    Array.isArray(value) && value.length > 0 && value.length <= MAX_NOTES,
+    'Invalid note list.',
+  );
+  const ids = new Set<string>();
+  for (const note of value) {
+    validateNote(note);
+    insist(!ids.has(note.id), 'Repeated note identifier.');
+    ids.add(note.id);
+  }
 }
 function validateHabit(
   value: unknown,
@@ -209,7 +236,7 @@ function dailyValue(value: unknown, version: number) {
 export function entryFits(
   habit: Habit,
   value: EntryValue | null,
-  version = 22,
+  version = 23,
 ) {
   if (value === null) return true;
   switch (habitType(habit)) {
@@ -230,7 +257,7 @@ export function entryFits(
 }
 export function validateChange(
   value: unknown,
-  version = 22,
+  version = 23,
 ): asserts value is Change {
   object(value);
   if (value.kind === 'entry') {
@@ -265,6 +292,43 @@ export function validateChange(
       insist(
         !sameValue(before[date], after[date]),
         'Every filled date must change.',
+      );
+    }
+  } else if (value.kind === 'note') {
+    insist(version >= 23, 'Notes require version 23.');
+    keys(value, ['kind', 'habitId', 'before', 'after']);
+    id(value.habitId);
+    insist(value.before !== null || value.after !== null, 'Missing note.');
+    for (const side of [value.before, value.after]) {
+      if (side === null) continue;
+      object(side);
+      const legacy = Object.hasOwn(side, 'legacy');
+      keys(side, ['index', 'note', ...(legacy ? ['legacy'] : [])]);
+      insist(
+        Number.isSafeInteger(side.index) &&
+          Number(side.index) >= 0 &&
+          Number(side.index) < MAX_NOTES,
+        'Invalid note position.',
+      );
+      validateNote(side.note);
+      // The definition's v7 description, read as the first note (Info).
+      if (legacy)
+        insist(
+          side.legacy === true &&
+            side.index === 0 &&
+            side.note.id === LEGACY_NOTE_ID &&
+            side.note.title === LEGACY_NOTE_TITLE &&
+            validDescription(side.note.text),
+          'Invalid description note.',
+        );
+    }
+    const before = value.before as { note: HabitNote; legacy?: true } | null,
+      after = value.after as { note: HabitNote; legacy?: true } | null;
+    if (before && after) {
+      insist(before.note.id === after.note.id, 'Note identity cannot change.');
+      insist(
+        !(before.legacy && after.legacy),
+        'A description note changes by leaving the definition.',
       );
     }
   } else if (value.kind === 'colour') {
@@ -302,7 +366,9 @@ export function validateChange(
     );
     const snapshot = value.before ?? value.after;
     object(snapshot);
-    keys(snapshot, ['habit', 'entries']);
+    const notes = version >= 23 && Object.hasOwn(snapshot, 'notes');
+    keys(snapshot, ['habit', 'entries', ...(notes ? ['notes'] : [])]);
+    if (notes) validateNoteList(snapshot.notes);
     validateHabit(snapshot.habit, version);
     insist(
       snapshot.habit.id === value.habitId && snapshot.habit.archived === true,
@@ -503,7 +569,8 @@ export function validateEvent(value: unknown): asserts value is StoredEvent {
       value.version === 19 ||
       value.version === 20 ||
       value.version === 21 ||
-      value.version === 22,
+      value.version === 22 ||
+      value.version === 23,
     'Unsupported event version.',
   );
   id(value.id);
@@ -529,7 +596,8 @@ export function validateEvent(value: unknown): asserts value is StoredEvent {
     'Invalid UTC offset.',
   );
   if (value.type === 'initialize') {
-    keys(value, [...common, 'habits']);
+    const notes = value.version >= 23 && Object.hasOwn(value, 'notes');
+    keys(value, [...common, 'habits', ...(notes ? ['notes'] : [])]);
     insist(
       Array.isArray(value.habits) &&
         (value.habits.length > 0 || value.version >= 3) &&
@@ -541,6 +609,18 @@ export function validateEvent(value: unknown): asserts value is StoredEvent {
       validateHabit(habit, value.version);
       insist(!ids.has(habit.id), 'Duplicate habit identifier.');
       ids.add(habit.id);
+      // From v23 new stores write notes, not definition descriptions.
+      insist(
+        value.version < 23 || !Object.hasOwn(habit, 'description'),
+        'Notes are saved as notes from version 23.',
+      );
+    }
+    if (notes) {
+      object(value.notes);
+      for (const [habitId, list] of Object.entries(value.notes)) {
+        insist(ids.has(habitId), 'Notes for an unknown habit.');
+        validateNoteList(list);
+      }
     }
   } else if (
     value.type === 'change' ||
@@ -561,6 +641,24 @@ export function validateEvent(value: unknown): asserts value is StoredEvent {
         (value.change.kind !== 'habit' && value.change.kind !== 'order'),
       'Habit management requires version 3.',
     );
+    // From v23 notes are saved as note changes. Undo/Redo still invert older
+    // description edits exactly, so only new habit actions are restricted.
+    if (
+      value.version >= 23 &&
+      value.type === 'change' &&
+      value.change.kind === 'habit' &&
+      value.change.after
+    )
+      insist(
+        value.change.before?.description === value.change.after.description,
+        'Notes are saved as note changes from version 23.',
+      );
+    // Only Undo/Redo may put a note back into a definition's description.
+    if (value.type === 'change' && value.change.kind === 'note')
+      insist(
+        !value.change.after?.legacy,
+        'Notes are saved as note changes from version 23.',
+      );
     if (value.type === 'undo' || value.type === 'redo') id(value.targetId);
     if (grouped) id(value.groupId);
     if (value.version !== 1)

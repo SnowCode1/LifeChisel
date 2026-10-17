@@ -46,14 +46,16 @@ function prefixLines(edit: Edit, prefix: (index: number) => string): Edit {
 }
 
 /**
- * Edits a habit's notes as Markdown, the same format the phone stores, with a
- * formatting toolbar and a live preview. Done applies through onApply (one
- * ordinary habit change, or a staged draft in the habit editor).
+ * Edits one of a habit's notes as Markdown, the same format the phone stores,
+ * with a formatting toolbar and a live preview. Done applies through onApply
+ * (one ordinary note change).
  */
 export function NotesEditor({
   title,
   colour,
   initial,
+  placeholder = 'Why this habit matters, a simple way to start, links…',
+  isNew = false,
   theme,
   editable,
   onClose,
@@ -62,6 +64,10 @@ export function NotesEditor({
   title: string;
   colour: string;
   initial: string;
+  /** The empty note's prompt (the preset hint for its title). */
+  placeholder?: string;
+  /** A new note: Done saves it even before anything is written. */
+  isNew?: boolean;
   theme: Theme;
   editable: boolean;
   onClose: () => void;
@@ -85,7 +91,7 @@ export function NotesEditor({
   };
   const done = () => {
     if (!editable || tooLong) return;
-    if (!dirty || onApply(normalizeDescription(text))) onClose();
+    if ((!dirty && !isNew) || onApply(normalizeDescription(text))) onClose();
   };
   const apply = (change: (edit: Edit) => Edit) => {
     const element = area.current;
@@ -208,7 +214,7 @@ export function NotesEditor({
           data-autofocus
           aria-label={`Notes for ${title}`}
           className="notes-text"
-          placeholder="Why this habit matters, a simple way to start, links…"
+          placeholder={placeholder}
           value={text}
           disabled={!editable}
           onChange={(event) => setText(event.target.value)}

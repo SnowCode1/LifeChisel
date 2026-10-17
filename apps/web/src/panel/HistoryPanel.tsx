@@ -9,13 +9,13 @@ import {
   historyDays,
   historyDisplayState,
   historyHabits,
-  historyKind,
   historyPresentation,
   historyRows,
   burstMemberLabel,
   type HistoryFilter,
   type HistoryKind,
 } from '@onpurpose/core/history';
+import { noteVersion } from '@onpurpose/core/notes';
 import type { HistoryAction, StoredState } from '@onpurpose/core/storage/model';
 import type { StoreSnapshot } from '@onpurpose/core/storage/store';
 import type { Theme } from '@onpurpose/core/theme';
@@ -435,8 +435,8 @@ function HistoryRow({
   onOpenNote: (action: HistoryAction) => void;
 }) {
   const row = historyPresentation(action, state);
-  // Note changes open Before/After.
-  const note = historyKind(action) === 'notes';
+  // Changes to a note's words open Before/After (renames and moves do not).
+  const note = noteVersion(action) !== null;
   const colour = theme.colour(row.color);
   return (
     <li className={nested ? 'history-row nested' : 'history-row'}>

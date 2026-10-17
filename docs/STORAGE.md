@@ -36,7 +36,7 @@ physical iPhone.
 
 ### Example event
 
-This entry event comes from [the v22 fixture](examples/storage-v22.json). It was
+This entry event comes from [the v23 fixture](examples/storage-v23.json). It was
 written at version 6 and still replays unchanged.
 
 ```json
@@ -81,8 +81,8 @@ introduced each feature.
 | Number                     | Where it lives     | Current | Meaning                                                                                                                                            |
 | -------------------------- | ------------------ | ------: | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 | SQL `PRAGMA user_version`  | SQLite database    |       1 | Table layout. Changes only through an explicit migration.                                                                                          |
-| Event `version`            | Each event         |      22 | Format the event was written in. Old events keep their version and that version's rules. Replay accepts 1–22; a log never returns to an older one. |
-| Export container `version` | Backup JSON header |      22 | Format of the export file. The importer accepts 1–22, and a container cannot hold events newer than its own version.                               |
+| Event `version`            | Each event         |      23 | Format the event was written in. Old events keep their version and that version's rules. Replay accepts 1–23; a log never returns to an older one. |
+| Export container `version` | Backup JSON header |      23 | Format of the export file. The importer accepts 1–23, and a container cannot hold events newer than its own version.                               |
 
 ### Glossary
 
@@ -115,9 +115,12 @@ Habits and records:
 
 - daily entries for all four habit types: checkbox, numeric daily total,
   multi-select categories and free text;
-- habit definitions: name, type, colour, units, icon, start date, description,
-  category options, effective-dated goals (weekday schedules, period quotas,
-  on/off cycles and checkbox defaults) and archived state;
+- habit definitions: name, type, colour, units, icon, start date, category
+  options, effective-dated goals (weekday schedules, period quotas, on/off
+  cycles and checkbox defaults) and archived state; definitions written before
+  v23 may also hold a `description`, which reads as the habit's Info note;
+- each habit's notes (v23): an ordered list of named Markdown notes, saved by
+  their own `note` changes rather than inside the definition;
 - habit order, archival, and undoable deletion of archived habits.
 
 Global preferences, saved as `preference` events outside History and Undo (see
@@ -238,12 +241,13 @@ Every event carries:
 | `utcOffsetMinutes` | Local offset east of UTC at edit time                                      |
 | `type`             | `initialize`, `change`, `undo`, `redo`, or `preference`                    |
 
-`initialize` records the ordered habit definitions and starts with no entries and
-haptics enabled. Each later edit includes `before` and `after` values.
+`initialize` records the ordered habit definitions (from v23, optionally each
+habit's first notes) and starts with no entries and haptics enabled. Each later
+edit includes `before` and `after` values.
 
 - `change` events carry a habit action: an entry, colour, habit definition,
-  order or archived-habit deletion. A new group's ID is its first event's ID;
-  corrections retain that ID.
+  note, order or archived-habit deletion. A new group's ID is its first event's
+  ID; corrections retain that ID.
 - `preference` events persist global settings in the same log and export,
   outside habit History and Undo/Redo.
 - `undo` targets an active group ID and carries its inverse. `redo` targets the
@@ -365,7 +369,7 @@ pending saves and captures a stable log. The export is a readable JSON container
 of **changes**, not a replacement snapshot of habit/day values. Every event
 version has a synthetic example in [docs/examples](examples/), from
 [the unchanged version-1 fixture](examples/storage-v1.json) to
-[the newest fixture](examples/storage-v22.json); see
+[the newest fixture](examples/storage-v23.json); see
 [Version history](#version-history).
 
 The container has `format: "onpurpose.changes"`, `version`, `exportedAt`,
@@ -375,7 +379,7 @@ container version, and the importer accepts every version up to it (see
 newer than its own version. The digest is SHA-256 of UTF-8
 `JSON.stringify(events)` with its existing property order. It detects accidental
 modification or incompleteness; it is not an authenticated signature. Exports
-are not encrypted and may reveal habit names, descriptions, dated values,
+are not encrypted and may reveal habit names, notes, dated values,
 colours, and preference/edit metadata. Pre-restore copies are not bundled into
 the active export. New containers retain legacy prefixes, including full raw
 edits and undo/redo operations omitted from the active History view.
@@ -412,9 +416,11 @@ initialization already includes icons, so no follow-up edits are needed. Restore
 remains exact at the time it runs; an older preset archive without icon history
 can receive this update on next launch.
 
-## Description drafts
+## Note drafts
 
-Recoverable description drafts are separate from applied habit state. A separate
+Recoverable note drafts are separate from applied habit state. Each note has its
+own draft key (core `noteDraftKey`; a v7 description keeps the key it always
+had, `habit-<id>`). A separate
 native draft database or browser key keeps unfinished text outside the canonical
 log, History and backups; sample drafts remain memory-only. Local v2 draft JSON
 adds optional bounded selection/scroll positions; v1 draft records remain
@@ -431,7 +437,9 @@ For statistics review, development builds can temporarily switch to a separate
 in-memory `ChangeStore` (`packages/core/src/dev/sampleData.ts`). It generates 180 days of
 fictional entries for the 12 preset habits, with long fictional notes on some,
 then appends fictional category/text records, effective-dated goals and
-period/cycle examples (`sampleRecords.ts`, `sampleGoals.ts`, `sampleTiming.ts`).
+period/cycle examples and extra v23 notes (`sampleRecords.ts`,
+`sampleGoals.ts`, `sampleTiming.ts`, `sampleNotes.ts`). Its v7 descriptions
+stay in the definitions, so editing one exercises the move into a note.
 It receives no real values and has no native/browser repository, so it cannot
 replace or restore backups. Its writes and Undo/Redo use the normal event logic
 but never reach SQLite, `localStorage`, exports or real History. Returning to
@@ -497,6 +505,7 @@ version, older events cannot follow it.
 |      20 | Cell look preferences (`todayOutlines` … `connectorThickness`)                           |
 |      21 | `joinedEndsOnly` cell look preference                                                    |
 |      22 | `entries` change: one fill across several days of a habit                                |
+|      23 | `note` change and named notes kept apart from habit definitions                          |
 
 ### Version 1: the original log
 
@@ -790,6 +799,53 @@ of any of its dates retires. Events v1–v21 reject `entries`, older events
 cannot follow a v22 event, backups accept container version 22, and SQL stays
 at schema 1. The [v22 fixture](examples/storage-v22.json) extends the v21
 example with a fill, its undo and redo, and a second (text) fill.
+
+### Version 23: notes apart from habit definitions
+
+A habit can have up to eight named Markdown notes (founder request, 17
+October 2026). They are saved apart from the definition, so a habit edit never
+copies a note and editing one note never copies the others. The projection
+gains `notes`, a map from habit ID to that habit's ordered saved notes (absent
+when no habit has any). A note is `{ id, title, text }`: an identifier, a
+title of 1–40 characters (trimmed, single-spaced, unique per habit ignoring
+case in the apps), and text of at most 20,000 characters, which may be empty.
+
+One change kind, `{ kind: 'note', habitId, before, after }`, adds (`before`
+null), removes (`after` null), rewrites, renames or moves one note. Each side
+is a slot `{ index, note, legacy? }`, where `index` is the note's position in
+the list the habit shows. The note ID cannot change, positions stay below
+eight, and replay checks the `before` slot against the current list, rejects a
+repeated ID and keeps at most eight notes. Note changes never group: each is
+one History action and one Undo step through the ordinary inverse, and it
+closes the open edit group.
+
+A definition's v7 `description` reads as the first note, with ID
+`description` and title `Info`; core `habitNotes` builds that list. A slot
+marked `legacy: true` is that description (index 0, title Info, nonblank
+text). The first note action that touches it (an edit, rename, move or
+removal) moves it out of the definition in that same change: the `before`
+slot is legacy, and replay removes the `description` field while writing the
+`after` slot as a saved note. Undo's inverse puts it back exactly, and only
+Undo and Redo may write a legacy `after` slot. While a description remains, it
+must stay first, so moving the second note up is written as moving the
+description down. A habit edit may not bring a description back beside a saved
+note with the ID `description`.
+
+From v23 new stores write notes, not descriptions. A v23 `initialize` may
+carry `notes` (a map of non-empty lists for its own habits), and its habits may
+not have a description. A v23 habit `change` must leave the description as it
+is (creation adds none), so the apps keep any older description untouched when
+saving a definition; v23 `undo` and `redo` events still invert older
+description edits exactly. A habit with saved notes cannot be removed as a
+definition, a v23 `deleteHabit` snapshot may carry `notes` (restored by Undo),
+and a deletion cannot be undone over existing notes. The one-time placeholder
+update for very old stores (`presetDescriptions.ts`) now adds an ordinary Info
+note. Older event versions reject `note` changes and these fields, older events
+cannot follow a v23 event, backups accept container version 23, and SQL stays
+at schema 1. The [v23 fixture](examples/storage-v23.json) extends the v22
+example: it edits the walk's v7 description into an Info note, adds Why and
+Rules, moves Why up (with its undo and redo), renames Rules, adds a note to the
+text habit, then archives and deletes that habit and undoes the deletion.
 
 ## References
 

@@ -90,7 +90,8 @@ type Props = {
   today: string;
   habits: Habit[];
   store: ChangeStore;
-  onHabitPress: (habit: Habit) => void;
+  /** Opens the habit's sheet, on one of its notes when given. */
+  onHabitPress: (habit: Habit, noteId?: string) => void;
   onHabitAction: (habit: Habit, action: HabitAction) => void;
   onReorder: (ids: string[]) => boolean;
   editable: boolean;

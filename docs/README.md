@@ -23,7 +23,7 @@ confirmed requirements and open questions.
 | [HABIT_MANAGEMENT.md](HABIT_MANAGEMENT.md) | Adding, editing, reordering, archiving and deleting habits  |
 | [GOALS.md](GOALS.md)                       | Completion goals, schedules, period quotas and cycles       |
 | [STATISTICS.md](STATISTICS.md)             | Per-habit statistics screens and how results are calculated |
-| [DESCRIPTIONS.md](DESCRIPTIONS.md)         | Markdown notes, the editor, drafts and note history         |
+| [DESCRIPTIONS.md](DESCRIPTIONS.md)         | Named Markdown notes, the editor, drafts and note history   |
 | [SETTINGS.md](SETTINGS.md)                 | Every setting, its default, and how preferences are stored  |
 | [HABIT_ICONS.md](HABIT_ICONS.md)           | Emoji and icon-pack habit symbols                           |
 

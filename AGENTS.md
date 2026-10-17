@@ -7,7 +7,7 @@ Read `PROJECT_GOALS.md`, `docs/DEVELOPMENT.md`, and `docs/DECISIONS.md`;
 (project owner and maintainer) is new to the stack: explain technical choices in
 plain language and connect them to the product goal.
 
-Current storage writers and backup exports are v22 with SQL schema 1;
+Current storage writers and backup exports are v23 with SQL schema 1;
 `docs/STORAGE.md` is the authority. Version numbers in the sections below record
 when a feature's fields arrived, and each older version must keep replaying
 unchanged.
@@ -202,9 +202,9 @@ preserve earlier icon choices/removals and raw history.
   calculations in `packages/core/src/statistics.ts`. Read HABIT_MANAGEMENT.md and STATISTICS.md.
   `src/HabitDetailsScreen.tsx`, `src/DescriptionReader.tsx`, `src/DescriptionEditor.tsx` and `src/DescriptionHistory.tsx`
   own description reading, full-screen draft editing and Before/After restore.
-  `src/DescriptionVersions.tsx` lists that habit's active note actions using the pure
-  `descriptionVersionFilter.ts` filter; retain repeated content and reverse sequence order.
-  Restore only description onto the current definition. `richText/selection.ts`
+  `src/DescriptionVersions.tsx` lists one note's active text changes using core
+  `noteVersions` (`notes.ts`); retain repeated content and reverse sequence order.
+  Restore only that note's text onto the current note. `richText/selection.ts`
   reads whole-selection highlight/link state; `descriptionLinks.ts` shares explicit
   native opening between reader/editor. `descriptionDiff.ts` compares intact Markdown
   passages with a bounded matrix; keep unchanged passages quiet and reader rows
@@ -215,7 +215,7 @@ preserve earlier icon choices/removals and raw history.
   `docs/DESCRIPTIONS.md`. `src/RichDescription.tsx` is the offline Expo DOM/Tiptap
   editing surface; `src/richText/` owns safe document mapping, formatting, local
   Undo/Redo and bounded highlights. Preserve native readers and request a current
-  DOM snapshot before applying. Applied descriptions use ordinary habit changes (introduced in v7);
+  DOM snapshot before applying. Applied notes use ordinary v23 `note` changes;
   recoverable drafts stay outside History/backups in a separate local store. Keep
   `storage/descriptionDraftModel.ts` distinct from native/web adapters for Metro.
   `packages/core/src/dev/sampleData.ts` owns isolated mock history for statistics testing. Keep
@@ -316,6 +316,23 @@ in v19, retaining v1–v18 prefixes and SQL schema 1. Read docs/SETTINGS.md.
 The description editor uses `@expo/dom-webview`, falling back to
 `react-native-webview` where its native view is missing (Expo Go on Android).
 
+## Notes (v23)
+
+Read docs/DESCRIPTIONS.md. Each habit has up to eight named Markdown notes,
+saved by their own `note` changes apart from the definition, so habit edits
+never copy them; core `notes.ts` owns presets (suggested names only), title
+rules, `habitNotes`, the change builders, `noteVersions` and `noteDraftKey`.
+A v7 `description` reads as the first note, Info; its first note action moves
+it out of the definition in that same change, and only Undo/Redo write it
+back. Never write a description in a new v23 habit change (saving a
+definition keeps the stored one untouched) and never migrate at load. Phone:
+`HabitNotes.tsx` (wrapping note names; never a sideways scroller inside the
+pager) and `NoteSheet.tsx` (an overlay inside the habit sheet, not a native
+modal, so the editor can present as it closes). Web: the habit dialog's
+Notes/Statistics switch, `panel/NotesView.tsx` and `notes/NoteNameDialog.tsx`.
+The habit editors have no notes field. A notes button on Today tiles is a
+trial.
+
 ## Web app
 
 `apps/web` is a Vite + React DOM app written for browsers, not a port of the phone
@@ -334,10 +351,10 @@ the line under each name. The font is set only in `--font-ui`. Web modules:
 `grid/` (grid, rows, drag, keyboard, overlay `Scrollbars` that cover only the
 scrolling area, `gridSizes` from the shared v18 sizes), `entry/` (cell popover on `ui/AnchoredDialog`),
 `habits/` (editor, colour/icon pickers, menu, goal editor), `panel/` (the
-habit page dialog `HabitDetails` (overview, notes and statistics cards; no
-tabs), the docked and resizable History
+habit page dialog `HabitDetails` (a Notes/Statistics switch; `NotesView`
+lists note names beside the shown note), the docked and resizable History
 panel with its calendar, SVG charts in `ChartFrame`, safe Markdown),
-`notes/` (Markdown editor, Before/After), `settings/`, and `actions.ts`, which
+`notes/` (Markdown editor, naming dialog, Before/After), `settings/`, and `actions.ts`, which
 reads every before-value from the current store. `Sidebar.tsx` holds what
 surrounds the grid (the only page; no new views); phones keep the top bar.
 Rows are memoized by a per-habit value signature; keep handlers stable. Tap

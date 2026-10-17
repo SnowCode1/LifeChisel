@@ -1,6 +1,7 @@
 import { withSampleTiming } from './sampleTiming.ts';
 import { withSampleRecords } from './sampleRecords.ts';
 import { withSampleGoals } from './sampleGoals.ts';
+import { withSampleNotes } from './sampleNotes.ts';
 import { sampleDescriptions } from './sampleDescriptions.ts';
 import { createPresetEvents } from './samplePresets.ts';
 import { calendarDay, localDateKey } from '../calendar.ts';
@@ -165,9 +166,12 @@ export async function createSampleStore(
   let { events, replay } = replayEvents(
     preset
       ? createPresetEvents(preset, today)
-      : withSampleTiming(
-          withSampleGoals(
-            withSampleRecords(createSampleEvents(today), today),
+      : withSampleNotes(
+          withSampleTiming(
+            withSampleGoals(
+              withSampleRecords(createSampleEvents(today), today),
+              today,
+            ),
             today,
           ),
           today,

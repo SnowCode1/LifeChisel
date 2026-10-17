@@ -15,7 +15,7 @@ export async function encodeArchive(
   const archive = JSON.stringify(
     {
       format: 'onpurpose.changes',
-      version: 22,
+      version: 23,
       exportedAt,
       eventCount: events.length,
       sha256: await digest(body),
@@ -68,7 +68,8 @@ export async function decodeArchive(text: string, digest: Digest) {
       archive.version !== 19 &&
       archive.version !== 20 &&
       archive.version !== 21 &&
-      archive.version !== 22)
+      archive.version !== 22 &&
+      archive.version !== 23)
   )
     throw new Error('Unsupported backup format or version.');
   if (

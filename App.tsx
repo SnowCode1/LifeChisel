@@ -6,9 +6,23 @@ import { DailyRecordDialog } from './src/DailyRecordDialog';
 import { HabitGoalsEditor } from './src/HabitGoalsEditor';
 import { TypographyProvider, Text } from './src/Typography';
 import { DescriptionVersions } from './src/DescriptionVersions';
-import { descriptionVersions } from '@onpurpose/core/descriptionVersionFilter';
 import { DescriptionEditor } from './src/DescriptionEditor';
-import { descriptionDraftKey } from './src/descriptionDrafts';
+import type { NoteRestore } from './src/DescriptionHistory';
+import { NoteSheet, type NoteSheetMode } from './src/NoteSheet';
+import {
+  addNote,
+  habitNotes,
+  moveNote,
+  newNoteId,
+  noteDraftKey,
+  noteHint,
+  noteVersions,
+  removeNote,
+  restoreNote,
+  updateNote,
+  type HabitNote,
+  type NoteChange,
+} from '@onpurpose/core/notes';
 import { applyPlaceholderDescriptions } from '@onpurpose/core/storage/presetDescriptions';
 import {
   displayDefaults,
@@ -329,23 +343,43 @@ function PersistentApp({
   const detail = habits.find((habit) => habit.id === detailId);
   const [habitMode, setHabitMode] = useState<HabitDialogMode>('edit');
   const [newHabit, setNewHabit] = useState<Habit | null>(null);
-  const [descriptionId, setDescriptionId] = useState<string | null>(null);
-  const descriptionHabit = habits.find((habit) => habit.id === descriptionId);
-  const [versionsId, setVersionsId] = useState<string | null>(null);
-  const versionsHabit = habits.find((habit) => habit.id === versionsId);
   const [statsId, setStatsId] = useState<string | null>(null);
+  // The note shown on the habit sheet's Notes page (the first by default),
+  // the note being written (an existing one, or a new one just named), its
+  // versions list and the small note sheet.
+  const [noteId, setNoteId] = useState<string | null>(null);
+  const [noteEditor, setNoteEditor] = useState<{
+    habitId: string;
+    noteId: string;
+    title: string;
+    isNew: boolean;
+  } | null>(null);
+  const [noteVersionsOpen, setNoteVersionsOpen] = useState(false);
+  const [noteSheet, setNoteSheet] = useState<NoteSheetMode | null>(null);
+  const editorHabit = habits.find((habit) => habit.id === noteEditor?.habitId);
   const [goalsId, setGoalsId] = useState<string | null>(null);
   const goalHabit = habits.find((habit) => habit.id === goalsId);
   const statsHabit = habits.find(
     (habit) => habit.id === statsId && !habit.archived,
   );
-  const versions = useMemo(() => {
-    const id = versionsId ?? statsId;
-    return id ? descriptionVersions(snapshot.replay.undo, id) : [];
-  }, [snapshot.replay.undo, versionsId, statsId]);
+  const notesState = snapshot.replay.state.notes;
+  const statsNotes = useMemo(
+    () => (statsHabit ? habitNotes({ notes: notesState }, statsHabit) : []),
+    [statsHabit, notesState],
+  );
+  const shownNote: HabitNote | undefined =
+    statsNotes.find((note) => note.id === noteId) ?? statsNotes[0];
+  const versions = useMemo(
+    () =>
+      statsHabit && shownNote
+        ? noteVersions(snapshot.replay.undo, statsHabit.id, shownNote.id)
+        : [],
+    [snapshot.replay.undo, statsHabit, shownNote],
+  );
   const editable = store.canEdit() && !backupBusy;
-  const openDetails = useCallback((habit: Habit) => {
+  const openDetails = useCallback((habit: Habit, note?: string) => {
     setStatsId(habit.id);
+    setNoteId(note ?? null);
     feedback('selection');
   }, []);
 
@@ -416,9 +450,16 @@ function PersistentApp({
     return accepted;
   }
   const saveHabit = useCallback(
-    (after: Habit): boolean => {
+    (edited: Habit): boolean => {
       const current = store.getSnapshot().replay.state.habits;
-      const before = current.find((habit) => habit.id === after.id) ?? null;
+      const before = current.find((habit) => habit.id === edited.id) ?? null;
+      // Notes are saved on their own (v23); a definition edit keeps whatever
+      // older description the saved habit still has, unchanged.
+      const { description: _description, ...rest } = edited;
+      const after: Habit =
+        before?.description !== undefined
+          ? { ...rest, description: before.description }
+          : rest;
       if (
         before &&
         before.name === after.name &&
@@ -469,16 +510,119 @@ function PersistentApp({
     },
     [store],
   );
-  const restoreDescription = useCallback(
-    (id: string, description: string | undefined) => {
-      const current = store
-        .getSnapshot()
-        .replay.state.habits.find((habit) => habit.id === id);
-      if (!current || !editable) return false;
-      const { description: _description, ...rest } = current;
-      return saveHabit({ ...rest, ...(description ? { description } : {}) });
+  // Every note action is one ordinary undoable change, read against the
+  // current store rather than the rendered habit.
+  const applyNote = useCallback(
+    (change: NoteChange | null): boolean => {
+      if (!change || !editable) return false;
+      const accepted = store.change(change);
+      if (accepted) feedback('confirm');
+      return accepted;
     },
-    [store, editable, saveHabit],
+    [store, editable],
+  );
+  const saveNoteText = useCallback(
+    (
+      target: {
+        habitId: string;
+        noteId: string;
+        title: string;
+        isNew: boolean;
+      },
+      text: string | undefined,
+    ): boolean => {
+      const state = store.getSnapshot().replay.state;
+      if (target.isNew) {
+        const added = applyNote(
+          addNote(
+            state,
+            target.habitId,
+            target.title,
+            text ?? '',
+            target.noteId,
+          ),
+        );
+        if (added) setNoteId(target.noteId);
+        return added;
+      }
+      const change = updateNote(state, target.habitId, target.noteId, {
+        text: text ?? '',
+      });
+      if (change) return applyNote(change);
+      // Unchanged text closes; a note removed meanwhile cannot be saved.
+      const habit = state.habits.find((item) => item.id === target.habitId);
+      return (
+        !!habit &&
+        habitNotes(state, habit).some((note) => note.id === target.noteId)
+      );
+    },
+    [store, applyNote],
+  );
+  const restoreNoteVersion: NoteRestore = useCallback(
+    (habitId, version) =>
+      applyNote(
+        restoreNote(store.getSnapshot().replay.state, habitId, version),
+      ),
+    [store, applyNote],
+  );
+  const closeNoteSheet = useCallback(() => setNoteSheet(null), []);
+  const pickNoteTitle = useCallback(
+    (title: string) => {
+      if (!statsHabit || !noteSheet) return;
+      if (noteSheet.kind === 'rename') {
+        if (
+          applyNote(
+            updateNote(
+              store.getSnapshot().replay.state,
+              statsHabit.id,
+              noteSheet.note.id,
+              { title },
+            ),
+          )
+        )
+          setNoteSheet(null);
+        return;
+      }
+      // A new note is written first and saved on Done, as one action.
+      setNoteSheet(null);
+      setNoteEditor({
+        habitId: statsHabit.id,
+        noteId: newNoteId(),
+        title,
+        isNew: true,
+      });
+    },
+    [statsHabit, noteSheet, store, applyNote],
+  );
+  const removeShownNote = useCallback(
+    (note: HabitNote) => {
+      if (!statsHabit) return;
+      const habitId = statsHabit.id;
+      Alert.alert(
+        `Remove the ${note.title} note?`,
+        'Undo brings it back, and History keeps its text.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Remove',
+            style: 'destructive',
+            onPress: () => {
+              if (
+                applyNote(
+                  removeNote(
+                    store.getSnapshot().replay.state,
+                    habitId,
+                    note.id,
+                  ),
+                )
+              )
+                setNoteSheet(null);
+            },
+          },
+        ],
+      );
+    },
+    [statsHabit, store, applyNote],
   );
   const reorderHabits = useCallback(
     (ids: string[]): boolean => {
@@ -542,7 +686,11 @@ function PersistentApp({
     setHabitMode('create');
   }, [store, today]);
 
-  const closeStats = useCallback(() => setStatsId(null), []);
+  const closeStats = useCallback(() => {
+    setStatsId(null);
+    setNoteSheet(null);
+    setNoteVersionsOpen(false);
+  }, []);
   const editStats = useCallback(() => {
     if (statsHabit) habitAction(statsHabit, 'edit');
   }, [statsHabit, habitAction]);
@@ -576,7 +724,6 @@ function PersistentApp({
           snapshot.events,
           today,
         )}
-        temporary={sampleData}
         mode={habitMode}
         Heading={PreviewHeading}
         onClose={closeDialog}
@@ -588,32 +735,40 @@ function PersistentApp({
 
   const overlays = (
     <>
-      {descriptionHabit && (
+      {noteEditor && editorHabit && (
         <DescriptionEditor
-          key={descriptionHabit.id}
-          title={descriptionHabit.name}
-          colour={descriptionHabit.color}
-          initialValue={descriptionHabit.description ?? ''}
-          draftKey={descriptionDraftKey(descriptionHabit.id)}
+          key={`${noteEditor.habitId}:${noteEditor.noteId}`}
+          title={editorHabit.name}
+          subtitle={noteEditor.title}
+          placeholder={noteHint(noteEditor.title)}
+          colour={editorHabit.color}
+          initialValue={
+            noteEditor.isNew
+              ? ''
+              : (habitNotes(snapshot.replay.state, editorHabit).find(
+                  (note) => note.id === noteEditor.noteId,
+                )?.text ?? '')
+          }
+          draftKey={noteDraftKey(noteEditor.habitId, noteEditor.noteId)}
           temporary={sampleData}
           editable={editable}
           Heading={PreviewHeading}
-          onClose={() => setDescriptionId(null)}
-          onApply={(description) =>
-            restoreDescription(descriptionHabit.id, description)
-          }
+          onClose={() => setNoteEditor(null)}
+          onApply={(text) => saveNoteText(noteEditor, text)}
         />
       )}
-      {versionsHabit && (
+      {noteVersionsOpen && statsHabit && shownNote && (
         <DescriptionVersions
-          key={versionsHabit.id}
-          habit={versionsHabit}
-          actions={versions}
+          key={`${statsHabit.id}:${shownNote.id}`}
+          habit={statsHabit}
+          title={shownNote.title}
+          text={shownNote.text}
+          versions={versions}
           state={snapshot.replay.state}
           editable={editable}
           Heading={PreviewHeading}
-          onRestore={restoreDescription}
-          onClose={() => setVersionsId(null)}
+          onRestore={restoreNoteVersion}
+          onClose={() => setNoteVersionsOpen(false)}
         />
       )}
       {editing && (
@@ -693,7 +848,7 @@ function PersistentApp({
         HeadingComponent={PreviewHeading}
         snapshot={snapshot}
         backupBusy={backupBusy}
-        onRestoreDescription={restoreDescription}
+        onRestoreNote={restoreNoteVersion}
         onUndo={undo}
         onRedo={redo}
         onExport={() => {
@@ -915,18 +1070,54 @@ function PersistentApp({
                           editable={editable}
                           onBack={closeStats}
                           onCellPress={pressCell}
-                          onDescriptionEdit={() =>
-                            setDescriptionId(statsHabit.id)
+                          notes={statsNotes}
+                          note={shownNote}
+                          onNoteSelect={(note) => setNoteId(note.id)}
+                          onNoteAdd={() => setNoteSheet({ kind: 'add' })}
+                          onNoteEdit={(note) =>
+                            setNoteEditor({
+                              habitId: statsHabit.id,
+                              noteId: note.id,
+                              title: note.title,
+                              isNew: false,
+                            })
                           }
-                          onDescriptionVersions={
+                          onNoteVersions={
                             versions.length
-                              ? () => setVersionsId(statsHabit.id)
+                              ? () => setNoteVersionsOpen(true)
                               : undefined
+                          }
+                          onNoteActions={(note) =>
+                            setNoteSheet({ kind: 'actions', note })
                           }
                           onEdit={editStats}
                           onGoalEdit={() => setGoalsId(statsHabit.id)}
                         />
                       </PerformanceBoundary>
+                      {noteSheet && (
+                        <NoteSheet
+                          key={`${noteSheet.kind}:${noteSheet.kind === 'add' ? '' : noteSheet.note.id}`}
+                          mode={noteSheet}
+                          notes={statsNotes}
+                          colour={theme.colour(statsHabit.color)}
+                          onPick={pickNoteTitle}
+                          onRename={(note) =>
+                            setNoteSheet({ kind: 'rename', note })
+                          }
+                          onMove={(note, direction) =>
+                            applyNote(
+                              moveNote(
+                                store.getSnapshot().replay.state,
+                                statsHabit.id,
+                                note.id,
+                                direction,
+                              ),
+                            )
+                          }
+                          onRemove={removeShownNote}
+                          onClose={closeNoteSheet}
+                        />
+                      )}
                       {overlays}
                     </SafeAreaView>
                   </SafeAreaProvider>

@@ -26,6 +26,7 @@ import { habitSummary } from '@onpurpose/core/habitSummary';
 import { habitType, type Habit } from '@onpurpose/core/habits';
 import { checkboxChecked } from '@onpurpose/core/habitGoals';
 import { recentNumericTotals } from '@onpurpose/core/numericSuggestions';
+import { habitNotes, type HabitNote } from '@onpurpose/core/notes';
 import type { ChangeStore } from '@onpurpose/core/storage/store';
 import {
   todayCount,
@@ -53,7 +54,9 @@ export function todayColumns(width: number, fontScale: number) {
 // number records in one tap from its usual totals, other types open their
 // dialog. Under the name sits the grid's line (schedule, rule or quota
 // progress); a habit not scheduled today dims. Holding a tile opens the
-// habit's Notes and Statistics.
+// habit's Notes and Statistics. A habit with notes shows a notes button in
+// the corner that opens its Notes page directly (an experiment, 17 October
+// 2026); screen readers get one action per note.
 export function TodayTiles({
   store,
   habits,
@@ -84,12 +87,17 @@ export function TodayTiles({
   tapAnimations: boolean;
   onCellPress: (habit: Habit, day: EntryDay) => void;
   onCellValue: (habit: Habit, day: EntryDay, value: EntryValue) => boolean;
-  onHabitPress: (habit: Habit) => void;
+  /** Opens the habit's sheet, on one of its notes when given. */
+  onHabitPress: (habit: Habit, noteId?: string) => void;
 }) {
   const theme = useTheme();
   const values = useSyncExternalStore(
     store.subscribe,
     () => store.getSnapshot().replay.state.values,
+  );
+  const notes = useSyncExternalStore(
+    store.subscribe,
+    () => store.getSnapshot().replay.state.notes,
   );
   const columns = todayColumns(width, fontScale);
   const tileWidth = Math.floor((width - GAP * (columns - 1)) / columns);
@@ -127,6 +135,7 @@ export function TodayTiles({
             habit={habit}
             value={values[`${habit.id}:${today}`]}
             values={values}
+            notes={habitNotes({ notes }, habit)}
             palette={palettes[habit.id]}
             today={today}
             day={day}
@@ -153,6 +162,7 @@ const TodayTile = memo(function TodayTile({
   habit,
   value,
   values,
+  notes,
   palette,
   today,
   day,
@@ -172,6 +182,7 @@ const TodayTile = memo(function TodayTile({
   value: EntryValue | undefined;
   /** Every saved value, for the summary line, streak and usual totals. */
   values: EntryValues;
+  notes: readonly HabitNote[];
   palette: GridPalette | undefined;
   today: string;
   day: EntryDay;
@@ -184,7 +195,7 @@ const TodayTile = memo(function TodayTile({
   tapAnimations: boolean;
   onCellPress: (habit: Habit, day: EntryDay) => void;
   onCellValue: (habit: Habit, day: EntryDay, value: EntryValue) => boolean;
-  onHabitPress: (habit: Habit) => void;
+  onHabitPress: (habit: Habit, noteId?: string) => void;
 }) {
   const theme = useTheme();
   const reducedMotion = useReducedMotion();
@@ -258,11 +269,17 @@ const TodayTile = memo(function TodayTile({
         accessibilityActions={[
           { name: 'activate', label: a11y.hint },
           { name: 'details', label: 'Open notes and statistics' },
+          ...notes.map((note) => ({
+            name: `note:${note.id}`,
+            label: `Open ${note.title} note`,
+          })),
         ]}
         onAccessibilityAction={(event) => {
-          if (event.nativeEvent.actionName === 'activate') activate();
-          else if (event.nativeEvent.actionName === 'details')
-            onHabitPress(habit);
+          const action = event.nativeEvent.actionName;
+          if (action === 'activate') activate();
+          else if (action === 'details') onHabitPress(habit);
+          else if (action.startsWith('note:'))
+            onHabitPress(habit, action.slice(5));
         }}
         delayLongPress={380}
         onPress={activate}
@@ -301,7 +318,7 @@ const TodayTile = memo(function TodayTile({
               {habitInitial(habit.name)}
             </Text>
           )}
-          <View style={{ flex: 1 }}>
+          <View style={{ flex: 1, paddingRight: notes.length ? 24 : 0 }}>
             <Text
               numberOfLines={2}
               style={{
@@ -323,6 +340,27 @@ const TodayTile = memo(function TodayTile({
             )}
           </View>
         </View>
+        {notes.length > 0 && (
+          <Pressable
+            accessible={false}
+            importantForAccessibility="no"
+            hitSlop={8}
+            onPress={() => onHabitPress(habit, notes[0]!.id)}
+            style={({ pressed }) => ({
+              position: 'absolute',
+              top: 6,
+              right: 6,
+              width: 28,
+              height: 28,
+              borderRadius: 8,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: pressed ? `${colour}26` : 'transparent',
+            })}
+          >
+            <Icon name="text" size={15} color={theme.ink(0x8c)} />
+          </Pressable>
+        )}
         {/* Today's cell: a fixed block at the bottom, the same in every tile. */}
         <View
           style={{ height: 54, alignItems: 'center', justifyContent: 'center' }}

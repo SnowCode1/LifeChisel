@@ -41,10 +41,28 @@ export type StoredState = {
   roundCheckboxes?: boolean;
   connectorThickness?: number;
   joinedEndsOnly?: boolean;
+  /** v23: each habit's saved notes in order (a v7 description reads first). */
+  notes?: Record<string, HabitNote[]>;
 };
 export type DeletedHabit = {
   habit: Habit;
   entries: Record<string, EntryValue>;
+  /** v23: the habit's saved notes, when it had any. */
+  notes?: HabitNote[];
+};
+/** One named Markdown note of a habit (v23). Text may be empty. */
+export type HabitNote = { id: string; title: string; text: string };
+/**
+ * A note at a position in the habit's shown list. `legacy` marks the habit
+ * definition's v7 description, which always shows first, titled Info.
+ */
+export type NoteSlot = { index: number; note: HabitNote; legacy?: true };
+/** Add (before null), remove (after null), edit, rename or move one note. */
+export type NoteChange = {
+  kind: 'note';
+  habitId: string;
+  before: NoteSlot | null;
+  after: NoteSlot | null;
 };
 /** One saved value for one habit and date. */
 export type EntryChange = {
@@ -65,6 +83,7 @@ export type EntriesChange = {
 export type Change =
   | EntryChange
   | EntriesChange
+  | NoteChange
   | { kind: 'colour'; habitId: string; before: string; after: string }
   | {
       kind: 'habit';
@@ -166,7 +185,8 @@ export type EventMeta = {
     | 19
     | 20
     | 21
-    | 22;
+    | 22
+    | 23;
   id: string;
   sequence: number;
   recordedAt: string;
@@ -199,7 +219,8 @@ export type CurrentChangeEvent = EventMeta & {
     | 19
     | 20
     | 21
-    | 22;
+    | 22
+    | 23;
 } & (
     | { type: 'change'; groupId: string; change: HabitChange }
     | { type: 'undo' | 'redo'; targetId: string; change: HabitChange }
@@ -207,7 +228,13 @@ export type CurrentChangeEvent = EventMeta & {
   );
 export type ChangeEvent = LegacyChangeEvent | CurrentChangeEvent;
 export type StoredEvent =
-  (EventMeta & { type: 'initialize'; habits: Habit[] }) | ChangeEvent;
+  | (EventMeta & {
+      type: 'initialize';
+      habits: Habit[];
+      /** v23: first notes by habit id. */
+      notes?: Record<string, HabitNote[]>;
+    })
+  | ChangeEvent;
 export type HistoryAction = EventMeta & {
   type: 'change';
   change: HabitChange;
@@ -245,4 +272,5 @@ export type Replay = {
   hasV20: boolean;
   hasV21: boolean;
   hasV22: boolean;
+  hasV23: boolean;
 };

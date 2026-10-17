@@ -11,11 +11,12 @@ described below.
 ## Main grid
 
 Tap a habit name to open its Notes/Statistics sheet: Notes first when the habit
-has a description, Statistics otherwise. Close returns to the same mounted grid
+has any note, Statistics otherwise. Close returns to the same mounted grid
 and date position. Rates, streaks, totals, averages, charts, weekday patterns
 and the calendar are described in [STATISTICS.md](STATISTICS.md). Create/Edit
 habit and Goal use full-screen editors with fixed Close/Done actions and short
-parent Back labels; descriptions use a separate full-screen editor.
+parent Back labels; notes use a separate full-screen editor from the Notes
+page.
 
 Hold a name for 380 ms to select its row with a haptic tick and show an anchored
 menu: Colour, Edit habit, Reorder, Archive. Releasing leaves the menu open. Each
@@ -50,9 +51,9 @@ active-management screen.
 New habits choose one of four types from a wrapping grid: **Checkbox**, **Daily
 total**, **Categories** or **Free text**. They also take a name, colour,
 optional emoji/pack icon ([HABIT_ICONS.md](HABIT_ICONS.md)), an optional unit
-for Daily total habits, and an optional Markdown/plain-text description. The
-description's compact control opens a full-screen editor while keeping the outer
-Done/Close draft contract; see [DESCRIPTIONS.md](DESCRIPTIONS.md). Names are
+for Daily total habits. Notes are added from the habit's Notes page, not this
+form (17 October 2026, superseding the form's Description control); see
+[DESCRIPTIONS.md](DESCRIPTIONS.md). Names are
 limited to 200 characters and units to 80. A Daily total habit without a unit
 remains numeric.
 

@@ -4,6 +4,8 @@ import {
   archivedRecordRange,
 } from '@onpurpose/core/archivedHabitDetails';
 import { descriptionExcerpt } from '@onpurpose/core/descriptionReading';
+import { habitNotes } from '@onpurpose/core/notes';
+import type { StoredState } from '@onpurpose/core/storage/model';
 import type { EntryValues } from '@onpurpose/core/entries';
 import { Text } from './Typography';
 import {
@@ -52,6 +54,7 @@ export function ArchivedHabits({
   sampleData = false,
   habits,
   values,
+  notes,
   editable,
   pending,
   error,
@@ -62,6 +65,7 @@ export function ArchivedHabits({
   sampleData?: boolean;
   habits: Habit[];
   values: EntryValues;
+  notes: StoredState['notes'];
   editable: boolean;
   pending: number;
   error: string | null;
@@ -75,14 +79,19 @@ export function ArchivedHabits({
     () => archivedHabitDetails(habits, values),
     [habits, values],
   );
+  // Each archived habit previews its first note with any words.
   const excerpts = useMemo(
     () =>
       new Map(
-        habits
-          .filter((habit) => habit.archived && habit.description)
-          .map((habit) => [habit.id, descriptionExcerpt(habit.description!)]),
+        habits.flatMap((habit) => {
+          const text = habit.archived
+            ? habitNotes({ notes }, habit).find((note) => note.text.trim())
+                ?.text
+            : undefined;
+          return text ? [[habit.id, descriptionExcerpt(text)] as const] : [];
+        }),
       ),
-    [habits],
+    [habits, notes],
   );
   const sheetScroll = useSheetScroll();
   return (

@@ -1276,7 +1276,8 @@ button[aria-disabled='true'] {
   opacity: 0;
 }
 .today-tile:hover .today-tile-more,
-.today-tile-more:focus-visible {
+.today-tile-more:focus-visible,
+.today-tile-more.has-notes {
   opacity: 1;
 }
 .today-tile-more:hover {

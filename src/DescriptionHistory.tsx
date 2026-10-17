@@ -28,7 +28,11 @@ import {
 } from '@onpurpose/core/descriptionDiff';
 import { DescriptionText } from './DescriptionText';
 import type { HistoryAction, StoredState } from '@onpurpose/core/storage/model';
+import { habitNotes, noteVersion, type HabitNote } from '@onpurpose/core/notes';
 import { useTheme } from './ThemeContext';
+
+/** Restore a note version's text onto the current habit. */
+export type NoteRestore = (habitId: string, version: HabitNote) => boolean;
 
 export function DescriptionHistory({
   Heading,
@@ -42,20 +46,18 @@ export function DescriptionHistory({
   action: HistoryAction;
   state: StoredState;
   editable: boolean;
-  onRestore: (id: string, text: string | undefined) => boolean;
+  onRestore: NoteRestore;
   onClose: () => void;
 }) {
   const theme = useTheme();
   const [version, setVersion] = useState<'before' | 'after'>('after');
   const [showChanges, setShowChanges] = useState(true);
   const change = action.change;
+  // Note changes (v23) and older description edits read the same way.
+  const note = useMemo(() => noteVersion(action), [action]);
   const diff = useMemo(
-    () =>
-      descriptionDiff(
-        change.kind === 'habit' ? (change.before?.description ?? '') : '',
-        change.kind === 'habit' ? (change.after?.description ?? '') : '',
-      ),
-    [change],
+    () => descriptionDiff(note?.before ?? '', note?.after ?? ''),
+    [note],
   );
   const list = useRef<FlatList<DescriptionPassage>>(null);
   const reducedMotion = useReducedMotion();
@@ -79,12 +81,21 @@ export function DescriptionHistory({
     [navigator],
   );
   const hasChanges = diff[version].some((passage) => passage.changed);
-  if (change.kind !== 'habit') return null;
-  const habit = change.after ?? change.before!;
-  const text = change[version]?.description;
+  if (!note || !('habitId' in change)) return null;
+  const current = state.habits.find((item) => item.id === change.habitId);
+  const habit =
+    change.kind === 'habit' ? (change.after ?? change.before!) : current;
+  if (!habit) return null;
+  const text = note[version];
   const colour = theme.colour(habit.color);
-  const current = state.habits.find((item) => item.id === habit.id);
-  const canRestore = editable && !!current && current.description !== text;
+  const currentNote = current
+    ? habitNotes(state, current).find((item) => item.id === note.noteId)
+    : undefined;
+  // A removed note can come back, but only with words to restore.
+  const canRestore =
+    editable &&
+    !!current &&
+    (currentNote ? currentNote.text !== text : !!text.trim());
   return (
     <Modal
       visible
@@ -127,16 +138,23 @@ export function DescriptionHistory({
               <Text
                 style={{ color: theme.ink(0x77), fontSize: 12, marginTop: 3 }}
               >
-                Description history
+                {note.title} note history
               </Text>
             </View>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={`Restore ${version} description`}
+              accessibilityLabel={`Restore ${version} ${note.title} note`}
               accessibilityState={{ disabled: !canRestore }}
               disabled={!canRestore}
               onPress={() => {
-                if (onRestore(habit.id, text)) onClose();
+                if (
+                  onRestore(habit.id, {
+                    id: note.noteId,
+                    title: currentNote?.title ?? note.title,
+                    text,
+                  })
+                )
+                  onClose();
               }}
               style={{
                 minWidth: 60,
@@ -213,7 +231,7 @@ export function DescriptionHistory({
                 Changes
               </Text>
               <Switch
-                accessibilityLabel="Highlight changed description passages"
+                accessibilityLabel="Highlight changed note passages"
                 value={showChanges}
                 onValueChange={setShowChanges}
                 trackColor={{
@@ -268,7 +286,7 @@ export function DescriptionHistory({
                   paddingHorizontal: 10,
                 }}
               >
-                No description in this version.
+                No text in this version.
               </Text>
             }
             renderItem={({ item: passage }) => {

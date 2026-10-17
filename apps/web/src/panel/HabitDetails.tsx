@@ -1,20 +1,25 @@
-import { useId, useLayoutEffect, useRef, useState } from 'react';
+import { useId, useState } from 'react';
 import type { WeekStart } from '@onpurpose/core/displayPreferences';
 import type { EntryValues } from '@onpurpose/core/entries';
 import type { Habit } from '@onpurpose/core/habits';
 import { habitSummary } from '@onpurpose/core/habitSummary';
+import type { HabitNote, NoteVersion } from '@onpurpose/core/notes';
 import type { HistoryAction, StoredEvent } from '@onpurpose/core/storage/model';
 import type { Theme } from '@onpurpose/core/theme';
 import { HabitSymbol } from '../ui/HabitSymbol.tsx';
 import { Icon } from '../ui/Icon.tsx';
 import { Modal } from '../ui/Modal.tsx';
-import { Markdown } from './Markdown.tsx';
+import { NoteNameDialog } from '../notes/NoteNameDialog.tsx';
+import { NotesView } from './NotesView.tsx';
 import { StatsView } from './StatsView.tsx';
 
+export type HabitView = 'notes' | 'statistics';
+
 /**
- * One page per habit in a wide dialog (full screen on phones): an overview
- * column with the summary and the habit's notes, beside a grid of statistics
- * cards. Esc, Close or a click outside returns to the grid.
+ * One page per habit in a wide dialog (full screen on phones), switched
+ * between its notes and its statistics like the phone's habit sheet. It opens
+ * on Notes when the habit has any. Esc, Close or a click outside returns to
+ * the grid.
  */
 export function HabitDetails({
   habit,
@@ -25,11 +30,20 @@ export function HabitDetails({
   weekStart,
   theme,
   editable,
+  notes,
+  note,
+  versions,
   onEdit,
   onClose,
   onDay,
   onEditGoal,
-  onEditNotes,
+  onSelectNote,
+  onNewNote,
+  onEditNote,
+  onRenameNote,
+  onMoveNote,
+  onRemoveNote,
+  onOpenVersion,
 }: {
   habit: Habit;
   values: EntryValues;
@@ -39,10 +53,21 @@ export function HabitDetails({
   weekStart: WeekStart;
   theme: Theme;
   editable: boolean;
+  notes: readonly HabitNote[];
+  /** The note shown in the Notes view (undefined without notes). */
+  note: HabitNote | undefined;
+  versions: NoteVersion[];
   onEdit: () => void;
   onClose: () => void;
   onEditGoal: () => void;
-  onEditNotes: () => void;
+  onSelectNote: (note: HabitNote) => void;
+  /** A title chosen for a new note, which then opens to be written. */
+  onNewNote: (title: string) => void;
+  onEditNote: (note: HabitNote) => void;
+  onRenameNote: (note: HabitNote, title: string) => boolean;
+  onMoveNote: (note: HabitNote, direction: -1 | 1) => void;
+  onRemoveNote: (note: HabitNote) => void;
+  onOpenVersion: (action: HistoryAction) => void;
   onDay: (
     habit: Habit,
     date: string,
@@ -52,13 +77,21 @@ export function HabitDetails({
 }) {
   const titleId = useId();
   const colour = theme.colour(habit.color);
+  const [view, setView] = useState<HabitView>(
+    notes.length ? 'notes' : 'statistics',
+  );
+  // Statistics mount on first view and then stay, keeping range and scroll.
+  const [statsSeen, setStatsSeen] = useState(view === 'statistics');
   // The range tabs and period stepper live in the dialog's toolbar; the
   // statistics view renders them there once it exists.
   const [toolbar, setToolbar] = useState<HTMLDivElement | null>(null);
-  // Long notes open in their own reading dialog above this one.
-  const [reading, setReading] = useState(false);
-  // The reader is a sibling of this dialog, never nested in it: Esc in a
-  // dialog inside another closes both.
+  // Naming a note opens a dialog beside this one, never nested in it: Esc
+  // in a dialog inside another closes both.
+  const [naming, setNaming] = useState<{ renaming?: HabitNote } | null>(null);
+  const show = (next: HabitView) => {
+    setView(next);
+    if (next === 'statistics') setStatsSeen(true);
+  };
   return (
     <>
       <Modal
@@ -96,197 +129,96 @@ export function HabitDetails({
             Edit habit
           </button>
         }
-        toolbar={<div ref={setToolbar} className="details-toolbar" />}
+        toolbar={
+          <div className="details-toolbar-row">
+            <div
+              className="segmented details-views"
+              role="tablist"
+              aria-label="Habit views"
+            >
+              {(['notes', 'statistics'] as const).map((value) => (
+                <button
+                  key={value}
+                  type="button"
+                  role="tab"
+                  aria-selected={view === value}
+                  onClick={() => show(value)}
+                >
+                  {value === 'notes'
+                    ? notes.length
+                      ? `Notes · ${notes.length}`
+                      : 'Notes'
+                    : 'Statistics'}
+                </button>
+              ))}
+            </div>
+            <div
+              ref={setToolbar}
+              className="details-toolbar"
+              hidden={view !== 'statistics'}
+            />
+          </div>
+        }
         onClose={onClose}
       >
         {/* Focus lands on the page itself, so keys scroll it without drawing
           a focus ring on a control. */}
         <div className="details-page" tabIndex={-1} data-autofocus>
-          <StatsView
-            key={habit.id}
-            toolbarHost={toolbar}
-            habit={habit}
-            values={values}
-            events={events}
-            actions={actions}
-            today={today}
-            weekStart={weekStart}
-            theme={theme}
-            editable={editable}
-            onDay={onDay}
-            onEditGoal={onEditGoal}
-            aside={
-              <NotesCard
+          {view === 'notes' && (
+            <NotesView
+              notes={notes}
+              selected={note}
+              versions={versions}
+              theme={theme}
+              colour={colour}
+              editable={editable}
+              onSelect={onSelectNote}
+              onAdd={() => setNaming({})}
+              onPreset={onNewNote}
+              onEdit={onEditNote}
+              onRename={(renaming) => setNaming({ renaming })}
+              onMove={onMoveNote}
+              onRemove={onRemoveNote}
+              onOpenVersion={onOpenVersion}
+            />
+          )}
+          {statsSeen && (
+            <div hidden={view !== 'statistics'}>
+              <StatsView
+                key={habit.id}
+                toolbarHost={toolbar}
                 habit={habit}
+                values={values}
+                events={events}
+                actions={actions}
+                today={today}
+                weekStart={weekStart}
                 theme={theme}
                 editable={editable}
-                onEdit={onEditNotes}
-                onOpen={() => setReading(true)}
+                onDay={onDay}
+                onEditGoal={onEditGoal}
               />
-            }
-          />
+            </div>
+          )}
         </div>
       </Modal>
-      {reading && habit.description && (
-        <NotesReader
-          habit={habit}
-          theme={theme}
-          editable={editable}
-          onEdit={onEditNotes}
-          onClose={() => setReading(false)}
+      {naming && (
+        <NoteNameDialog
+          notes={notes}
+          renaming={naming.renaming}
+          colour={colour}
+          onClose={() => setNaming(null)}
+          onPick={(title) => {
+            if (naming.renaming) {
+              if (onRenameNote(naming.renaming, title)) setNaming(null);
+              return;
+            }
+            setNaming(null);
+            setView('notes');
+            onNewNote(title);
+          }}
         />
       )}
     </>
-  );
-}
-
-// Notes as a card in the overview column. Long notes show their start; the
-// expand button or Show all opens them in a full reading dialog.
-function NotesCard({
-  habit,
-  theme,
-  editable,
-  onEdit,
-  onOpen,
-}: {
-  habit: Habit;
-  theme: Theme;
-  editable: boolean;
-  onEdit: () => void;
-  onOpen: () => void;
-}) {
-  const body = useRef<HTMLDivElement>(null);
-  const [long, setLong] = useState(false);
-  const text = habit.description;
-  // Measured whenever the card or its text changes size: the dialog may
-  // still be closed (unlaid out) when the card first renders.
-  useLayoutEffect(() => {
-    const element = body.current;
-    if (!element) return;
-    const measure = () =>
-      setLong(element.scrollHeight > element.clientHeight + 2);
-    const observer = new ResizeObserver(measure);
-    observer.observe(element);
-    if (element.firstElementChild) observer.observe(element.firstElementChild);
-    return () => observer.disconnect();
-  }, [text]);
-  return (
-    <section className="stats-card notes-card" aria-labelledby="notes-heading">
-      <header>
-        <h3 id="notes-heading">Notes</h3>
-        <span className="notes-actions">
-          <button
-            type="button"
-            className="text-button"
-            disabled={!editable}
-            onClick={onEdit}
-          >
-            {text ? 'Edit' : 'Add notes'}
-          </button>
-          {text && (
-            <button
-              type="button"
-              className="icon-button"
-              aria-label="Open notes"
-              title="Open notes"
-              onClick={onOpen}
-            >
-              <Icon name="expand" size={16} />
-            </button>
-          )}
-        </span>
-      </header>
-      {text ? (
-        <>
-          <div
-            ref={body}
-            // Clamped; the fade shows only when text is cut.
-            className={long ? 'note-body clamped faded' : 'note-body clamped'}
-          >
-            <article className="note">
-              <Markdown text={text} scheme={theme.scheme} colour={theme.link} />
-            </article>
-          </div>
-          {long && (
-            <button
-              type="button"
-              className="link-button show-all"
-              onClick={onOpen}
-            >
-              Show all
-            </button>
-          )}
-        </>
-      ) : (
-        <p className="muted">
-          Why this habit matters, a simple way to start, or links.
-        </p>
-      )}
-    </section>
-  );
-}
-
-// The notes on their own, in a wide reading dialog above the habit's page.
-function NotesReader({
-  habit,
-  theme,
-  editable,
-  onEdit,
-  onClose,
-}: {
-  habit: Habit;
-  theme: Theme;
-  editable: boolean;
-  onEdit: () => void;
-  onClose: () => void;
-}) {
-  const titleId = useId();
-  const colour = theme.colour(habit.color);
-  return (
-    <Modal
-      titleId={titleId}
-      className="notes-reader"
-      closeOnBackdrop
-      title={
-        <span className="habit-details-title">
-          <HabitSymbol icon={habit.icon} colour={colour} size={20} />
-          <span className="name" style={{ color: colour }}>
-            {habit.name}
-          </span>
-          <span className="summary">Notes</span>
-        </span>
-      }
-      leading={
-        <button
-          type="button"
-          className="icon-button"
-          aria-label="Close notes"
-          onClick={onClose}
-        >
-          <Icon name="close" size={18} />
-        </button>
-      }
-      trailing={
-        <button
-          type="button"
-          className="text-button"
-          disabled={!editable}
-          onClick={onEdit}
-        >
-          Edit
-        </button>
-      }
-      onClose={onClose}
-    >
-      <div className="reader-page" tabIndex={-1} data-autofocus>
-        <article className="note">
-          <Markdown
-            text={habit.description ?? ''}
-            scheme={theme.scheme}
-            colour={theme.link}
-          />
-        </article>
-      </div>
-    </Modal>
   );
 }

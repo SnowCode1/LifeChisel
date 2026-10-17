@@ -30,8 +30,6 @@ import { HabitSymbol } from '../ui/HabitSymbol.tsx';
 import { ColourPicker } from './ColourPicker.tsx';
 import { IconPicker } from './IconPicker.tsx';
 import { GoalEditor } from './GoalEditor.tsx';
-import { NotesEditor } from '../notes/NotesEditor.tsx';
-import { descriptionExcerpt } from '@onpurpose/core/descriptionReading';
 import type { WeekStart } from '@onpurpose/core/displayPreferences';
 
 const TYPES: HabitType[] = ['checkbox', 'number', 'categorical', 'text'];
@@ -63,8 +61,6 @@ export function HabitEditor({
   const titleId = useId();
   const [view, setView] = useState<'form' | 'colour' | 'icon'>('form');
   const [goalsOpen, setGoalsOpen] = useState(false);
-  const [notesOpen, setNotesOpen] = useState(false);
-  const [description, setDescription] = useState(habit.description);
   const [name, setName] = useState(habit.name);
   const [type, setType] = useState<HabitType>(habitType(habit));
   const [unit, setUnit] = useState(habit.unit ?? '');
@@ -115,7 +111,6 @@ export function HabitEditor({
       icon: _icon,
       categories: _categories,
       goals: _goals,
-      description: _description,
       ...base
     } = habit;
     const after: Habit = {
@@ -139,7 +134,6 @@ export function HabitEditor({
           }
         : {}),
       ...(goals ? { goals } : {}),
-      ...(description ? { description } : {}),
     };
     if (onSave(after)) onClose();
   }
@@ -360,20 +354,6 @@ export function HabitEditor({
           </span>
         </button>
 
-        <button
-          type="button"
-          className="summary-row goal-button"
-          disabled={!editable}
-          onClick={() => setNotesOpen(true)}
-        >
-          <span className="field-label">Notes</span>
-          <span className="note-excerpt">
-            {description
-              ? descriptionExcerpt(description)
-              : 'Why it matters, a simple start, or links · optional'}
-          </span>
-        </button>
-
         <label className="field">
           <span className="field-label">Start date</span>
           <input
@@ -428,21 +408,6 @@ export function HabitEditor({
         {/* Enter in a field submits; the visible Done button is in the header. */}
         <button type="submit" hidden />
       </form>
-      {notesOpen && (
-        <NotesEditor
-          title={name.trim() || 'New habit'}
-          colour={accent}
-          initial={description ?? ''}
-          theme={theme}
-          editable={editable}
-          onClose={() => setNotesOpen(false)}
-          onApply={(next) => {
-            // Staged: saved with the habit on Done.
-            setDescription(next);
-            return true;
-          }}
-        />
-      )}
       {goalsOpen && (
         <GoalEditor
           habit={draft}

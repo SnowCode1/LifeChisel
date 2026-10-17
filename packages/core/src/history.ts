@@ -6,9 +6,10 @@ import { habitType, isNumericHabit } from './habits.ts';
 import { fillRange, fillSummary } from './entryFill.ts';
 import type { HistoryAction, StoredState } from './storage/model.ts';
 import type { IconName } from './iconNames.ts';
+import { noteChangeSummary } from './notes.ts';
 
-// Exclusive kinds for the History filter and day summaries. Notes are rows that
-// read "Description edited/cleared" and open Before/After.
+// Exclusive kinds for the History filter and day summaries. Notes are note
+// actions (v23) and older "Description edited/cleared" rows.
 export type HistoryKind = 'entries' | 'edits' | 'notes';
 export type HistoryFilter = {
   kind: HistoryKind | 'all';
@@ -75,7 +76,8 @@ export function historyKind(action: HistoryAction): HistoryKind {
     kind =
       change.kind === 'entry' || change.kind === 'entries'
         ? 'entries'
-        : change.kind === 'habit' && isDescriptionEdit(change)
+        : change.kind === 'note' ||
+            (change.kind === 'habit' && isDescriptionEdit(change))
           ? 'notes'
           : 'edits';
     kinds.set(action, kind);
@@ -461,6 +463,14 @@ export function historyPresentation(event: HistoryAction, state: StoredState) {
       effectiveDate: null,
     };
   }
+  if (change.kind === 'note')
+    return {
+      title,
+      summary: noteChangeSummary(change),
+      icon: (change.after ? 'edit' : 'erase') as IconName,
+      color: habit?.color ?? '#ACB8C5',
+      effectiveDate: null,
+    };
   let icon: IconName;
   let summary: string;
   if (change.kind === 'colour') {

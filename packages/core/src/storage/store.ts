@@ -91,7 +91,7 @@ export class ChangeStore {
     const started = performanceEnabled ? performance.now() : 0;
     const meta = {
       ...this.metadata(this.snapshot.events.length + 1),
-      version: 22 as const,
+      version: 23 as const,
     };
     if (performanceEnabled)
       recordPerformance('store.metadata', performance.now() - started);
@@ -104,7 +104,7 @@ export class ChangeStore {
 
   deleteArchivedHabit(habitId: string): boolean {
     if (!this.canEdit()) return false;
-    const { habits, values } = this.snapshot.replay.state;
+    const { habits, values, notes } = this.snapshot.replay.state;
     const index = habits.findIndex((habit) => habit.id === habitId);
     const habit = habits[index];
     if (!habit?.archived) return false;
@@ -118,7 +118,11 @@ export class ChangeStore {
       kind: 'deleteHabit',
       habitId,
       index,
-      before: { habit, entries },
+      before: {
+        habit,
+        entries,
+        ...(notes?.[habitId] ? { notes: notes[habitId] } : {}),
+      },
       after: null,
     });
   }
@@ -129,7 +133,7 @@ export class ChangeStore {
     if (!target) return false;
     return this.enqueue({
       ...this.metadata(this.snapshot.events.length + 1),
-      version: 22,
+      version: 23,
       type: 'undo',
       targetId: target.id,
       change: inverse(target.change) as typeof target.change,
@@ -141,7 +145,7 @@ export class ChangeStore {
     if (!target) return false;
     return this.enqueue({
       ...this.metadata(this.snapshot.events.length + 1),
-      version: 22,
+      version: 23,
       type: 'redo',
       targetId: target.undoId,
       change: target.action.change,

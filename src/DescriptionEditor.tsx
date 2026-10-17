@@ -51,6 +51,8 @@ const expoDomWebView =
 
 export function DescriptionEditor({
   title,
+  subtitle = 'Note',
+  placeholder,
   colour,
   initialValue,
   baseValue = initialValue,
@@ -63,6 +65,10 @@ export function DescriptionEditor({
   onClose,
 }: {
   title: string;
+  /** Under the title: the note's name. */
+  subtitle?: string;
+  /** The empty note's prompt. */
+  placeholder?: string;
   colour: string;
   initialValue: string;
   baseValue?: string;
@@ -146,10 +152,10 @@ export function DescriptionEditor({
         if (pending.base !== baseValue)
           Alert.alert(
             'A draft from an earlier version',
-            'The saved description has changed since this draft was written.',
+            'The saved note has changed since this draft was written.',
             [
               {
-                text: 'Use saved description',
+                text: 'Use saved note',
                 onPress: () => {
                   void drafts.remove(draftKey).catch(() => {
                     if (active) setStatus('Couldn’t discard the older draft');
@@ -164,7 +170,7 @@ export function DescriptionEditor({
       .catch(() => {
         if (active)
           setStatus(
-            'Draft recovery unavailable. Applied descriptions are still saved normally.',
+            'Draft recovery unavailable. Applied notes are still saved normally.',
           );
       })
       .finally(() => {
@@ -270,8 +276,8 @@ export function DescriptionEditor({
       return;
     }
     Alert.alert(
-      'Discard description changes?',
-      'Your applied description will stay as it was.',
+      'Discard note changes?',
+      'The saved note will stay as it was.',
       [
         { text: 'Keep editing', style: 'cancel' },
         {
@@ -315,7 +321,7 @@ export function DescriptionEditor({
     setRequesting(false);
     if (finished.current) return;
     if (value.length > MAX_DESCRIPTION_LENGTH) {
-      setStatus('The description is too long to apply.');
+      setStatus('The note is too long to apply.');
       return;
     }
     update(value, location);
@@ -354,7 +360,7 @@ export function DescriptionEditor({
                 <Heading numberOfLines={1} style={styles.title}>
                   {title || 'New habit'}
                 </Heading>
-                <Text style={styles.subtitle}>Description</Text>
+                <Text style={styles.subtitle}>{subtitle}</Text>
               </View>
               <EditorAction
                 label="Done"
@@ -383,6 +389,7 @@ export function DescriptionEditor({
                 onPosition={handlePosition}
                 onSnapshot={snapshot}
                 onLimit={handleLimit}
+                placeholder={placeholder}
                 palette={palette}
                 dom={{
                   useExpoDOMWebView: expoDomWebView,

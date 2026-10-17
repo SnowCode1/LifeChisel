@@ -6,13 +6,14 @@ import { Text, useAppWindowDimensions } from './Typography';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useHabitPages } from './useHabitPages';
-import { DescriptionReader } from './DescriptionReader';
+import { HabitNotes } from './HabitNotes';
 import { HabitStatsScreen } from './HabitStatsScreen';
 import { ChartScrubLock } from './ChartFrame';
 import { HabitSymbol } from './HabitSymbol';
 import { Icon } from './Icon';
 import { themedStyles, useTheme } from './ThemeContext';
 import type { Habit } from '@onpurpose/core/habits';
+import type { HabitNote } from '@onpurpose/core/notes';
 import type { WeekStart } from '@onpurpose/core/displayPreferences';
 import type { HistoryAction, StoredEvent } from '@onpurpose/core/storage/model';
 import type { EntryDay } from '@onpurpose/core/calendar';
@@ -26,8 +27,13 @@ export const HabitDetailsScreen = memo(function HabitDetailsScreen({
   today,
   Heading,
   onBack,
-  onDescriptionEdit,
-  onDescriptionVersions,
+  notes,
+  note,
+  onNoteSelect,
+  onNoteAdd,
+  onNoteEdit,
+  onNoteVersions,
+  onNoteActions,
   onEdit,
   onGoalEdit,
   onCellPress,
@@ -41,8 +47,14 @@ export const HabitDetailsScreen = memo(function HabitDetailsScreen({
   today: string;
   Heading: ComponentType<TextProps>;
   onBack: () => void;
-  onDescriptionEdit: () => void;
-  onDescriptionVersions?: () => void;
+  notes: readonly HabitNote[];
+  /** The note shown on the Notes page (undefined without notes). */
+  note: HabitNote | undefined;
+  onNoteSelect: (note: HabitNote) => void;
+  onNoteAdd: () => void;
+  onNoteEdit: (note: HabitNote) => void;
+  onNoteVersions?: (note: HabitNote) => void;
+  onNoteActions: (note: HabitNote) => void;
   onEdit: () => void;
   onGoalEdit: () => void;
   onCellPress: (habit: Habit, day: EntryDay) => void;
@@ -59,7 +71,7 @@ export const HabitDetailsScreen = memo(function HabitDetailsScreen({
   // While a chart is thumb-tracked, sideways drags read it instead of paging.
   const [chartScrubbing, setChartScrubbing] = useState(false);
   const { fontScale } = useAppWindowDimensions();
-  const pages = useHabitPages(!!habit.description, width);
+  const pages = useHabitPages(notes.length > 0, width);
   const { tab, visited, offset, pageWidth } = pages;
   const islandWidth = Math.min(
     Math.max(0, width - 32),
@@ -102,11 +114,21 @@ export const HabitDetailsScreen = memo(function HabitDetailsScreen({
           </Heading>
         </View>
         <Pressable
-          onPress={tab === 'notes' ? onDescriptionEdit : onEdit}
+          onPress={
+            tab === 'statistics'
+              ? onEdit
+              : note
+                ? () => onNoteEdit(note)
+                : onNoteAdd
+          }
           disabled={!editable}
           accessibilityRole="button"
           accessibilityLabel={
-            tab === 'notes' ? 'Edit description' : `Edit ${habit.name}`
+            tab === 'statistics'
+              ? `Edit ${habit.name}`
+              : note
+                ? `Edit ${note.title} note`
+                : 'Add a note'
           }
           accessibilityState={{ disabled: !editable }}
           style={[
@@ -156,12 +178,16 @@ export const HabitDetailsScreen = memo(function HabitDetailsScreen({
                   }
                 >
                   {visited.notes && (
-                    <DescriptionReader
-                      description={habit.description}
+                    <HabitNotes
+                      notes={notes}
+                      selected={note}
                       colour={accent}
                       editable={editable}
-                      onEdit={onDescriptionEdit}
-                      onVersions={onDescriptionVersions}
+                      onSelect={onNoteSelect}
+                      onAdd={onNoteAdd}
+                      onEdit={onNoteEdit}
+                      onVersions={onNoteVersions}
+                      onActions={onNoteActions}
                       bottomInset={bottomInset}
                     />
                   )}

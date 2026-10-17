@@ -27,15 +27,15 @@ founder confirmed the sheet on the iPhone. Short/reversed drag, nested-editor
 and Reduce Motion checks are in [TESTING.md](TESTING.md).
 
 The mounted grid keeps its viewed dates and scroll position beneath the sheet.
-`App.tsx` hosts statistics and its numeric, habit, description and version
-dialogs in the same presentation tree, so nested editors present above it and
+`App.tsx` hosts statistics and its numeric, habit, note editor, note sheet and
+version dialogs in the same presentation tree, so nested editors present above it and
 save failure/retry stays visible inside the sheet. Edits update derived
 statistics without separate statistics events.
 
 `HabitDetailsScreen.tsx` holds Notes and Statistics as two tabs in one sheet.
-A name tap opens Notes when the habit has a description and Statistics
+A name tap opens Notes when the habit has any note and Statistics
 otherwise. The header has an X to close, the habit name, and a pencil that edits
-the description on Notes and the habit on Statistics. A floating bottom
+the shown note on Notes and the habit on Statistics. A floating bottom
 Notes/Statistics switch and horizontal swipes share native paging through
 `useHabitPages.ts`. Panels keep their scroll, range and chart state, and the
 measured height of the switch pads the bottom so the last controls stay
