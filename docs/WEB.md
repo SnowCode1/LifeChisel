@@ -120,10 +120,10 @@ choice in `localStorage` (`onpurpose.gridMode`); it is not a saved preference.
   tile has the same fixed height (about 2.5 Rows sizes; a two-line name, one
   summary line and the cell), so rows never stretch. Arrow keys move one
   roving focus between tiles (up and down by a row of tiles), Home and End
-  to the ends. The (i) opens Notes and
-  Statistics, and a right-click opens the habit's actions. A habit with notes
-  shows an always-visible notes button there instead, which opens its Notes
-  (an experiment, 17 October 2026).
+  to the ends. A slim row along the tile's bottom (20 px added to its
+  height) holds a Notes button and a Statistics button that open the habit's
+  page on that view (a trial, 18 October 2026; Notes is fainter while the
+  habit has none), and a right-click opens the habit's actions.
 - **Weeks**: `grid/WeekGrid.tsx`, a table in the same frame with one column
   per calendar week (the current one at the right; 53 weeks at first, more
   load near the oldest, up to about ten years). Each cell shows a number over
@@ -203,15 +203,27 @@ are raised rather than bordered. The layout follows the dialog's own width
 - **Phones:** one column, with the switch, the range tabs and the stepper on
   their own rows.
 
-The Notes view (`panel/NotesView.tsx`) lists the note names down the side
-(a wrapping row of pills when the dialog is narrow) beside the chosen note at
-a reading width (about 70 characters). Up and Down move between names. Above
-the note: Edit (Write when empty), Versions, Rename, Move up, Move down and
-Remove (which asks first). Versions lists that note's text changes in place,
-newest first, and each opens Before and After. Add note opens a small naming
-dialog (`notes/NoteNameDialog.tsx`): your own name, or a suggestion with its
-line on what it is for; Done in the editor then saves the new note, even
-empty. A habit without notes shows the eight suggestions to start from. See
+The Notes view (`panel/NotesView.tsx`, redesigned 18 October 2026 at the
+founder's request) fills the dialog. A habit with one note shows just that
+note, at full width, with Add note in its header, so a single note is not a
+lesser experience. With several, a quiet list of notes (name and first words)
+sits beside the open note, styled like the Settings sections: soft text, a
+hairline divider, and the chosen note in full ink on a raised neutral, with
+no habit colour (founder preference, 18 October 2026: coloured highlights
+made the view feel immature); drag a card to reorder (the others slide aside;
+core `moveNoteTo` makes one undoable change, or two when an older
+description must first leave the definition), or use Alt with the arrow
+keys; the arrows alone move between notes. When the dialog is narrow the
+cards become a wrapping row of pills above the note. The open note sits straight on the dialog (no card), and its header (lined up with the reading column, about 720 px, centred on
+wide pages) shows its name, when its words last changed, Versions, a ⋯ menu
+(Rename, Move up, Move down, Remove, which asks first) and Edit, all as
+quiet text buttons; only Save is filled. The rail and
+the page scroll separately. Versions lists that note's text changes in
+place, newest first, and each opens Before and After. Add note opens a small
+naming dialog (`notes/NoteNameDialog.tsx`): your own name, or a suggestion
+with its line on what it is for; the new note then appears in the rail and is
+written in place, and Save adds it as one action (Cancel adds nothing). A
+habit without notes shows the eight suggestions to start from. See
 [DESCRIPTIONS.md](DESCRIPTIONS.md). History: the docked habit panel (founder
 decision, 14 October 2026) was cramped at 440 px; the tabbed dialog that
 followed left most of its Notes tab empty; a Notes card beside the statistics
@@ -270,13 +282,17 @@ discarding them.
 
 ## Notes
 
-Each note is edited as Markdown, the format the phone stores, in a dialog
-with a formatting toolbar (bold, italic, highlight, lists, quote, link;
-Ctrl+B, Ctrl+I and Ctrl+K) and a live preview beside it (tabs on narrow
-screens), within the shared 20,000-character limit. Its title reads "Habit ·
-Note" and an empty note shows its preset's prompt. It opens from the Notes
-view and applies as one undoable note change; closing with unapplied changes
-asks first. The habit editor no longer has a Notes field. History rows that
+Each note is written in place on its page (Edit, Write on an empty note, or
+a double-click on its text), as Markdown, the format the phone stores, with
+a formatting toolbar (bold, italic, highlight, lists, quote, link; Ctrl+B,
+Ctrl+I and Ctrl+K) and a live preview beside it (Write/Preview tabs when the
+page is narrow; `notes/NoteComposer.tsx`), within the shared
+20,000-character limit. An empty note shows its preset's prompt. Save (or
+Ctrl+Enter) applies one undoable note change; Cancel or Esc leaves the note
+as it was, and Esc never closes the dialog. Switching notes, switching to
+Statistics or closing the dialog with unsaved words asks first. (Until 18
+October 2026 notes were written in a separate editor dialog over the habit
+page.) The habit editor no longer has a Notes field. History rows that
 changed a note's words open Before and After (`notes/NoteVersions.tsx`), and
 restoring applies only that text to the habit's current note, or brings a
 removed note back. The phone's rich-text editor and recoverable drafts are

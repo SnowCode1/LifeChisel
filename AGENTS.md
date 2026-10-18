@@ -329,9 +329,12 @@ definition keeps the stored one untouched) and never migrate at load. Phone:
 `HabitNotes.tsx` (wrapping note names; never a sideways scroller inside the
 pager) and `NoteSheet.tsx` (an overlay inside the habit sheet, not a native
 modal, so the editor can present as it closes). Web: the habit dialog's
-Notes/Statistics switch, `panel/NotesView.tsx` and `notes/NoteNameDialog.tsx`.
-The habit editors have no notes field. A notes button on Today tiles is a
-trial.
+Notes/Statistics switch, `panel/NotesView.tsx` (one note full width; several
+get a draggable rail; notes are written in place with `notes/NoteComposer.tsx`)
+and `notes/NoteNameDialog.tsx`.
+The habit editors have no notes field. Today tiles' bottom row of Notes and
+Statistics buttons (opening the sheet on that page via `initialTab`/
+`initialView`) is a trial; it takes tile height, never the name's width.
 
 ## Web app
 
@@ -354,7 +357,7 @@ scrolling area, `gridSizes` from the shared v18 sizes), `entry/` (cell popover o
 habit page dialog `HabitDetails` (a Notes/Statistics switch; `NotesView`
 lists note names beside the shown note), the docked and resizable History
 panel with its calendar, SVG charts in `ChartFrame`, safe Markdown),
-`notes/` (Markdown editor, naming dialog, Before/After), `settings/`, and `actions.ts`, which
+`notes/` (in-place Markdown composer, naming dialog, Before/After), `settings/`, and `actions.ts`, which
 reads every before-value from the current store. `Sidebar.tsx` holds what
 surrounds the grid (the only page; no new views); phones keep the top bar.
 Rows are memoized by a per-habit value signature; keep handlers stable. Tap

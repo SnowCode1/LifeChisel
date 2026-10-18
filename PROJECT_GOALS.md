@@ -166,7 +166,7 @@ and uncertainty about whether something was saved.
   Ideas, Obstacles) help choose one, and any name works. Save notes apart from
   the habit definition, so habit edits never copy them. On the web, notes sit in
   the habit dialog with a Notes/Statistics switch, like the phone. Try a notes
-  button on Today tiles. Keep the full notes one name tap away through the
+  and a statistics button on Today tiles. Keep the full notes one name tap away through the
   Notes tab, with a full-screen live formatted editor, local temporary Undo/Redo,
   reversible formatting controls and optional highlight colours. Retain applied
   changes in incremental storage and Undo/Redo. Populate existing habits with

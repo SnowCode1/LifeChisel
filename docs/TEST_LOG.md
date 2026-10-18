@@ -2113,3 +2113,36 @@ shrank when switching to a short note (now a steady height), and switching
 habits behind an open naming dialog kept that dialog (the page now resets
 per habit). The phone Notes page, note sheet, editor prompt and Today tile
 button are unchecked on a device.
+
+## 18 October 2026
+
+### Notes and Statistics buttons on Today tiles
+
+Headless desktop Chrome with sample data at 1400 and 390 px: every tile showed
+the two buttons in its bottom corners, faint Notes on Workout and Daily
+highlight (no notes), names at full width and goal lines unclipped. Statistics
+on Go for a walk (which has notes) opened its page on Statistics, and Notes on
+Workout (no notes) opened on Notes. A first version with the buttons beside
+the name wrapped "Drink water" at 390 px and clipped its goal line; moving
+them to a bottom row fixed it. The phone tiles are unchecked on a device.
+
+### A fuller web Notes view
+
+`scripts/notes.test.mjs` gained a drag test (one change normally, two past a
+v7 description, Undo restoring it). Headless desktop Chrome with sample data
+at 1400 and 390 px: Drink water (one note) showed no rail and the note at full
+width with Add note in the header; Go for a walk showed the rail of cards; a
+real mouse drag moved Rules from third to first; Why was edited in place and
+saved; the ⋯ menu opened, and Esc closed only the menu; a new Links note was
+named, shown in the rail while written, and saved as one note. At 390 px the
+cards became pills above the note. Found and fixed: the selected pill showed
+the rail's left accent bar, and with one note the title did not line up with
+the centred text.
+
+### A quieter web Notes view
+
+Headless desktop Chrome with sample data at 1400 and 390 px: Meditate's two
+notes showed in a neutral list (the chosen one raised, no colour), the note
+without a card, Edit as a text button, and the reading column lined up with
+the title once the scroll area kept even gutters. Writing in place and the
+narrow pill row still worked.

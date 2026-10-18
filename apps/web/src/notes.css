@@ -1,15 +1,5 @@
-/* Notes editor and Before/After versions. */
+/* Note writing, the Notes view and Before/After versions. */
 
-.modal.notes-editor {
-  width: min(1040px, calc(100vw - 32px));
-  height: min(820px, calc(100dvh - 48px));
-}
-.modal.notes-editor .modal-body {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 12px 18px 16px;
-}
 .notes-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -117,7 +107,6 @@
   }
 }
 @media (max-width: 600px) {
-  .modal.notes-editor,
   .modal.note-versions {
     width: 100vw;
     height: 100dvh;
@@ -158,89 +147,195 @@
   }
 }
 
-/* The Notes view: note names down the side, the chosen note at a reading
-   width. Narrow dialogs put the names in a wrapping row above the note. */
+/* The Notes view fills the dialog: one note on its own uses the whole width;
+   with several, a quiet list of notes (draggable) sits beside the open note,
+   like the Settings sections: soft text, a hairline, and the chosen one in
+   full ink on a raised neutral. No habit colour, so the words lead. The list
+   and the note scroll separately, so the page itself never does. */
+.details-page:has(> .notes-view),
+.details-page:has(> .notes-empty) {
+  height: 100%;
+}
 .notes-view {
   display: grid;
-  grid-template-columns: 180px minmax(0, 1fr);
-  align-items: start;
-  gap: 24px;
+  grid-template-columns: minmax(0, 1fr);
+  height: 100%;
+  min-height: 0;
 }
-.note-list {
-  position: sticky;
-  top: 0;
+.notes-view.with-rail {
+  grid-template-columns: 220px minmax(0, 1fr);
+}
+.note-rail,
+.note-page-body {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scroll-thumb) transparent;
+}
+.note-rail {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 12px 4px 0;
+  border-right: 1px solid var(--rule);
 }
-.note-list [role='tab'],
-.note-add {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 36px;
-  padding: 0 12px;
+.note-card {
+  position: relative;
+  flex: none;
+  display: grid;
+  gap: 1px;
+  padding: 8px 12px 9px;
   border-radius: 10px;
-  overflow: hidden;
   text-align: left;
+  transition: transform 160ms ease;
+  touch-action: none;
+  user-select: none;
+}
+.note-card:hover:not([aria-selected='true']):not(.pending) {
+  background-color: var(--surface);
+}
+.note-card[aria-selected='true'],
+.note-card.pending {
+  background-color: var(--surface-raised);
+}
+.note-card.dragging {
+  z-index: 1;
+  transition: none;
+  background-color: var(--surface-raised);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.3);
+  cursor: grabbing;
+}
+.note-card-title {
+  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 14px;
   color: var(--ink-soft);
 }
-.note-list [role='tab'][aria-selected='true'] {
+.note-card[aria-selected='true'] .note-card-title,
+.note-card.pending .note-card-title {
   font-weight: 600;
+  color: var(--ink);
 }
-.note-list [role='tab']:hover:not([aria-selected='true']),
-.note-add:hover:not(:disabled) {
-  background-color: var(--surface-raised);
+.note-card-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--ink-hint);
+}
+/* A grip appears on hover, in the card's own padding. */
+.note-grip {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  font-size: 11px;
+  letter-spacing: -2px;
+  color: var(--ink-hint);
+  opacity: 0;
+  cursor: grab;
+}
+.note-card:hover .note-grip,
+.note-card:focus-visible .note-grip {
+  opacity: 1;
 }
 .note-add {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
   margin-top: 6px;
+  padding: 0 12px;
+  border-radius: 10px;
+  font-size: 13px;
   color: var(--ink-quiet);
+}
+.note-add:hover:not(:disabled) {
+  color: var(--ink);
+  background-color: var(--surface);
 }
 .note-add:disabled {
   opacity: 0.4;
 }
-.note-pane {
+
+/* The open note: its name, when it changed and its actions, then the text,
+   straight on the dialog (no card), in one reading column. */
+.note-page {
+  container: notepage / inline-size;
+  display: flex;
+  flex-direction: column;
   min-width: 0;
-  max-width: 70ch;
+  min-height: 0;
 }
-.note-pane-header {
+.note-page-header {
+  flex: none;
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
-  gap: 4px 12px;
-  margin-bottom: 12px;
+  gap: 8px 16px;
+  /* Lined up with the reading column below, which centres on wide pages. */
+  padding: 4px max(28px, calc((100% - 720px) / 2));
 }
-.note-pane-header h3 {
+.note-page.editing .note-page-header {
+  padding-inline: 24px;
+}
+.note-page-title {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  min-width: 0;
+}
+.note-page-title h3 {
   margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 20px;
   font-weight: 600;
 }
-.note-pane-actions {
+.note-page-title .muted {
+  font-size: 12px;
+  white-space: nowrap;
+  color: var(--ink-hint);
+}
+.note-page-actions {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   gap: 2px 6px;
 }
-.note-pane-actions .text-button {
+.note-page-actions .text-button {
   align-self: center;
-  font-size: 13px;
+  min-height: 32px;
+  padding: 0 8px;
+  font-size: 14px;
 }
-.note-pane-actions .icon-button {
-  width: 32px;
+.note-page-actions .text-button:hover:not(:disabled) {
+  color: var(--ink);
+  background-color: var(--surface-raised);
+}
+.note-page-actions .done-button {
   height: 32px;
+  padding: 0 14px;
 }
-.note-pane-actions .icon-button:disabled {
-  opacity: 0.3;
+.note-page-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  /* Even gutters keep the column lined up with the header above. */
+  scrollbar-gutter: stable both-edges;
+  padding: 18px 28px 32px;
 }
-.icon-button.flip .icon {
-  transform: rotate(180deg);
+/* Reading: a comfortable measure, centred once the page is wide. */
+.note-page-body > .note,
+.note-page-body > .note-blank,
+.note-page-body > .note-version-list {
+  max-width: 720px;
+  margin: 0 auto;
 }
-.note-pane .note {
-  max-width: none;
+.note-page-body > .note {
   font-size: 17px;
   line-height: 1.65;
 }
@@ -248,16 +343,17 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 12px;
+  gap: 14px;
+  padding-top: 8px;
 }
 .note-blank p {
   margin: 0;
+  font-size: 16px;
 }
 .note-version-list {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  margin: 0;
   padding: 0;
   list-style: none;
 }
@@ -276,25 +372,117 @@
 .note-version-list .muted {
   font-size: 12px;
 }
-@container details (max-width: 639px) {
-  .notes-view {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 16px;
+
+/* Writing in place: the toolbar, text and preview fill the page body. */
+.note-page-body:has(> .note-composer) {
+  display: flex;
+  padding: 14px 18px 12px;
+}
+.note-composer {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+}
+.note-composer .notes-panes {
+  min-height: 240px;
+}
+.note-composer .hint {
+  margin: 0;
+}
+@container notepage (max-width: 760px) {
+  .note-composer .notes-tabs {
+    display: flex;
   }
-  .note-list {
-    position: static;
+  .note-composer .notes-panes {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .note-composer .notes-panes.show-write .notes-preview,
+  .note-composer .notes-panes.show-preview .notes-text {
+    display: none;
+  }
+}
+
+/* The ⋯ menu beside the note's actions. */
+.note-menu {
+  position: relative;
+}
+.note-menu > .icon-button {
+  width: 34px;
+  height: 34px;
+  font-size: 18px;
+}
+.note-menu-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  min-width: 160px;
+  padding: 4px;
+  border: 1px solid var(--card-edge);
+  border-radius: 12px;
+  background-color: var(--surface-raised);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.35);
+}
+.note-menu-list button {
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 8px;
+  text-align: left;
+  font-size: 14px;
+}
+.note-menu-list button:hover:not(:disabled),
+.note-menu-list button:focus-visible {
+  background-color: var(--surface-edge);
+}
+.note-menu-list button:disabled {
+  opacity: 0.4;
+}
+.note-menu-list .danger {
+  color: var(--danger, #d99090);
+}
+
+/* Narrow dialogs: the notes become a wrapping row above the note. */
+@container details (max-width: 639px) {
+  .notes-view.with-rail {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 12px;
+  }
+  .note-rail {
     flex-direction: row;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 4px;
+    overflow: visible;
+    padding: 0 0 10px;
+    border-right: 0;
+    border-bottom: 1px solid var(--rule);
   }
-  .note-list [role='tab'],
-  .note-add {
-    border: 1px solid var(--rule);
+  .note-card {
+    padding: 6px 12px;
     border-radius: 999px;
   }
+  .note-card-text,
+  .note-grip {
+    display: none;
+  }
   .note-add {
+    min-height: 0;
     margin-top: 0;
-    border-style: dashed;
+    padding: 6px 12px;
+    border-radius: 999px;
+  }
+  .note-page-header {
+    padding: 4px;
+  }
+  .note-page.editing .note-page-header {
+    padding-inline: 4px;
+  }
+  .note-page-body {
+    padding: 14px 4px 24px;
   }
 }
 
@@ -305,6 +493,14 @@
   align-items: flex-start;
   gap: 14px;
   max-width: 760px;
+  margin: 0 auto;
+  padding-top: 12px;
+  overflow-y: auto;
+}
+.notes-empty h3 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 650;
 }
 .notes-empty > p {
   margin: 0;

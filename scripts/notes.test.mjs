@@ -29,6 +29,7 @@ import {
   MAX_NOTE_TITLE,
   MAX_NOTES,
   moveNote,
+  moveNoteTo,
   noteDraftKey,
   noteHint,
   notePresets,
@@ -480,4 +481,34 @@ test('new stores, marketing presets and the sample store start with notes, not d
     ),
   );
   await sample.flush();
+});
+
+test('dragging a note moves it in one change, or two past a v7 description', async () => {
+  const { store, state, notes } = await fixture();
+  for (const title of ['Why', 'Rules', 'Links'])
+    store.change(addNote(state(), 'walk', title, '', title.toLowerCase()));
+  const ids = () => notes().map((note) => note.id);
+  assert.deepEqual(ids(), [LEGACY_NOTE_ID, 'why', 'rules', 'links']);
+  assert.deepEqual(moveNoteTo(state(), 'walk', 'why', 1), []);
+  assert.deepEqual(moveNoteTo(state(), 'walk', 'why', 9), []);
+  // Down past others: one change, the description stays in the definition.
+  const down = moveNoteTo(state(), 'walk', 'why', 3);
+  assert.equal(down.length, 1);
+  assert.ok(store.change(down[0]));
+  assert.deepEqual(ids(), [LEGACY_NOTE_ID, 'rules', 'links', 'why']);
+  assert.equal(state().habits[0].description, 'Old **walk** note');
+  // To the top while the description is first: it leaves, then the move.
+  const top = moveNoteTo(state(), 'walk', 'links', 0);
+  assert.equal(top.length, 2);
+  for (const change of top) assert.ok(store.change(change));
+  assert.deepEqual(ids(), ['links', LEGACY_NOTE_ID, 'rules', 'why']);
+  assert.equal(state().habits[0].description, undefined);
+  assert.ok(store.undo());
+  assert.ok(store.undo());
+  assert.equal(state().habits[0].description, 'Old **walk** note');
+  // The description itself can be dragged anywhere in one change.
+  const info = moveNoteTo(state(), 'walk', LEGACY_NOTE_ID, 2);
+  assert.equal(info.length, 1);
+  assert.ok(store.change(info[0]));
+  assert.deepEqual(ids(), ['rules', 'links', LEGACY_NOTE_ID, 'why']);
 });

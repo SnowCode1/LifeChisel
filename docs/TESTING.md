@@ -344,8 +344,11 @@ Rules on Go for a walk, Links on Read and How on Meditate.
 - Editing the sample walk's Info note for the first time keeps its place and
   text everywhere; Undo restores it; its Versions list includes the older
   description edits.
-- Today view: tiles of habits with notes show the notes button in the corner;
-  it opens the habit on its Notes, and VoiceOver offers one action per note.
+- Today view: every tile's bottom corners hold Notes (faint without notes) and
+  Statistics; each opens the sheet on that page, even against the habit's
+  usual first page. The buttons are easy to hit at three columns without
+  recording by mistake, names keep their width, and VoiceOver offers Open
+  notes, Open statistics and one action per note.
 - Name taps open Notes when the habit has any note, Statistics otherwise. Swipe or use the
   floating island to switch: partial drags settle, vertical reading stays
   vertical, swipes over links/charts do not activate them, and each panel keeps

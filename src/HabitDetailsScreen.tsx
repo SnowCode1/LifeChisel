@@ -5,7 +5,7 @@ import { Pressable, StyleSheet, View, type TextProps } from 'react-native';
 import { Text, useAppWindowDimensions } from './Typography';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useHabitPages } from './useHabitPages';
+import { useHabitPages, type HabitTab } from './useHabitPages';
 import { HabitNotes } from './HabitNotes';
 import { HabitStatsScreen } from './HabitStatsScreen';
 import { ChartScrubLock } from './ChartFrame';
@@ -27,6 +27,7 @@ export const HabitDetailsScreen = memo(function HabitDetailsScreen({
   today,
   Heading,
   onBack,
+  initialTab,
   notes,
   note,
   onNoteSelect,
@@ -47,6 +48,8 @@ export const HabitDetailsScreen = memo(function HabitDetailsScreen({
   today: string;
   Heading: ComponentType<TextProps>;
   onBack: () => void;
+  /** The page to open on; by default Notes when the habit has any. */
+  initialTab?: HabitTab;
   notes: readonly HabitNote[];
   /** The note shown on the Notes page (undefined without notes). */
   note: HabitNote | undefined;
@@ -71,7 +74,7 @@ export const HabitDetailsScreen = memo(function HabitDetailsScreen({
   // While a chart is thumb-tracked, sideways drags read it instead of paging.
   const [chartScrubbing, setChartScrubbing] = useState(false);
   const { fontScale } = useAppWindowDimensions();
-  const pages = useHabitPages(notes.length > 0, width);
+  const pages = useHabitPages(notes.length > 0, width, initialTab);
   const { tab, visited, offset, pageWidth } = pages;
   const islandWidth = Math.min(
     Math.max(0, width - 32),

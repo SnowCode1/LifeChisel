@@ -1122,7 +1122,8 @@ button[aria-disabled='true'] {
   position: relative;
   display: flex;
   flex-direction: column;
-  height: calc(max(var(--row), 56px) * 2.45);
+  /* Plus the bottom row with the Notes and Statistics buttons. */
+  height: calc(max(var(--row), 56px) * 2.45 + 20px);
   overflow: hidden;
   border: 1px solid;
   border-radius: 14px;
@@ -1139,7 +1140,7 @@ button[aria-disabled='true'] {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 10px 12px 12px;
+  padding: 10px 12px 2px;
   border-radius: 13px;
   text-align: left;
   color: inherit;
@@ -1158,8 +1159,8 @@ button[aria-disabled='true'] {
   display: flex;
   align-items: flex-start;
   gap: 8px;
-  padding-right: 22px;
 }
+
 .today-tile-head .habit-symbol,
 .today-tile-head .habit-initial {
   flex: none;
@@ -1225,7 +1226,7 @@ button[aria-disabled='true'] {
 .today-tile-chips {
   flex: none;
   height: 54px;
-  margin: 0 10px 12px;
+  margin: 0 10px 2px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1263,24 +1264,26 @@ button[aria-disabled='true'] {
   padding: 0;
   color: var(--ink-quiet);
 }
-.today-tile-more {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 30px;
-  height: 30px;
+/* Notes and Statistics in the tile's bottom corners. */
+.today-tile-links {
+  flex: none;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 4px 4px;
+}
+.today-tile-link {
+  width: 26px;
+  height: 26px;
   display: grid;
   place-items: center;
   border-radius: 8px;
   color: var(--ink-quiet);
-  opacity: 0;
 }
-.today-tile:hover .today-tile-more,
-.today-tile-more:focus-visible,
-.today-tile-more.has-notes {
+.today-tile-link.faint {
+  opacity: 0.5;
+}
+.today-tile-link:hover {
   opacity: 1;
-}
-.today-tile-more:hover {
   background-color: var(--surface-raised);
 }
 .today-tiles .add-habit {
@@ -1292,11 +1295,6 @@ button[aria-disabled='true'] {
 }
 .grid .add-row {
   overflow: visible;
-}
-@media (hover: none) {
-  .today-tile-more {
-    opacity: 1;
-  }
 }
 @media (max-width: 600px) {
   .today-area {

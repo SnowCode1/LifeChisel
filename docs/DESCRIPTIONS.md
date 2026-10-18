@@ -64,13 +64,23 @@ note; an empty note shows its prompt and Write.
 **Web.** The habit dialog switches between Notes and Statistics in its
 toolbar, like the phone (founder decision, 17 October 2026, replacing the
 Notes card beside the statistics, which squeezed the note). It opens on Notes
-when the habit has any, otherwise on Statistics. See [WEB.md](WEB.md).
+when the habit has any, otherwise on Statistics. Notes are read and written
+in place on a full-height page; one note takes the whole width, and several
+get a draggable rail of note cards (founder request, 18 October 2026). See
+[WEB.md](WEB.md).
 
-**Today tiles (experiment, 17 October 2026).** A habit with notes shows a
-quiet notes button in its tile's corner, on both apps, which opens the habit
-straight onto its Notes. The phone tile also gives screen readers one action
-per note ("Open Why note"). Whether to show a note's first line on the tile
-(for example a rule, at the moment of recording) is still to be tried.
+**Today tiles (trial).** Every tile has a slim row along its bottom with a
+Notes button in one corner and a Statistics button in the other, on both
+apps; each opens the habit straight on that page, whatever the habit's usual
+first page (founder suggestion, 18 October 2026, so a tile need not open the
+shared sheet and then switch). Notes is fainter while the habit has none. The
+row adds about 20 points to each tile instead of taking width from the name,
+which three-column phone tiles (about 115 points wide on the test iPhone)
+cannot spare. Screen readers get Open notes, Open statistics and one action
+per note ("Open Why note"). Holding a tile still opens the sheet by the usual
+rule. This replaced a notes-only corner button of 17 October 2026. Whether to
+show a note's first line on the tile (for example a rule, at the moment of
+recording) is still to be tried.
 
 ## Reading and editing
 

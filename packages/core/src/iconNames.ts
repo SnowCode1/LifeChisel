@@ -21,6 +21,7 @@ export type IconName =
   | 'info'
   | 'plus'
   | 'calendar'
+  | 'stats'
   | 'modeGrid'
   | 'modeCompact'
   | 'modeToday'

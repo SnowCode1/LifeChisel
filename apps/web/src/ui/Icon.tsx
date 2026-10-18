@@ -68,6 +68,7 @@ export function Icon({
         </>
       )}
       {name === 'text' && <path d="M4 5h16M4 10h16M4 15h11M4 20h8" />}
+      {name === 'stats' && <path d="M4 20h16M7 16v-4M12 16V6M17 16v-7" />}
       {name === 'number' && <path d="M9 3 7 21M17 3l-2 18M4 8h17M3 16h17" />}
       {name === 'erase' && (
         <path d="m3.5 13 8-9a2 2 0 0 1 2.8-.2l6 5.3a2 2 0 0 1 .2 2.8L14 19H8l-4.3-3.7a1.6 1.6 0 0 1-.2-2.3ZM8 8l10 8M14 19h7" />

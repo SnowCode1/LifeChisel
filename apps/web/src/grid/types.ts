@@ -88,8 +88,8 @@ export type GridHandlers = {
     done: (change: FillChange | null) => void,
   ): void;
   openMenu(habit: Habit, anchor: HTMLElement): void;
-  /** Opens the habit's Notes/Statistics panel. */
-  openHabit(habit: Habit): void;
+  /** Opens the habit's page, on Notes or Statistics when given. */
+  openHabit(habit: Habit, view?: 'notes' | 'statistics'): void;
   /** Saves the displayed rows in a new order. */
   reorder(ids: string[]): void;
   add(): void;

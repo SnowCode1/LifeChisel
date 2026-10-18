@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import type { WeekStart } from '@onpurpose/core/displayPreferences';
 import type { EntryValues } from '@onpurpose/core/entries';
 import type { Habit } from '@onpurpose/core/habits';
@@ -18,11 +18,12 @@ export type HabitView = 'notes' | 'statistics';
 /**
  * One page per habit in a wide dialog (full screen on phones), switched
  * between its notes and its statistics like the phone's habit sheet. It opens
- * on Notes when the habit has any. Esc, Close or a click outside returns to
- * the grid.
+ * on the chosen view, or on Notes when the habit has any. Esc, Close or a
+ * click outside returns to the grid.
  */
 export function HabitDetails({
   habit,
+  initialView,
   values,
   events,
   actions,
@@ -38,14 +39,16 @@ export function HabitDetails({
   onDay,
   onEditGoal,
   onSelectNote,
-  onNewNote,
-  onEditNote,
+  onCreateNote,
+  onSaveNote,
   onRenameNote,
   onMoveNote,
   onRemoveNote,
   onOpenVersion,
 }: {
   habit: Habit;
+  /** The view to open on; by default Notes when the habit has any. */
+  initialView?: HabitView;
   values: EntryValues;
   events: StoredEvent[];
   actions: HistoryAction[];
@@ -61,11 +64,12 @@ export function HabitDetails({
   onClose: () => void;
   onEditGoal: () => void;
   onSelectNote: (note: HabitNote) => void;
-  /** A title chosen for a new note, which then opens to be written. */
-  onNewNote: (title: string) => void;
-  onEditNote: (note: HabitNote) => void;
+  /** Saves a new note, written in place after it was named. */
+  onCreateNote: (title: string, text: string) => boolean;
+  onSaveNote: (note: HabitNote, text: string) => boolean;
   onRenameNote: (note: HabitNote, title: string) => boolean;
-  onMoveNote: (note: HabitNote, direction: -1 | 1) => void;
+  /** Moves a note to a position (a drag, Alt+arrows or the menu). */
+  onMoveNote: (note: HabitNote, index: number) => void;
   onRemoveNote: (note: HabitNote) => void;
   onOpenVersion: (action: HistoryAction) => void;
   onDay: (
@@ -78,7 +82,7 @@ export function HabitDetails({
   const titleId = useId();
   const colour = theme.colour(habit.color);
   const [view, setView] = useState<HabitView>(
-    notes.length ? 'notes' : 'statistics',
+    initialView ?? (notes.length ? 'notes' : 'statistics'),
   );
   // Statistics mount on first view and then stay, keeping range and scroll.
   const [statsSeen, setStatsSeen] = useState(view === 'statistics');
@@ -88,7 +92,25 @@ export function HabitDetails({
   // Naming a note opens a dialog beside this one, never nested in it: Esc
   // in a dialog inside another closes both.
   const [naming, setNaming] = useState<{ renaming?: HabitNote } | null>(null);
+  // A new note's name while it is written in place, before it is saved.
+  const [pending, setPending] = useState<string | null>(null);
+  // Unsaved words in the open note: leaving the view or the page asks first.
+  const dirty = useRef(false);
+  const mayLeave = () =>
+    !dirty.current ||
+    window.confirm('Discard your changes to this note?\n\nThey are not saved.');
+  const close = () => {
+    if (mayLeave()) onClose();
+  };
+  const startNote = (title: string) => {
+    setNaming(null);
+    setView('notes');
+    setPending(title);
+  };
   const show = (next: HabitView) => {
+    if (next === view || !mayLeave()) return;
+    dirty.current = false;
+    setPending(null);
     setView(next);
     if (next === 'statistics') setStatsSeen(true);
   };
@@ -114,7 +136,7 @@ export function HabitDetails({
             type="button"
             className="icon-button"
             aria-label="Close"
-            onClick={onClose}
+            onClick={close}
           >
             <Icon name="close" size={18} />
           </button>
@@ -159,7 +181,7 @@ export function HabitDetails({
             />
           </div>
         }
-        onClose={onClose}
+        onClose={close}
       >
         {/* Focus lands on the page itself, so keys scroll it without drawing
           a focus ring on a control. */}
@@ -172,13 +194,26 @@ export function HabitDetails({
               theme={theme}
               colour={colour}
               editable={editable}
-              onSelect={onSelectNote}
+              onSelect={(note) => {
+                setPending(null);
+                onSelectNote(note);
+              }}
               onAdd={() => setNaming({})}
-              onPreset={onNewNote}
-              onEdit={onEditNote}
+              pendingTitle={pending}
+              onPreset={startNote}
               onRename={(renaming) => setNaming({ renaming })}
-              onMove={onMoveNote}
+              onMoveTo={onMoveNote}
               onRemove={onRemoveNote}
+              onSaveText={onSaveNote}
+              onCreate={(title, text) => {
+                if (!onCreateNote(title, text)) return false;
+                setPending(null);
+                return true;
+              }}
+              onCancelNew={() => setPending(null)}
+              onDirtyChange={(value) => {
+                dirty.current = value;
+              }}
               onOpenVersion={onOpenVersion}
             />
           )}
@@ -213,9 +248,7 @@ export function HabitDetails({
               if (onRenameNote(naming.renaming, title)) setNaming(null);
               return;
             }
-            setNaming(null);
-            setView('notes');
-            onNewNote(title);
+            startNote(title);
           }}
         />
       )}

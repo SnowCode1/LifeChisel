@@ -239,6 +239,33 @@ export function moveNote(
   return change(habitId, slot(found.habit, from, note), { index: to, note });
 }
 
+/**
+ * Move a note to another position (a drag). Usually one change; two while a
+ * v7 description is first and another note goes above it: the description
+ * leaves the definition in place, then the note moves. Empty when nothing
+ * would change.
+ */
+export function moveNoteTo(
+  state: Owner,
+  habitId: string,
+  noteId: string,
+  to: number,
+): NoteChange[] {
+  const found = context(state, habitId);
+  if (!found) return [];
+  const from = found.notes.findIndex((note) => note.id === noteId);
+  if (from < 0 || to < 0 || to >= found.notes.length || from === to) return [];
+  const note = found.notes[from]!;
+  if (found.habit.description !== undefined && to === 0) {
+    const first = found.notes[0]!;
+    return [
+      change(habitId, slot(found.habit, 0, first), { index: 0, note: first }),
+      change(habitId, { index: from, note }, { index: 0, note }),
+    ];
+  }
+  return [change(habitId, slot(found.habit, from, note), { index: to, note })];
+}
+
 export function removeNote(
   state: Owner,
   habitId: string,

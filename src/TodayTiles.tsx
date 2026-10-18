@@ -38,9 +38,15 @@ import { Icon } from './Icon';
 import { Text } from './Typography';
 import { useTheme } from './ThemeContext';
 import { feedback } from './haptics';
+import type { HabitTab } from './useHabitPages';
+
+/** Where a habit sheet opens: a page, and on Notes a particular note. */
+export type HabitOpening = { tab: HabitTab; noteId?: string };
 
 const GAP = 10;
 const MIN_TILE = 104;
+// The bottom row with the Notes and Statistics buttons.
+const TILE_LINKS = 20;
 
 /** How many tiles fit across `width`: at least two. */
 export function todayColumns(width: number, fontScale: number) {
@@ -54,9 +60,11 @@ export function todayColumns(width: number, fontScale: number) {
 // number records in one tap from its usual totals, other types open their
 // dialog. Under the name sits the grid's line (schedule, rule or quota
 // progress); a habit not scheduled today dims. Holding a tile opens the
-// habit's Notes and Statistics. A habit with notes shows a notes button in
-// the corner that opens its Notes page directly (an experiment, 17 October
-// 2026); screen readers get one action per note.
+// habit's Notes and Statistics. A slim row along the bottom holds a Notes
+// button and a Statistics button that open the sheet straight on that page
+// (a trial, 18 October 2026; Notes is fainter while the habit has none). The
+// row takes height rather than the name's width, which narrow phone tiles
+// cannot spare. Screen readers get the same as actions, plus one per note.
 export function TodayTiles({
   store,
   habits,
@@ -87,8 +95,8 @@ export function TodayTiles({
   tapAnimations: boolean;
   onCellPress: (habit: Habit, day: EntryDay) => void;
   onCellValue: (habit: Habit, day: EntryDay, value: EntryValue) => boolean;
-  /** Opens the habit's sheet, on one of its notes when given. */
-  onHabitPress: (habit: Habit, noteId?: string) => void;
+  /** Opens the habit's sheet, on a chosen page or note when given. */
+  onHabitPress: (habit: Habit, open?: HabitOpening) => void;
 }) {
   const theme = useTheme();
   const values = useSyncExternalStore(
@@ -140,7 +148,7 @@ export function TodayTiles({
             today={today}
             day={day}
             width={tileWidth}
-            height={Math.max(Math.round(rowHeight * 2.45), 137)}
+            height={Math.max(Math.round(rowHeight * 2.45), 137) + TILE_LINKS}
             fontScale={fontScale}
             checkboxStyle={checkboxStyle}
             cellLook={cellLook}
@@ -195,7 +203,7 @@ const TodayTile = memo(function TodayTile({
   tapAnimations: boolean;
   onCellPress: (habit: Habit, day: EntryDay) => void;
   onCellValue: (habit: Habit, day: EntryDay, value: EntryValue) => boolean;
-  onHabitPress: (habit: Habit, noteId?: string) => void;
+  onHabitPress: (habit: Habit, open?: HabitOpening) => void;
 }) {
   const theme = useTheme();
   const reducedMotion = useReducedMotion();
@@ -268,7 +276,8 @@ const TodayTile = memo(function TodayTile({
         accessibilityHint={`${a11y.hint}. Hold for notes and statistics`}
         accessibilityActions={[
           { name: 'activate', label: a11y.hint },
-          { name: 'details', label: 'Open notes and statistics' },
+          { name: 'notes', label: 'Open notes' },
+          { name: 'statistics', label: 'Open statistics' },
           ...notes.map((note) => ({
             name: `note:${note.id}`,
             label: `Open ${note.title} note`,
@@ -277,9 +286,11 @@ const TodayTile = memo(function TodayTile({
         onAccessibilityAction={(event) => {
           const action = event.nativeEvent.actionName;
           if (action === 'activate') activate();
-          else if (action === 'details') onHabitPress(habit);
+          else if (action === 'notes') onHabitPress(habit, { tab: 'notes' });
+          else if (action === 'statistics')
+            onHabitPress(habit, { tab: 'statistics' });
           else if (action.startsWith('note:'))
-            onHabitPress(habit, action.slice(5));
+            onHabitPress(habit, { tab: 'notes', noteId: action.slice(5) });
         }}
         delayLongPress={380}
         onPress={activate}
@@ -318,7 +329,7 @@ const TodayTile = memo(function TodayTile({
               {habitInitial(habit.name)}
             </Text>
           )}
-          <View style={{ flex: 1, paddingRight: notes.length ? 24 : 0 }}>
+          <View style={{ flex: 1 }}>
             <Text
               numberOfLines={2}
               style={{
@@ -340,27 +351,6 @@ const TodayTile = memo(function TodayTile({
             )}
           </View>
         </View>
-        {notes.length > 0 && (
-          <Pressable
-            accessible={false}
-            importantForAccessibility="no"
-            hitSlop={8}
-            onPress={() => onHabitPress(habit, notes[0]!.id)}
-            style={({ pressed }) => ({
-              position: 'absolute',
-              top: 6,
-              right: 6,
-              width: 28,
-              height: 28,
-              borderRadius: 8,
-              alignItems: 'center',
-              justifyContent: 'center',
-              backgroundColor: pressed ? `${colour}26` : 'transparent',
-            })}
-          >
-            <Icon name="text" size={15} color={theme.ink(0x8c)} />
-          </Pressable>
-        )}
         {/* Today's cell: a fixed block at the bottom, the same in every tile. */}
         <View
           style={{ height: 54, alignItems: 'center', justifyContent: 'center' }}
@@ -485,7 +475,63 @@ const TodayTile = memo(function TodayTile({
             </Text>
           )}
         </View>
+        {/* Notes and Statistics, tucked into the tile's bottom corners. */}
+        <View
+          style={{
+            flexDirection: 'row',
+            justifyContent: 'space-between',
+            marginHorizontal: -6,
+            marginTop: -6,
+            marginBottom: -6,
+          }}
+        >
+          <TileButton
+            icon="text"
+            colour={colour}
+            faint={!notes.length}
+            onPress={() => onHabitPress(habit, { tab: 'notes' })}
+          />
+          <TileButton
+            icon="stats"
+            colour={colour}
+            onPress={() => onHabitPress(habit, { tab: 'statistics' })}
+          />
+        </View>
       </Pressable>
     </Animated.View>
   );
 });
+
+// A small icon button inside a tile. The tile's accessibility actions cover
+// it, so it is hidden from screen readers itself.
+function TileButton({
+  icon,
+  colour,
+  faint = false,
+  onPress,
+}: {
+  icon: 'text' | 'stats';
+  colour: string;
+  faint?: boolean;
+  onPress: () => void;
+}) {
+  const theme = useTheme();
+  return (
+    <Pressable
+      accessible={false}
+      importantForAccessibility="no"
+      hitSlop={8}
+      onPress={onPress}
+      style={({ pressed }) => ({
+        width: 28,
+        height: 28,
+        borderRadius: 8,
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: pressed ? `${colour}26` : 'transparent',
+      })}
+    >
+      <Icon name={icon} size={15} color={theme.ink(faint ? 0x50 : 0x8c)} />
+    </Pressable>
+  );
+}

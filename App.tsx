@@ -60,6 +60,8 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { PerformanceBoundary } from './src/PerformanceBoundary';
 import { developmentToolsEnabled } from '@onpurpose/core/developmentFeatures';
 import { HabitDetailsScreen } from './src/HabitDetailsScreen';
+import type { HabitTab } from './src/useHabitPages';
+import type { HabitOpening } from './src/TodayTiles';
 import { HabitGrid } from './src/HabitGrid';
 import {
   habitType,
@@ -348,6 +350,8 @@ function PersistentApp({
   // the note being written (an existing one, or a new one just named), its
   // versions list and the small note sheet.
   const [noteId, setNoteId] = useState<string | null>(null);
+  // The page a habit sheet opens on, when chosen (a Today tile's buttons).
+  const [statsTab, setStatsTab] = useState<HabitTab | undefined>(undefined);
   const [noteEditor, setNoteEditor] = useState<{
     habitId: string;
     noteId: string;
@@ -377,9 +381,10 @@ function PersistentApp({
     [snapshot.replay.undo, statsHabit, shownNote],
   );
   const editable = store.canEdit() && !backupBusy;
-  const openDetails = useCallback((habit: Habit, note?: string) => {
+  const openDetails = useCallback((habit: Habit, open?: HabitOpening) => {
     setStatsId(habit.id);
-    setNoteId(note ?? null);
+    setNoteId(open?.noteId ?? null);
+    setStatsTab(open?.tab);
     feedback('selection');
   }, []);
 
@@ -1062,6 +1067,7 @@ function PersistentApp({
                           weekStart={weekStart}
                           key={statsHabit.id}
                           habit={statsHabit}
+                          initialTab={statsTab}
                           values={values}
                           events={snapshot.events}
                           actions={snapshot.replay.undo}

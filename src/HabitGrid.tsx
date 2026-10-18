@@ -58,7 +58,7 @@ import {
 import type { GridMode } from '@onpurpose/core/gridModes';
 import { weekColumnStart, weeksAgoOf } from '@onpurpose/core/weekSummary';
 import { GridModeMenu } from './GridModeMenu';
-import { TodayTiles } from './TodayTiles';
+import { TodayTiles, type HabitOpening } from './TodayTiles';
 import { headingHeight } from './canvasGrid/gridGeometry';
 import { feedback } from './haptics';
 import { Icon } from './Icon';
@@ -90,8 +90,8 @@ type Props = {
   today: string;
   habits: Habit[];
   store: ChangeStore;
-  /** Opens the habit's sheet, on one of its notes when given. */
-  onHabitPress: (habit: Habit, noteId?: string) => void;
+  /** Opens the habit's sheet, on a chosen page or note when given. */
+  onHabitPress: (habit: Habit, open?: HabitOpening) => void;
   onHabitAction: (habit: Habit, action: HabitAction) => void;
   onReorder: (ids: string[]) => boolean;
   editable: boolean;

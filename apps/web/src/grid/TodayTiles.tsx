@@ -39,9 +39,10 @@ import type { CellLookStyle, GridHandlers } from './types.ts';
 // (drawn with the saved cell look) toggles, a blank number records in one
 // tap from its usual totals, other types open the entry popover. Under the
 // name sits the grid's line (schedule, rule or quota progress), and a habit
-// not scheduled today dims. The (i) opens Notes and Statistics; a habit with
-// notes shows a notes button there instead, always visible, which opens its
-// Notes (an experiment, 17 October 2026). A right-click opens the actions.
+// not scheduled today dims. A slim row along the bottom holds a Notes button
+// and a Statistics button that open the habit's page on that view (a trial,
+// 18 October 2026; Notes is fainter while the habit has none). A right-click
+// opens the actions.
 export function TodayTiles({
   habits,
   values,
@@ -362,29 +363,36 @@ function TodayTileView({
           </span>
         </span>
       )}
-      {notes.length ? (
+      <span className="today-tile-links">
         <button
           type="button"
-          className="today-tile-more has-notes"
+          className={notes.length ? 'today-tile-link' : 'today-tile-link faint'}
           tabIndex={-1}
-          aria-label={`Notes for ${habit.name}: ${notes.map((note) => note.title).join(', ')}`}
-          title={`Notes: ${notes.map((note) => note.title).join(', ')}`}
-          onClick={() => on.openHabit(habit)}
+          aria-label={
+            notes.length
+              ? `Notes for ${habit.name}: ${notes.map((note) => note.title).join(', ')}`
+              : `Notes for ${habit.name}, none yet`
+          }
+          title={
+            notes.length
+              ? `Notes: ${notes.map((note) => note.title).join(', ')}`
+              : 'Notes'
+          }
+          onClick={() => on.openHabit(habit, 'notes')}
         >
           <Icon name="text" size={15} />
         </button>
-      ) : (
         <button
           type="button"
-          className="today-tile-more"
+          className="today-tile-link"
           tabIndex={-1}
-          aria-label={`Notes and statistics for ${habit.name}`}
-          title="Notes and statistics"
-          onClick={() => on.openHabit(habit)}
+          aria-label={`Statistics for ${habit.name}`}
+          title="Statistics"
+          onClick={() => on.openHabit(habit, 'statistics')}
         >
-          <Icon name="info" size={16} />
+          <Icon name="stats" size={15} />
         </button>
-      )}
+      </span>
     </div>
   );
 }

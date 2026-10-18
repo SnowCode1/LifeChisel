@@ -2378,3 +2378,60 @@ tried on a device.
   first line on the tile is the possible next step, after a phone trial.
 - Open for the founder: whether to keep the Today notes button, and whether
   a note's first line belongs on its tile.
+
+## 18 October 2026 — Notes and Statistics buttons on Today tiles
+
+Status: implemented on the `web-app` branch for both apps; checked in
+headless desktop Chrome at 1400 and 390 px wide with sample data, not yet on
+a phone.
+
+- Founder suggestion: give each Today tile a Notes button and a Statistics
+  button, so reaching either does not mean opening the shared sheet and then
+  switching. This replaces the notes-only corner button of 17 October.
+- Assistant implementation: both buttons sit in a slim row along the tile's
+  bottom corners and open the habit sheet (phone) or page (web) straight on
+  that view, whatever its usual first page; Notes is drawn fainter while the
+  habit has no notes. A first version beside the name squeezed it (at 390 px
+  "Drink water" wrapped and clipped its goal line, and phone tiles are about
+  115 points wide at three columns), so the row adds about 20 points of tile
+  height instead. Holding a tile still opens the sheet by the usual rule.
+  Screen readers get Open notes, Open statistics and one action per note.
+- Open for the founder: whether the extra height is worth it on the phone,
+  and whether to keep both buttons after trying them.
+
+## 18 October 2026 — A fuller web Notes view
+
+Status: implemented in the web app; checked in headless desktop Chrome at 1400
+and 390 px wide with sample data.
+
+- Founder request, from a screenshot of a habit with two short notes: use the
+  space better, allow dragging to reorder, and improve the view a lot; and a
+  habit with only one note should get more space, so people who keep one
+  note do not get a second-class experience.
+- Assistant implementation: the view fills the dialog. One note shows alone
+  at full width with Add note in its header; with several, a rail of note
+  cards (name and first words) sits beside it, dragged to reorder (Alt and
+  the arrow keys too) and wrapping into pills when narrow. The open note is a
+  page with its name, when its words last changed, Versions, a ⋯ menu and
+  Edit, its text in a centred reading column. Notes are written in place
+  instead of in a second dialog over the first; a new note is named, then
+  written in place and saved as one action. Leaving with unsaved words asks
+  first. Core `moveNoteTo` turns a drag into one change (two when an older
+  description must first leave the definition). The phone is unchanged; its
+  notes keep their sheet with Move earlier/later.
+
+## 18 October 2026 — A quieter web Notes view
+
+Status: implemented in the web app; checked in headless desktop Chrome at 1400
+and 390 px wide with sample data.
+
+- Founder feedback: everything works, but the highlights on the notes make
+  the app feel immature; improve the view with several notes to suit the
+  founder's UI preferences.
+- Assistant changes, following the existing Settings section list: the list
+  of notes has soft text and a hairline divider, and the chosen note is in
+  full ink on a raised neutral, with no habit colour, tint or accent bar. The
+  open note sits on the dialog without a card border. Edit is a quiet text
+  button like Versions; only Save while writing is filled. Excerpts are one
+  line, the drag grip sits at the card's right, scrollbars are thin and
+  neutral, and the reading column lines up with the note's header.

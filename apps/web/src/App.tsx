@@ -31,15 +31,13 @@ import { habitTrackingStart } from '@onpurpose/core/statistics';
 import { HabitMenu, type HabitMenuAction } from './habits/HabitMenu.tsx';
 import { HabitEditor } from './habits/HabitEditor.tsx';
 import { GoalEditor } from './habits/GoalEditor.tsx';
-import { NotesEditor } from './notes/NotesEditor.tsx';
 import { NoteVersions } from './notes/NoteVersions.tsx';
 import type { HistoryAction } from '@onpurpose/core/storage/model';
 import {
   addNote,
   habitNotes,
-  moveNote,
+  moveNoteTo,
   newNoteId,
-  noteHint,
   noteVersions,
   removeNote,
   restoreNote,
@@ -47,7 +45,7 @@ import {
   type HabitNote,
   type NoteChange,
 } from '@onpurpose/core/notes';
-import { HabitDetails } from './panel/HabitDetails.tsx';
+import { HabitDetails, type HabitView } from './panel/HabitDetails.tsx';
 import { HistoryPanel } from './panel/HistoryPanel.tsx';
 import { PanelResizer, usePanelWidth } from './panel/PanelResizer.tsx';
 import { Icon } from './ui/Icon.tsx';
@@ -203,9 +201,12 @@ function Tracker({
   const [detailsId, setDetailsId] = useState<string | null>(null);
   // The note shown in a habit's Notes view (the first by default).
   const [detailsNoteId, setDetailsNoteId] = useState<string | null>(null);
-  const showHabit = (id: string) => {
+  // The view a habit's page opens on, when chosen (a Today tile's buttons).
+  const [detailsView, setDetailsView] = useState<HabitView | undefined>();
+  const showHabit = (id: string, view?: HabitView) => {
     setDetailsId(id);
     setDetailsNoteId(null);
+    setDetailsView(view);
   };
   const newHabit = () =>
     setEditor({
@@ -221,7 +222,7 @@ function Tracker({
   const openHabit = (habit: Habit) => showHabit(habit.id);
   const handlers = useMemo<GridHandlers>(
     () => ({
-      openHabit: (habit) => showHabit(habit.id),
+      openHabit: (habit, view) => showHabit(habit.id, view),
       toggle: actions.toggle,
       saveValue: actions.saveEntry,
       openEntry: (habit, date, label, anchor) =>
@@ -312,13 +313,6 @@ function Tracker({
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [collapsed, setCollapsed] = useStoredFlag('onpurpose.sidebarCollapsed');
   const [goalHabitId, setGoalHabitId] = useState<string | null>(null);
-  // The note being written: an existing one, or a new one just named.
-  const [noteTarget, setNoteTarget] = useState<{
-    habitId: string;
-    noteId: string;
-    title: string;
-    isNew: boolean;
-  } | null>(null);
   const [noteAction, setNoteAction] = useState<HistoryAction | null>(null);
   // The same saved cell look as the phone; the last four apply to boxes only.
   const cell = cellLookOf(state);
@@ -397,39 +391,8 @@ function Tracker({
   const current = () => store.getSnapshot().replay.state;
   const applyNote = (change: NoteChange | null) =>
     !!change && store.canEdit() && store.change(change);
-  const saveNoteText = (
-    target: NonNullable<typeof noteTarget>,
-    text: string | undefined,
-  ) => {
-    if (target.isNew) {
-      const added = applyNote(
-        addNote(
-          current(),
-          target.habitId,
-          target.title,
-          text ?? '',
-          target.noteId,
-        ),
-      );
-      if (added) setDetailsNoteId(target.noteId);
-      return added;
-    }
-    const change = updateNote(current(), target.habitId, target.noteId, {
-      text: text ?? '',
-    });
-    if (change) return applyNote(change);
-    // Unchanged text closes; a note removed meanwhile cannot be saved.
-    const habit = current().habits.find((item) => item.id === target.habitId);
-    return (
-      !!habit &&
-      habitNotes(current(), habit).some((note) => note.id === target.noteId)
-    );
-  };
   const restoreNoteVersion = (habitId: string, version: HabitNote) =>
     applyNote(restoreNote(current(), habitId, version));
-  const notesHabit = noteTarget
-    ? state.habits.find((habit) => habit.id === noteTarget.habitId)
-    : undefined;
   const goalHabit = goalHabitId
     ? state.habits.find((habit) => habit.id === goalHabitId)
     : undefined;
@@ -598,6 +561,7 @@ function Tracker({
             <HabitDetails
               key={detailsHabit.id}
               habit={detailsHabit}
+              initialView={detailsView}
               values={state.values}
               events={snapshot.events}
               actions={snapshot.replay.undo}
@@ -613,32 +577,39 @@ function Tracker({
               note={detailsNote}
               versions={detailsVersions}
               onSelectNote={(note) => setDetailsNoteId(note.id)}
-              onNewNote={(title) =>
-                setNoteTarget({
-                  habitId: detailsHabit.id,
-                  noteId: newNoteId(),
-                  title,
-                  isNew: true,
-                })
-              }
-              onEditNote={(note) =>
-                setNoteTarget({
-                  habitId: detailsHabit.id,
-                  noteId: note.id,
-                  title: note.title,
-                  isNew: false,
-                })
-              }
+              onCreateNote={(title, text) => {
+                const noteId = newNoteId();
+                const added = applyNote(
+                  addNote(current(), detailsHabit.id, title, text, noteId),
+                );
+                if (added) setDetailsNoteId(noteId);
+                return added;
+              }}
+              onSaveNote={(note, text) => {
+                const change = updateNote(current(), detailsHabit.id, note.id, {
+                  text,
+                });
+                // Unchanged words close; a note removed meanwhile cannot save.
+                return change
+                  ? applyNote(change)
+                  : habitNotes(current(), detailsHabit).some(
+                      (item) => item.id === note.id,
+                    );
+              }}
               onRenameNote={(note, title) =>
                 applyNote(
                   updateNote(current(), detailsHabit.id, note.id, { title }),
                 )
               }
-              onMoveNote={(note, direction) =>
-                applyNote(
-                  moveNote(current(), detailsHabit.id, note.id, direction),
-                )
-              }
+              onMoveNote={(note, index) => {
+                for (const change of moveNoteTo(
+                  current(),
+                  detailsHabit.id,
+                  note.id,
+                  index,
+                ))
+                  if (!applyNote(change)) break;
+              }}
               onRemoveNote={(note) => {
                 if (
                   window.confirm(
@@ -735,26 +706,6 @@ function Tracker({
             const { goals: _goals, ...base } = goalHabit;
             return actions.saveHabit({ ...base, ...(goals ? { goals } : {}) });
           }}
-        />
-      )}
-      {noteTarget && notesHabit && (
-        <NotesEditor
-          key={`${noteTarget.habitId}:${noteTarget.noteId}`}
-          title={`${notesHabit.name} · ${noteTarget.title}`}
-          colour={theme.colour(notesHabit.color)}
-          initial={
-            noteTarget.isNew
-              ? ''
-              : (habitNotes(state, notesHabit).find(
-                  (note) => note.id === noteTarget.noteId,
-                )?.text ?? '')
-          }
-          placeholder={noteHint(noteTarget.title)}
-          isNew={noteTarget.isNew}
-          theme={theme}
-          editable={store.canEdit()}
-          onClose={() => setNoteTarget(null)}
-          onApply={(text) => saveNoteText(noteTarget, text)}
         />
       )}
       {noteAction && (

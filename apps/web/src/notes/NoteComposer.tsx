@@ -1,18 +1,7 @@
-import {
-  useId,
-  useRef,
-  useState,
-  type KeyboardEvent,
-  type ReactNode,
-} from 'react';
-import {
-  MAX_DESCRIPTION_LENGTH,
-  normalizeDescription,
-} from '@onpurpose/core/description';
+import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { MAX_DESCRIPTION_LENGTH } from '@onpurpose/core/description';
 import type { Theme } from '@onpurpose/core/theme';
 import { highlightPalette } from '@onpurpose/core/richText/highlights';
-import { Modal } from '../ui/Modal.tsx';
-import { Icon } from '../ui/Icon.tsx';
 import { Markdown } from '../panel/Markdown.tsx';
 
 type Edit = { text: string; start: number; end: number };
@@ -46,53 +35,34 @@ function prefixLines(edit: Edit, prefix: (index: number) => string): Edit {
 }
 
 /**
- * Edits one of a habit's notes as Markdown, the same format the phone stores,
- * with a formatting toolbar and a live preview. Done applies through onApply
- * (one ordinary note change).
+ * Writes one note as Markdown, the format the phone stores: a formatting
+ * toolbar (Ctrl+B, Ctrl+I, Ctrl+K), the text, and a live preview beside it
+ * (Write/Preview tabs when narrow). Ctrl+Enter saves and Esc cancels; Esc
+ * never reaches the dialog around it.
  */
-export function NotesEditor({
-  title,
-  colour,
-  initial,
-  placeholder = 'Why this habit matters, a simple way to start, links…',
-  isNew = false,
+export function NoteComposer({
+  text,
+  onText,
+  label,
+  placeholder,
   theme,
   editable,
-  onClose,
-  onApply,
+  onSave,
+  onCancel,
 }: {
-  title: string;
-  colour: string;
-  initial: string;
-  /** The empty note's prompt (the preset hint for its title). */
-  placeholder?: string;
-  /** A new note: Done saves it even before anything is written. */
-  isNew?: boolean;
+  text: string;
+  onText: (text: string) => void;
+  /** Names the text area for screen readers. */
+  label: string;
+  placeholder: string;
   theme: Theme;
   editable: boolean;
-  onClose: () => void;
-  onApply: (description: string | undefined) => boolean;
+  onSave: () => void;
+  onCancel: () => void;
 }) {
-  const titleId = useId();
-  const [text, setText] = useState(initial);
   const [tab, setTab] = useState<'write' | 'preview'>('write');
   const area = useRef<HTMLTextAreaElement>(null);
-  const dirty = text !== initial;
   const tooLong = text.length > MAX_DESCRIPTION_LENGTH;
-  const close = () => {
-    if (
-      dirty &&
-      !window.confirm(
-        'Discard these note changes?\n\nYour unapplied changes will be lost.',
-      )
-    )
-      return;
-    onClose();
-  };
-  const done = () => {
-    if (!editable || tooLong) return;
-    if ((!dirty && !isNew) || onApply(normalizeDescription(text))) onClose();
-  };
   const apply = (change: (edit: Edit) => Edit) => {
     const element = area.current;
     if (!element) return;
@@ -101,7 +71,7 @@ export function NotesEditor({
       start: element.selectionStart,
       end: element.selectionEnd,
     });
-    setText(next.text);
+    onText(next.text);
     requestAnimationFrame(() => {
       element.focus();
       element.setSelectionRange(next.start, next.end);
@@ -123,42 +93,24 @@ export function NotesEditor({
     },
   };
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === 'Escape') {
+      // Cancel the edit, not the dialog around it.
+      event.preventDefault();
+      event.stopPropagation();
+      onCancel();
+      return;
+    }
     if (!(event.ctrlKey || event.metaKey)) return;
     const key = event.key.toLowerCase();
     if (key === 'b') actions.bold();
     else if (key === 'i') actions.italic();
     else if (key === 'k') actions.link();
-    else if (key === 'enter') done();
+    else if (key === 'enter') onSave();
     else return;
     event.preventDefault();
   };
   return (
-    <Modal
-      titleId={titleId}
-      title={<span style={{ color: colour }}>{title}</span>}
-      className="notes-editor"
-      leading={
-        <button
-          type="button"
-          className="icon-button"
-          aria-label="Close without applying changes"
-          onClick={close}
-        >
-          <Icon name="close" size={18} />
-        </button>
-      }
-      trailing={
-        <button
-          type="button"
-          className="done-button"
-          disabled={!editable || tooLong}
-          onClick={done}
-        >
-          Done
-        </button>
-      }
-      onClose={close}
-    >
+    <div className="note-composer">
       <div className="notes-toolbar" role="toolbar" aria-label="Formatting">
         <Tool label="Bold (Ctrl+B)" onAction={() => actions.bold()}>
           <strong>B</strong>
@@ -211,13 +163,13 @@ export function NotesEditor({
       <div className={`notes-panes show-${tab}`}>
         <textarea
           ref={area}
-          data-autofocus
-          aria-label={`Notes for ${title}`}
+          autoFocus
+          aria-label={label}
           className="notes-text"
           placeholder={placeholder}
           value={text}
           disabled={!editable}
-          onChange={(event) => setText(event.target.value)}
+          onChange={(event) => onText(event.target.value)}
           onKeyDown={onKeyDown}
           spellCheck
         />
@@ -232,10 +184,10 @@ export function NotesEditor({
       <p className={tooLong ? 'hint error' : 'hint'}>
         {text.length.toLocaleString()} /{' '}
         {MAX_DESCRIPTION_LENGTH.toLocaleString()} characters · Markdown:
-        **bold**, *italic*, ==highlight==, - lists, [links](https://…) · Ctrl
-        Enter applies
+        **bold**, *italic*, ==highlight==, - lists, [links](https://…) ·
+        Ctrl+Enter saves · Esc cancels
       </p>
-    </Modal>
+    </div>
   );
 }
 

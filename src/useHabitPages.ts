@@ -22,12 +22,19 @@ export type HabitTab = 'notes' | 'statistics';
 
 // UIKit handles directional locking, snapping and finger-following movement.
 // React only receives drag boundaries and aligned pages, never frame updates.
-export function useHabitPages(hasNotes: boolean, width: number) {
-  const initial = hasNotes ? 0 : 1;
-  const [tab, setTab] = useState<HabitTab>(hasNotes ? 'notes' : 'statistics');
+// The sheet opens on `start` when given (a Today tile's Notes or Statistics
+// button), otherwise on Notes when the habit has any.
+export function useHabitPages(
+  hasNotes: boolean,
+  width: number,
+  start?: HabitTab,
+) {
+  const notesFirst = start ? start === 'notes' : hasNotes;
+  const initial = notesFirst ? 0 : 1;
+  const [tab, setTab] = useState<HabitTab>(notesFirst ? 'notes' : 'statistics');
   const [visited, setVisited] = useState({
-    notes: hasNotes,
-    statistics: !hasNotes,
+    notes: notesFirst,
+    statistics: !notesFirst,
   });
   const pager = useAnimatedRef<ScrollView>();
   const current = useRef(initial);
