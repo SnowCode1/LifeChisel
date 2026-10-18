@@ -3,7 +3,6 @@ import {
   Picture,
   Skia,
   createPicture,
-  type SkParagraph,
 } from '@shopify/react-native-skia';
 import { useMemo, type ReactNode } from 'react';
 import { View } from 'react-native';
@@ -80,7 +79,12 @@ import {
   GridAccessibilityLayer,
   HeadingAccessibility,
 } from './GridAccessibilityLayer';
-import { streakLabel, useGridModel, type CanvasCell } from './useGridModel';
+import {
+  streakLabel,
+  useGridModel,
+  type CanvasCell,
+  type LabelCache,
+} from './useGridModel';
 
 type Row = { id: string; top: number; height: number };
 /** The UI thread's clock, for double-tap timing. */
@@ -763,7 +767,7 @@ export function useCanvasGrid(props: CanvasGridProps): {
   ) {
     const id = habit.id;
     const now = model.value;
-    const labels = new Map<string, SkParagraph>();
+    const labels: LabelCache = new Map();
     const box = shapes[id]?.box ?? 0;
     const colour = palettes[id]?.checkmark ?? '#000000';
     const streaks = boxes && cellLook.streakNumbers;

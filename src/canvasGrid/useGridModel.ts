@@ -2,9 +2,13 @@ import {
   FontWeight,
   Skia,
   TextAlign,
+  type SkFont,
+  type SkPaint,
   type SkParagraph,
+  type SkRect,
 } from '@shopify/react-native-skia';
 import { useEffect, useLayoutEffect, useRef } from 'react';
+import { GRID_FONT_FAMILIES, gridFont } from './gridFont';
 import {
   runOnJS,
   useAnimatedReaction,
@@ -36,7 +40,18 @@ export type CanvasCell = {
   r: boolean;
   s: 0 | 1 | 2;
   p: SkParagraph | null;
-  q: SkParagraph | null;
+  q: StreakLabel | null;
+};
+/** Grid text by key: paragraphs, and streak labels under `streak|` keys. */
+export type LabelCache = Map<string, SkParagraph | StreakLabel>;
+/** A streak number, drawn with `font` from the origin x, y (its baseline
+ * start, relative to the box's centre) so its digits sit centred. */
+export type StreakLabel = {
+  text: string;
+  font: SkFont;
+  paint: SkPaint;
+  x: number;
+  y: number;
 };
 export type CanvasDays = Record<string, Record<string, CanvasCell>>;
 
@@ -52,7 +67,7 @@ type Context = {
   column: number;
   heights: Record<string, number>;
   baseHeight: number;
-  paragraphs: Map<string, SkParagraph>;
+  paragraphs: LabelCache;
   /** Number checked boxes by streak position (development look). */
   streaks: boolean;
 };
@@ -66,7 +81,7 @@ function paragraph(
   lineHeight?: number,
 ) {
   const key = `${colour}|${size}|${lines}|${lineHeight ?? 0}|${text}`;
-  let result = context.paragraphs.get(key);
+  let result = context.paragraphs.get(key) as SkParagraph | undefined;
   if (!result) {
     const builder = Skia.ParagraphBuilder.Make({
       maxLines: lines,
@@ -76,6 +91,7 @@ function paragraph(
     builder.pushStyle({
       color: Skia.Color(colour),
       fontSize: size,
+      fontFamilies: GRID_FONT_FAMILIES,
       fontStyle: { weight: FontWeight.Medium },
       ...(lineHeight ? { heightMultiplier: lineHeight / size } : {}),
     });
@@ -100,30 +116,80 @@ function numberParagraph(context: Context, text: string, colour: string) {
   return paragraph(context, text, colour, fitted, 1);
 }
 
-/** A streak position inside a checked box: bold, centred and shrunk to fit. */
+// Where a number's weight sits across, in text units from the pen: the
+// centroid of its ink, found by drawing it once off screen at four times its
+// size. Cached per text and size (colour does not move the weight).
+const centres = new Map<string, number>();
+function inkCentreX(font: SkFont, size: number, text: string, ink: SkRect) {
+  const key = `${size}|${text}`;
+  const known = centres.get(key);
+  if (known !== undefined) return known;
+  const middle = ink.x + ink.width / 2;
+  const scale = 4,
+    pad = 2;
+  const width = Math.ceil(ink.width * scale) + pad * 2;
+  const height = Math.ceil(ink.height * scale) + pad * 2;
+  const surface = Skia.Surface.Make(width, height);
+  if (!surface) return middle;
+  const paint = Skia.Paint();
+  paint.setColor(Skia.Color('#000000'));
+  paint.setAntiAlias(true);
+  const canvas = surface.getCanvas();
+  canvas.translate(pad, pad);
+  canvas.scale(scale, scale);
+  canvas.drawText(text, -ink.x, -ink.y, paint, font);
+  surface.flush();
+  const pixels = surface.makeImageSnapshot().readPixels();
+  let sum = 0,
+    mass = 0;
+  if (pixels)
+    for (let y = 0; y < height; y++)
+      for (let x = 0; x < width; x++) {
+        const alpha = Number(pixels[(y * width + x) * 4 + 3]);
+        sum += alpha * (x + 0.5);
+        mass += alpha;
+      }
+  const centre = mass > 0 ? ink.x + (sum / mass - pad) / scale : middle;
+  centres.set(key, centre);
+  return centre;
+}
+
+/**
+ * A streak position inside a checked box: bold, centred and shrunk to fit.
+ * The digits are drawn with the same font that measured them. Vertically
+ * their ink (cap height to baseline) is centred, so every number sits on one
+ * line; a font's line box would sit digits high in a face with a tall ascent.
+ * Across, the ink's weight is centred (optical centring): a 1 is a stem with
+ * a flag to the left, so centring its outline or its advance leaves the stem,
+ * and so the digit, looking right of centre. Measured on the iPhone capture
+ * of 18 October 2026: outlines were within 0.5 px of centre, yet a 1's
+ * weight sat about 3 px (1 pt) right. Drawn text is unkerned, as measured.
+ */
 export function streakLabel(
-  cache: Map<string, SkParagraph>,
+  cache: LabelCache,
   colour: string,
   box: number,
   streak: number,
-) {
+): StreakLabel {
   const text = String(streak);
   const size = box * (text.length > 2 ? 0.48 : 0.6);
   const key = `streak|${colour}|${box}|${text}`;
-  let result = cache.get(key);
+  let result = cache.get(key) as StreakLabel | undefined;
   if (!result) {
-    const builder = Skia.ParagraphBuilder.Make({
-      maxLines: 1,
-      textAlign: TextAlign.Center,
-    });
-    builder.pushStyle({
-      color: Skia.Color(colour),
-      fontSize: size,
-      fontStyle: { weight: FontWeight.Bold },
-    });
-    builder.addText(text);
-    result = builder.build();
-    result.layout(Math.max(1, box));
+    const font = gridFont(size, FontWeight.Bold) ?? Skia.Font(undefined, size);
+    const paint = Skia.Paint();
+    paint.setColor(Skia.Color(colour));
+    paint.setAntiAlias(true);
+    // Ink bounds are relative to the pen's start on the baseline (top
+    // negative), so this origin puts the ink's centre on the box's centre.
+    const ink = font.measureText(text);
+    result = {
+      text,
+      font,
+      paint,
+      x: -inkCentreX(font, size, text, ink),
+      y: -(ink.y + ink.height / 2),
+    };
     cache.set(key, result);
   }
   return result;

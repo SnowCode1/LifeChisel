@@ -2156,3 +2156,51 @@ brightness from a not-done one. Headless desktop Chrome with sample data
 (Dark): done tiles stood out clearly from grey not-done tiles with grey
 circles; on the grid, empty boxes and missed crosses were grey and done days
 tinted. Paper and the phone are unchecked by eye.
+
+### Streak numbers sat high on the iPhone
+
+Founder report: numbers inside the circles looked slightly high on the iPhone
+but fine on the web. Cause: the phone grid draws them with Skia paragraphs
+and centred each paragraph's line box. With no family named, Skia's
+paragraphs ask for "sans-serif", which its Apple font manager falls back to
+Helvetica for; Helvetica's ascent is tall for its descent and cap height, so
+the digits' centre sat about 0.09em (roughly 1.4 pt in a circle) above the
+box's centre. The fix names the face (Helvetica on iOS, sans-serif on
+Android), measures the digits' ink with the same face and centres that.
+Checked: types, lint, grid tests and the iOS export. The founder then
+confirmed on the iPhone that the numbers sit centred.
+
+### Grid text in the system font
+
+The phone grid now names the system face for all its Skia text
+(".AppleSystemUIFont" on iOS, "sans-serif" on Android). Checked: types and lint for the grid files, the grid tests
+(canvas-grid, fill-wave, grid-motion, grid-navigation) and the iOS and
+Android exports. The whole-project typecheck was not run cleanly because
+another session's storage work in progress breaks it. The founder's iPhone
+captures show the headings, values and streak numbers in San Francisco.
+
+### A 1 looked off-centre in the circles
+
+Founder report (iPhone, system font): digits such as 1 looked slightly right
+of centre in the circles. A 1's ink (stem right, flag left) sits right of
+its advance's centre, and the tabular digits turned on just before widened
+that advance. A first fix made digits proportional and added a horizontal
+offset from the paragraph's reported line left; the founder reported 1s and
+other numbers still looked off, most likely because that offset and the
+paragraph's own centring did not agree. Second fix: circle numbers are no
+longer paragraphs. Each is drawn with `drawText` using the same Skia font
+that measured its ink, from an origin that centres that ink both ways, so
+measuring and drawing cannot disagree whichever face the phone resolves.
+The founder still saw 1s (and some others) off-centre. A face-down preview
+capture (1206×2622) was measured for all 28 circles: every digit's outline
+was within 0.5–1.5 px of the circle's centre, so measuring and drawing
+agreed, but the ink's weight sat right of centre: about 3 px (1 pt) for 1,
+2–3 px for 10–12, 1.7 px for 2, and 7's sat 2.8 px high. The remaining
+error is optical. Third fix: across, each number centres its ink's weight
+(the centroid, from one off-screen drawing at four times its size, cached
+per number and size); vertically the ink box stays centred so every number
+shares one line. Checked: types, lint and grid tests for the grid files, and
+the iOS export. The founder found it better on the iPhone, and a second
+capture confirmed it: across 22 circles (eight of them 1s), every number's
+weight sat within 0.3 px of the centre horizontally, and outlines within
+0.5 px vertically.

@@ -100,6 +100,13 @@ preserve earlier icon choices/removals and raw history.
   (resolve theme colours before drawing); a crash on first scroll usually means
   one of these.
   `gridGeometry.ts`/`gridDates.ts` hold worklet geometry and integer date maths.
+  Grid text names the system face from `canvasGrid/gridFont.ts` (San
+  Francisco on iOS, Roboto on Android) with proportional digits; unnamed,
+  Skia falls back to Helvetica on iOS. Streak numbers are drawn with
+  `drawText` in the same font that measured them: vertically their ink box
+  is centred, across their ink's weight (optical centring, so a 1's stem
+  sits in the middle); never a paragraph's line box or advance. The apps use the system
+  font; Instrument Sans is the brand voice (landing page) only.
   Keep all per-frame work on the UI thread; React receives only settles, reveals
   and arrivals. `useGridModel.ts` prepares cell records on JS in 30-day chunks
   and re-checks only prepared days whose saved values changed (acknowledgements

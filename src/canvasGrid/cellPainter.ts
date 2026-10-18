@@ -9,6 +9,7 @@ import {
   type SkCanvas,
   type SkParagraph,
 } from '@shopify/react-native-skia';
+import { GRID_FONT_FAMILIES } from './gridFont';
 import { PixelRatio } from 'react-native';
 import type { WeekStart } from '@onpurpose/core/displayPreferences';
 import type { GridPalette } from '@onpurpose/core/gridAppearance';
@@ -54,6 +55,7 @@ function heading(
   builder.pushStyle({
     color: Skia.Color(colour),
     fontSize: size,
+    fontFamilies: GRID_FONT_FAMILIES,
     fontStyle: { weight },
   });
   builder.addText(text);
@@ -418,7 +420,13 @@ export function drawCellMark(
     }
     if (cell.q)
       // Streak numbers replace the tick with the streak position.
-      cell.q.paint(canvas, -shape.box / 2, -cell.q.getHeight() / 2);
+      canvas.drawText(
+        cell.q.text,
+        cell.q.x,
+        cell.q.y,
+        cell.q.paint,
+        cell.q.font,
+      );
     else if (cell.c) {
       const glyph = shape.box * 0.85;
       canvas.translate(-glyph / 2, -glyph / 2);

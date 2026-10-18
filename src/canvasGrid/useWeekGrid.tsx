@@ -7,6 +7,7 @@ import {
   createPicture,
   type SkParagraph,
 } from '@shopify/react-native-skia';
+import { GRID_FONT_FAMILIES } from './gridFont';
 import {
   useEffect,
   useLayoutEffect,
@@ -132,6 +133,7 @@ function numberParagraph(
     builder.pushStyle({
       color: Skia.Color(colour),
       fontSize: text.length > 4 ? size * 0.82 : size,
+      fontFamilies: GRID_FONT_FAMILIES,
       fontStyle: { weight: FontWeight.SemiBold },
     });
     builder.addText(text);
@@ -315,6 +317,7 @@ export function useWeekGrid(props: WeekGridProps): {
         builder.pushStyle({
           color: Skia.Color(colour),
           fontSize: 11 * fontScale,
+          fontFamilies: GRID_FONT_FAMILIES,
           fontStyle: { weight: FontWeight.Medium },
         });
         builder.addText(format.format(new Date(Date.UTC(2026, index, 15))));

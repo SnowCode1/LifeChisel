@@ -207,7 +207,10 @@ without rewriting saved data.
 - **Streak numbers:** each checked box shows its position in its run of
   consecutive checked days, from 1, instead of a tick. The count runs back to
   the start of the streak beyond the visible dates (up to ten years) and
-  updates newer days after an edit.
+  updates newer days after an edit. On the phone the number's digits are
+  centred by their own ink, measured in the face they are drawn in
+  (`streakLabel`), not by the font's line box (which sat them high in
+  Helvetica, the face the grid used before it named the system font).
 - **Joined checkboxes:** consecutive checked boxes are joined by a bar thinner
   than the boxes, so the boxes stand out from it; cell backgrounds stay full
   squares. A tap that makes or breaks a join animates it: the bar grows out of

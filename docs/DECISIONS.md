@@ -2455,3 +2455,26 @@ sample data (Today view and grid, Dark), not yet on a phone.
   neutral edge. A ticked box whose goal is not met keeps its dim colour, and
   recorded values keep the habit colour (tracking-only habits have no goal).
   `createGridPalette` holds the rules for both apps.
+
+## 18 October 2026 — System font in the apps, Instrument Sans for the brand
+
+Status: implemented for the phone grid; types, lint, grid tests and both
+exports pass; not yet seen on the iPhone.
+
+- Founder question: should most of the UI use Instrument Sans (the landing
+  page's face), or something more refined? The assistant found the phone app
+  was split: React Native text used the system font (San Francisco on iOS,
+  Roboto on Android), but the Skia-drawn grid fell back to Helvetica on iOS
+  because it named no font. The web app uses the system font.
+- Assistant recommendation, accepted by the founder: keep the system font
+  throughout the apps (tuned for small, dense text and numbers, follows text
+  size and bold-text settings, covers every language, needs no loading) and
+  keep Instrument Sans as the brand voice on the landing page (and a wordmark
+  at most).
+- Built: `src/canvasGrid/gridFont.ts` names the system face for every grid
+  text (date headings, values, text and category cells, streak numbers,
+  Weeks labels, the Settings preview). Streak numbers measure their ink in
+  the same face. Tabular digits were tried the same day and removed: each
+  cell centres its own number, so they lined nothing up, and they left a 1
+  looking off to the right in its wide advance (founder report). Streak
+  numbers now centre their ink horizontally as well as vertically.
