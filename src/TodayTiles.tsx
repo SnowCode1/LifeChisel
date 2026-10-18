@@ -254,9 +254,15 @@ const TodayTile = memo(function TodayTile({
   const record = (total: number) => {
     if (onCellValue(habit, day, total)) feedback('confirm');
   };
+  // Colour means done: a done tile is tinted with a soft habit-coloured edge;
+  // one not done yet is grey with a neutral edge.
   const background = state.met
-    ? (palette?.completedBackground ?? theme.mix(colour, 0.1))
+    ? (palette?.tileDone ?? theme.mix(colour, 0.2))
     : theme.ink(0x0e);
+  const edge = state.met
+    ? (palette?.tileDoneEdge ?? theme.mix(colour, 0.35))
+    : (palette?.tileEdge ?? theme.ink(0x1c));
+  const empty = palette?.empty ?? theme.ink(0x5a);
   // The checkbox follows the cell look: boxes or ticks and crosses, round
   // boxes, and the streak position in place of the tick.
   const box = Math.round(Math.min(34 * Math.max(1, fontScale), height / 3));
@@ -302,7 +308,7 @@ const TodayTile = memo(function TodayTile({
           gap: 6,
           borderRadius: 14,
           borderWidth: 1,
-          borderColor: state.met ? `${colour}55` : `${colour}26`,
+          borderColor: edge,
           backgroundColor: pressed
             ? (palette?.pressed ?? `${colour}20`)
             : background,
@@ -421,7 +427,7 @@ const TodayTile = memo(function TodayTile({
                     ? boxFill
                     : state.met
                       ? colour
-                      : (palette?.checkbox ?? colour),
+                      : empty,
                   backgroundColor: state.checked ? boxFill : 'transparent',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -453,7 +459,13 @@ const TodayTile = memo(function TodayTile({
                 name={state.checked ? 'tick' : 'close'}
                 size={Math.round(box * 0.9)}
                 strokeWidth={state.checked ? 2.3 : 1.8}
-                color={state.met ? colour : (palette?.checkbox ?? colour)}
+                color={
+                  state.met
+                    ? colour
+                    : state.checked
+                      ? (palette?.checkbox ?? colour)
+                      : empty
+                }
               />
             )
           ) : (

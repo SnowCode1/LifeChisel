@@ -353,12 +353,7 @@ function HabitRowView({
         const reached = bump !== undefined;
         const animated = pulsing || reached || absorbed;
         const cross = (
-          <Glyph
-            path={CROSS}
-            colour={`${palette.colour}66`}
-            size={16}
-            width={1.8}
-          />
+          <Glyph path={CROSS} colour={palette.missed} size={16} width={1.8} />
         );
         const fading = start !== undefined && motion!.kind !== 'tap';
         const filling =
@@ -444,7 +439,7 @@ function HabitRowView({
                             ? fill
                             : state.met
                               ? palette.colour
-                              : palette.checkbox,
+                              : palette.empty,
                           color: palette.checkmark,
                           fontSize: String(streak).length > 2 ? '11px' : '14px',
                         } as CSSProperties
@@ -475,7 +470,7 @@ function HabitRowView({
                     >
                       <Glyph
                         path={state.checked ? TICK : CROSS}
-                        colour={state.met ? palette.colour : palette.checkbox}
+                        colour={markOf(palette, state)}
                         size={24}
                         width={state.checked ? 2.3 : 1.8}
                       />
@@ -499,7 +494,7 @@ function HabitRowView({
                             ? fillOf(palette, previous)
                             : previous.met
                               ? palette.colour
-                              : palette.checkbox,
+                              : palette.empty,
                           color: palette.checkmark,
                           fontSize:
                             String(earlierStreak).length > 2 ? '11px' : '14px',
@@ -521,9 +516,7 @@ function HabitRowView({
                       <span className="glyph">
                         <Glyph
                           path={previous.checked ? TICK : CROSS}
-                          colour={
-                            previous.met ? palette.colour : palette.checkbox
-                          }
+                          colour={markOf(palette, previous)}
                           size={24}
                           width={previous.checked ? 2.3 : 1.8}
                         />
@@ -577,10 +570,18 @@ function HabitRowView({
   );
 }
 
-/** The colour a checked box (and its half of a join) is filled with. */
 /** The fill of a checked box: the habit colour when its goal is met. */
 export function fillOf(palette: GridPalette, state: CellState) {
   return state.met ? palette.colour : palette.checkbox;
+}
+
+/** A Ticks & crosses mark: coloured when met, grey for an empty cross. */
+export function markOf(palette: GridPalette, state: CellState) {
+  return state.met
+    ? palette.colour
+    : state.checked
+      ? palette.checkbox
+      : palette.empty;
 }
 
 /** A number, text or category cell's content (or its missed-day mark). */

@@ -232,6 +232,20 @@ without rewriting saved data.
   or a day before the start date, stays blank. Weekly quotas and tracking-only
   habits never mark a single day as missed.
 
+**Colour means done** (founder choice, 18 October 2026, from mockups of two
+options): the habit colour marks what is done, and everything not done is
+neutral, so done and not done differ in brightness as well as hue. Empty box
+outlines and unticked crosses are grey (`ink 5A`), missed-day crosses are
+grey (`ink 50`), as are blank-value dashes and missed week dots. A done day's
+cell carries a 16% tint of the habit colour (10% before). On Today tiles a
+done tile has a 20% tint and a 35% edge in the habit colour, and a tile not
+done yet keeps the grey surface with a neutral edge. A ticked box whose goal
+is not met keeps its dim habit colour. Recorded values keep the habit colour
+even below a target, since tracking-only habits have no goal to meet. Names
+keep their colour, so rows stay easy to find. Core `createGridPalette` holds
+these for both apps (`empty`, `missed`, `tileDone`, `tileDoneEdge`,
+`tileEdge`).
+
 Streak numbers, Joined checkboxes, Streak ends only and Connector thickness apply to Squares and
 Circles and are hidden for Ticks & crosses. Outlines only on Today (empty boxes
 only in the Today column) was tried and removed the same day because it looked

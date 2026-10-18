@@ -31,7 +31,7 @@ import {
 } from '@onpurpose/core/todaySummary';
 import { HabitSymbol } from '../ui/HabitSymbol.tsx';
 import { Icon } from '../ui/Icon.tsx';
-import { CROSS, Glyph, TICK, fillOf } from './HabitRow.tsx';
+import { CROSS, Glyph, TICK, fillOf, markOf } from './HabitRow.tsx';
 import type { CellLookStyle, GridHandlers } from './types.ts';
 
 // Today mode: one tile per habit, in the saved order, without date or name
@@ -248,8 +248,8 @@ function TodayTileView({
       className={`today-tile${state.met ? ' met' : ''}${status === 'off' ? ' off' : ''}`}
       style={{
         color: palette.colour,
-        backgroundColor: state.met ? palette.completedBackground : undefined,
-        borderColor: state.met ? `${palette.colour}55` : `${palette.colour}26`,
+        backgroundColor: state.met ? palette.tileDone : undefined,
+        borderColor: state.met ? palette.tileDoneEdge : palette.tileEdge,
       }}
       onContextMenu={(event) => {
         event.preventDefault();
@@ -293,7 +293,7 @@ function TodayTileView({
                         ? fill
                         : state.met
                           ? palette.colour
-                          : palette.checkbox,
+                          : palette.empty,
                       color: palette.checkmark,
                       fontSize: String(streak).length > 2 ? '14px' : '17px',
                     } as CSSProperties
@@ -314,7 +314,7 @@ function TodayTileView({
                 <span key={pulse} className={pulse ? 'glyph pulse' : 'glyph'}>
                   <Glyph
                     path={state.checked ? TICK : CROSS}
-                    colour={state.met ? palette.colour : palette.checkbox}
+                    colour={markOf(palette, state)}
                     size={30}
                     width={state.checked ? 2.3 : 1.8}
                   />

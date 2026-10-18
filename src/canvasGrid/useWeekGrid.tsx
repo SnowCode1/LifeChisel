@@ -293,8 +293,7 @@ export function useWeekGrid(props: WeekGridProps): {
   const paints = useMemo(() => {
     const base = gridPaints(palettes, theme);
     const missed: Record<string, ReturnType<typeof fill>> = {};
-    for (const [id, p] of Object.entries(palettes))
-      missed[id] = fill(`${p.colour}66`);
+    for (const [id, p] of Object.entries(palettes)) missed[id] = fill(p.missed);
     return {
       ...base,
       missed,

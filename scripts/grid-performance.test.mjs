@@ -44,7 +44,10 @@ test('precomputed grid palettes keep every readable colour, with one tone for al
     assert.equal(palette.colour, shown);
     assert.equal(palette.checkmark, checkmarkColor(shown));
     assert.equal(palette.checkbox, colorOnBlack(shown, 170 / 255));
-    assert.equal(palette.number, colorOnBlack(shown, 0.65));
+    // Colour means done: empty and blank marks are neutral grey.
+    assert.equal(palette.number, blackTheme.ink(0x5a));
+    assert.equal(palette.empty, blackTheme.ink(0x5a));
+    assert.equal(palette.completedBackground, colorOnBlack(shown, 0.16));
     assert.equal(palette.rule, `${shown}20`);
   }
 });

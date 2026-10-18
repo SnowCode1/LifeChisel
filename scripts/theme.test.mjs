@@ -120,6 +120,13 @@ test('grid palettes and date headings stay visible on any background', () => {
         theme.contrast(palette.checkbox) > 1.2,
         `${theme.background} ${value}`,
       );
+      // Empty boxes stay visible, and a done Today tile differs from a
+      // not-done one in brightness, not only in hue.
+      assert.ok(theme.contrast(palette.empty) > 1.5, theme.background);
+      assert.ok(
+        contrastRatio(palette.tileDone, theme.ink(0x10)) > 1.08,
+        `${theme.background} ${value} tile`,
+      );
       assert.equal(palette.background, theme.background);
     }
     const dates = dateTone(theme);

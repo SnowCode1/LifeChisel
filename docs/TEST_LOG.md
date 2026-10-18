@@ -2146,3 +2146,13 @@ notes showed in a neutral list (the chosen one raised, no colour), the note
 without a card, Edit as a text button, and the reading column lined up with
 the title once the scroll area kept even gutters. Writing in place and the
 narrow pill row still worked.
+
+### Colour means done
+
+`scripts/grid-performance.test.mjs` and `scripts/theme.test.mjs` now check the
+neutral empty and blank colours, the 16% done tint, that empty boxes stay
+visible on every tested background, and that a done Today tile differs in
+brightness from a not-done one. Headless desktop Chrome with sample data
+(Dark): done tiles stood out clearly from grey not-done tiles with grey
+circles; on the grid, empty boxes and missed crosses were grey and done days
+tinted. Paper and the phone are unchecked by eye.

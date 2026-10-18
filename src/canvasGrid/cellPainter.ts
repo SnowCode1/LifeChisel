@@ -126,13 +126,14 @@ export function gridPaints(
       colour: fill(p.colour),
       colourLine: stroke(p.colour),
       box: stroke(p.checkbox),
+      empty: stroke(p.empty),
       boxFill: fill(p.checkbox),
       mark: stroke(p.checkmark),
       met: fill(p.completedBackground),
       pressed: fill(p.pressed),
       rule: stroke(p.rule, hairline),
       dash: stroke(`${p.colour}40`, 2),
-      missed: stroke(`${p.colour}66`, 1.8),
+      missed: stroke(p.missed, 1.8),
     };
   return {
     habit,
@@ -406,7 +407,9 @@ export function drawCellMark(
   canvas.save();
   canvas.translate(middleX, middleY);
   if (scale !== 1) canvas.scale(scale, scale);
-  const line = cell.m ? p.colourLine : p.box;
+  // Colour means done: the habit colour when met, its dim tone for a tick
+  // whose goal is not met, and neutral grey for an empty box or a cross.
+  const line = cell.m ? p.colourLine : cell.c ? p.box : p.empty;
   if (style.boxes) {
     if (cell.c) canvas.drawRRect(shape.fill, boxColour(p, cell));
     else {

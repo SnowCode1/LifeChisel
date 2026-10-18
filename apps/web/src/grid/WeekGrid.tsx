@@ -417,7 +417,7 @@ function WeekRowView({
                       dot === 'done'
                         ? { backgroundColor: palette.colour }
                         : dot === 'missed' && missed
-                          ? { backgroundColor: `${palette.colour}66` }
+                          ? { backgroundColor: palette.missed }
                           : undefined
                     }
                   />

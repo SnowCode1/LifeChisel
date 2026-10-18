@@ -2435,3 +2435,23 @@ and 390 px wide with sample data.
   button like Versions; only Save while writing is filled. Excerpts are one
   line, the drag grip sits at the card's right, scrollbars are thin and
   neutral, and the reading column lines up with the note's header.
+
+## 18 October 2026 — Colour means done
+
+Status: implemented for both apps; checked in headless desktop Chrome with
+sample data (Today view and grid, Dark), not yet on a phone.
+
+- Founder feedback: on the Today view especially, and on the grid, empty and
+  filled cells were hard to tell apart. The assistant measured why: a not-done
+  Today tile (#101010) and a done one (a 10% tint, #0D1713 for the walk) are
+  about equally dark, so only hue separates them, and empty boxes drawn in a
+  dimmed habit colour read as half-done.
+- The assistant published mockups of the current look and two options using
+  the app's own colour rules: A, a stronger tint in the same style, and B,
+  colour means done. The founder chose B.
+- Built: empty outlines, unticked crosses, missed-day crosses, blank dashes
+  and missed week dots are neutral grey; done days carry a 16% tint (was 10%);
+  done Today tiles a 20% tint with a 35% habit-coloured edge, not-done tiles a
+  neutral edge. A ticked box whose goal is not met keeps its dim colour, and
+  recorded values keep the habit colour (tracking-only habits have no goal).
+  `createGridPalette` holds the rules for both apps.
