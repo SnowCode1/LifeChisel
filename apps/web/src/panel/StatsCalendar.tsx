@@ -16,12 +16,14 @@ import {
 } from '@onpurpose/core/statisticsFormatting';
 import {
   isRecorded,
+  valueLevel,
   weekStartOf,
   type Outcome,
   type SeriesDay,
 } from '@onpurpose/core/statsSeries';
 import { MISSED_OPACITY } from '@onpurpose/core/outcomeColours';
 import type { Theme } from '@onpurpose/core/theme';
+import type { NumberCombine } from '@onpurpose/core/statsLayout';
 
 type State = Outcome | 'beyond';
 type Cell = { day: number; date: string; item: SeriesDay | null; state: State };
@@ -40,7 +42,7 @@ function dayFill(
   habit: Habit,
   cell: Cell,
   colour: string,
-  max: number,
+  level: (value: number) => number,
   theme: Theme,
 ) {
   const recorded = isRecorded(habit, cell.item?.value),
@@ -61,9 +63,7 @@ function dayFill(
       const value = cell.item?.value;
       return theme.mix(
         colour,
-        typeof value === 'number'
-          ? 0.3 + 0.45 * Math.min(1, value / Math.max(1, max))
-          : 0.3,
+        typeof value === 'number' ? 0.3 + 0.45 * level(value) : 0.3,
       );
     }
     case 'future':
@@ -107,6 +107,7 @@ export function StatsCalendar({
   editable,
   highlight,
   categoryColours,
+  combine = 'total',
   onDay,
 }: {
   habit: Habit;
@@ -121,13 +122,12 @@ export function StatsCalendar({
   /** A category to emphasise; other days fade. */
   highlight?: string | null;
   categoryColours?: Map<string, string>;
+  /** v25: readings shade between the period's lowest and highest value. */
+  combine?: NumberCombine;
   onDay: (date: string, label: string, anchor: HTMLElement) => void;
 }) {
   const now = dayNumber(today);
-  const max = Math.max(
-    1,
-    ...days.map((d) => (typeof d.value === 'number' ? d.value : 0)),
-  );
+  const level = valueLevel(days, combine);
   const compact = to - from + 1 > 100;
   const start = weekStartOf(from, weekStart),
     end = weekStartOf(to, weekStart) + 6;
@@ -155,7 +155,7 @@ export function StatsCalendar({
   const dayButton = (cell: Cell, joinLeft: boolean, joinRight: boolean) => {
     const inWindow = !!cell.item && cell.state !== 'outside';
     const label = `${statisticDayLabel(cell.date, today)}, ${describe(habit, cell)}`;
-    const fill = markColour(cell) ?? dayFill(habit, cell, colour, max, theme);
+    const fill = markColour(cell) ?? dayFill(habit, cell, colour, level, theme);
     return (
       <div
         key={cell.day}
@@ -337,7 +337,7 @@ export function StatsCalendar({
               const fill = bridged[i]
                 ? theme.mix(colour, 0.38)
                 : (markColour(cell) ??
-                  dayFill(habit, cell, colour, max, theme));
+                  dayFill(habit, cell, colour, level, theme));
               return tile(
                 cell,
                 fill,

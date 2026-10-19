@@ -8,6 +8,7 @@ import type { Habit } from '@onpurpose/core/habits';
 import type { HistoryAction, StoredEvent } from '@onpurpose/core/storage/model';
 import { entryMinutes, timeOfDayStatistics } from '@onpurpose/core/timeOfDay';
 import { TimeOfDayChart } from './TimeOfDayChart';
+import type { StatsLayout } from '@onpurpose/core/statsLayout';
 import { entryDay, type EntryDay } from '@onpurpose/core/calendar';
 import {
   dateKey,
@@ -17,6 +18,9 @@ import {
 } from '@onpurpose/core/statistics';
 import { recordStatistics } from '@onpurpose/core/recordStatistics';
 import {
+  CustomizableSections,
+  CustomizeButton,
+  CustomizePanel,
   PeriodNavigator,
   RangePicker,
   StatTiles,
@@ -69,6 +73,8 @@ export const RecordStatsScreen = memo(function RecordStatsScreen({
   onCellPress,
   bottomInset,
   onGoalEdit,
+  layout,
+  onStatsLayout,
 }: {
   habit: Habit;
   values: EntryValues;
@@ -80,6 +86,9 @@ export const RecordStatsScreen = memo(function RecordStatsScreen({
   onCellPress: (habit: Habit, day: EntryDay) => void;
   bottomInset: number;
   onGoalEdit: () => void;
+  /** v25: this habit's statistics layout (null: the default). */
+  layout: StatsLayout | null;
+  onStatsLayout: (layout: StatsLayout | null) => void;
 }) {
   const theme = useTheme();
   const styles = useStyles();
@@ -88,6 +97,8 @@ export const RecordStatsScreen = memo(function RecordStatsScreen({
   const [range, setRange] = useState<StatsRange>(30);
   const [offset, setOffset] = useState(0);
   const [category, setCategory] = useState<string | null>(null);
+  // Customize: reorder and hide sections (the entries list stays last).
+  const [editing, setEditing] = useState(false);
   const trackingStart = useMemo(
     () => habitTrackingStart(habit, values, events, today),
     [habit, values, events, today],
@@ -238,6 +249,14 @@ export const RecordStatsScreen = memo(function RecordStatsScreen({
   const header = (
     <View style={styles.header}>
       <RangePicker range={range} onChange={changeRange} />
+      {editing && (
+        <CustomizePanel
+          habit={habit}
+          layout={layout}
+          onStatsLayout={onStatsLayout}
+          onDone={() => setEditing(false)}
+        />
+      )}
       <View style={statsStyles.overview}>
         <PeriodNavigator
           label={
@@ -275,109 +294,129 @@ export const RecordStatsScreen = memo(function RecordStatsScreen({
       {offset === 0 && (
         <PeriodProgress data={stats.periodGoals} colour={habitColour} />
       )}
-      {habit.type === 'categorical' && (
-        <StatsSection
-          title="Categories"
-          subtitle={
-            selectedLabel
-              ? `Showing ${selectedLabel} · tap again for all`
-              : null
-          }
-          info="Each row shows when that category was chosen; longer ranges shade each week or month by how often. Several categories can share a day, so rows are never added together. The number is days in this period. Tap a row to show only that category in the calendar and entries. Renamed and archived options keep their records."
-        >
-          <CategoryMatrix
-            habit={habit}
-            days={days}
-            colours={colours}
-            weekStart={weekStart}
-            selected={category}
-            onSelect={setCategory}
-          />
-        </StatsSection>
-      )}
-      <StatsSection
-        title={mode === 'recording' ? 'Days recorded' : 'Success over time'}
-        subtitle={
-          trendNow === undefined || trendNow === null
-            ? null
-            : `Trend ${Math.round(trendNow * 100)}%${offset ? ` on ${statisticDateLabel(end)}` : ''}`
-        }
-        info={
-          mode === 'period'
-            ? `Columns show whether each finished period met its target. The line smooths success over about two ${periodNoun} either side; rest periods and the current period don’t count.`
-            : mode === 'recording'
-              ? 'Columns show the share of days with an entry. The line smooths that share over about two weeks either side, so single days don’t make it jump. Today counts once it’s recorded.'
-              : 'Columns show the share of scheduled days that met the goal. The line smooths success over about two weeks either side, so single days don’t make it jump. Days off don’t count, and today counts once it’s done.'
-        }
-      >
-        <SuccessChart
-          key={`${habit.id}:${range}:${offset}`}
-          colour={habitColour}
-          bins={binSeries(habit, days, successUnit(span), weekStart)}
-          unit={successUnit(span)}
-          observations={observed}
-          trend={trend}
-          mode={mode}
-          periodNoun={periodNoun}
-          from={from}
-          to={window.to}
-          today={today}
-          weekStart={weekStart}
-        />
-      </StatsSection>
-      <StatsSection
-        title="Streaks"
-        subtitle={
-          longestRun
-            ? `Longest here: ${plural(longestRun.length, mode === 'period' ? periodNoun.replace(/s$/, '') : 'day')}, ${statisticSpanLabel(dateKey(longestRun.from), dateKey(longestRun.to), today)}`
-            : 'No streak in this period'
-        }
-        info={
-          mode === 'period'
-            ? 'Each bar is a streak of finished periods in a row that met their target; rest periods hold it and a missed period breaks it. A bar cut off square at the left edge began earlier; square ends between rows mean the streak continues. Tap a bar for its length and dates.'
-            : mode === 'recording'
-              ? 'Each bar is a streak of days in a row with an entry; a day without one breaks it, and an unfinished today keeps it. A bar cut off square at the left edge began earlier; square ends between rows mean the streak continues. Tap a bar for its length and dates.'
-              : 'Each bar is a streak of successful scheduled days in a row, carried across days off; a missed day breaks it, and an unfinished today keeps it. A bar cut off square at the left edge began earlier; square ends between rows mean the streak continues. Tap a bar for its length and dates.'
-        }
-      >
-        <StreakChart
-          key={`${habit.id}:${range}:${offset}`}
-          colour={habitColour}
-          runs={runs}
-          noun={mode === 'period' ? periodNoun : 'days'}
-          from={from}
-          to={window.to}
-          today={today}
-          weekStart={weekStart}
-        />
-      </StatsSection>
-      <StatsSection
-        title="Calendar"
-        info={
-          habit.type === 'categorical'
-            ? 'Tap a day to read or edit its entry. Dots show the categories chosen, in their colours. Days meeting their goal are brighter and join into one bar while the streak lasts.'
-            : 'Tap a day to read or edit its entry. Days meeting their goal are brighter and join into one bar while the streak lasts.'
-        }
-      >
-        <StatsCalendar
-          key={`${habit.id}:${range}:${offset}`}
-          habit={habit}
-          days={days}
-          from={from}
-          to={window.to}
-          today={today}
-          weekStart={weekStart}
-          editable={editable}
-          allowFuture={offset === 0}
-          onDayPress={onCellPress}
-          categoryColours={colours}
-          highlight={category}
-        />
-      </StatsSection>
-      <TimeOfDayChart
-        key={`${habit.id}:${range}:${offset}`}
-        stats={timeOfDay}
-        colour={habitColour}
+      <CustomizableSections
+        habit={habit}
+        layout={layout}
+        editing={editing}
+        onStatsLayout={onStatsLayout}
+        content={{
+          ...(habit.type === 'categorical' && {
+            categories: () => (
+              <StatsSection
+                title="Categories"
+                subtitle={
+                  selectedLabel
+                    ? `Showing ${selectedLabel} · tap again for all`
+                    : null
+                }
+                info="Each row shows when that category was chosen; longer ranges shade each week or month by how often. Several categories can share a day, so rows are never added together. The number is days in this period. Tap a row to show only that category in the calendar and entries. Renamed and archived options keep their records."
+              >
+                <CategoryMatrix
+                  habit={habit}
+                  days={days}
+                  colours={colours}
+                  weekStart={weekStart}
+                  selected={category}
+                  onSelect={setCategory}
+                />
+              </StatsSection>
+            ),
+          }),
+          success: () => (
+            <StatsSection
+              title={
+                mode === 'recording' ? 'Days recorded' : 'Success over time'
+              }
+              subtitle={
+                trendNow === undefined || trendNow === null
+                  ? null
+                  : `Trend ${Math.round(trendNow * 100)}%${offset ? ` on ${statisticDateLabel(end)}` : ''}`
+              }
+              info={
+                mode === 'period'
+                  ? `Columns show whether each finished period met its target. The line smooths success over about two ${periodNoun} either side; rest periods and the current period don’t count.`
+                  : mode === 'recording'
+                    ? 'Columns show the share of days with an entry. The line smooths that share over about two weeks either side, so single days don’t make it jump. Today counts once it’s recorded.'
+                    : 'Columns show the share of scheduled days that met the goal. The line smooths success over about two weeks either side, so single days don’t make it jump. Days off don’t count, and today counts once it’s done.'
+              }
+            >
+              <SuccessChart
+                key={`${habit.id}:${range}:${offset}`}
+                colour={habitColour}
+                bins={binSeries(habit, days, successUnit(span), weekStart)}
+                unit={successUnit(span)}
+                observations={observed}
+                trend={trend}
+                mode={mode}
+                periodNoun={periodNoun}
+                from={from}
+                to={window.to}
+                today={today}
+                weekStart={weekStart}
+              />
+            </StatsSection>
+          ),
+          streaks: () => (
+            <StatsSection
+              title="Streaks"
+              subtitle={
+                longestRun
+                  ? `Longest here: ${plural(longestRun.length, mode === 'period' ? periodNoun.replace(/s$/, '') : 'day')}, ${statisticSpanLabel(dateKey(longestRun.from), dateKey(longestRun.to), today)}`
+                  : 'No streak in this period'
+              }
+              info={
+                mode === 'period'
+                  ? 'Each bar is a streak of finished periods in a row that met their target; rest periods hold it and a missed period breaks it. A bar cut off square at the left edge began earlier; square ends between rows mean the streak continues. Tap a bar for its length and dates.'
+                  : mode === 'recording'
+                    ? 'Each bar is a streak of days in a row with an entry; a day without one breaks it, and an unfinished today keeps it. A bar cut off square at the left edge began earlier; square ends between rows mean the streak continues. Tap a bar for its length and dates.'
+                    : 'Each bar is a streak of successful scheduled days in a row, carried across days off; a missed day breaks it, and an unfinished today keeps it. A bar cut off square at the left edge began earlier; square ends between rows mean the streak continues. Tap a bar for its length and dates.'
+              }
+            >
+              <StreakChart
+                key={`${habit.id}:${range}:${offset}`}
+                colour={habitColour}
+                runs={runs}
+                noun={mode === 'period' ? periodNoun : 'days'}
+                from={from}
+                to={window.to}
+                today={today}
+                weekStart={weekStart}
+              />
+            </StatsSection>
+          ),
+          calendar: () => (
+            <StatsSection
+              title="Calendar"
+              info={
+                habit.type === 'categorical'
+                  ? 'Tap a day to read or edit its entry. Dots show the categories chosen, in their colours. Days meeting their goal are brighter and join into one bar while the streak lasts.'
+                  : 'Tap a day to read or edit its entry. Days meeting their goal are brighter and join into one bar while the streak lasts.'
+              }
+            >
+              <StatsCalendar
+                key={`${habit.id}:${range}:${offset}`}
+                habit={habit}
+                days={days}
+                from={from}
+                to={window.to}
+                today={today}
+                weekStart={weekStart}
+                editable={editable && !editing}
+                allowFuture={offset === 0}
+                onDayPress={onCellPress}
+                categoryColours={colours}
+                highlight={category}
+              />
+            </StatsSection>
+          ),
+          timeOfDay: () => (
+            <TimeOfDayChart
+              key={`${habit.id}:${range}:${offset}`}
+              stats={timeOfDay}
+              colour={habitColour}
+            />
+          ),
+        }}
       />
       <StatsSection
         title="Entries"
@@ -534,7 +573,12 @@ export const RecordStatsScreen = memo(function RecordStatsScreen({
         </Text>
       }
       ListFooterComponent={
-        <View style={{ paddingTop: 20 }}>
+        <View style={{ paddingTop: 20, gap: 12 }}>
+          <CustomizeButton
+            editing={editing}
+            disabled={!editable && !editing}
+            onPress={() => setEditing((value) => !value)}
+          />
           <InfoNote
             label="How recording statistics work"
             text="Recording counts use all calendar days since the start. Success counts use scheduled days and the goal effective on each date. Off-days leave success streaks intact; logging streaks require consecutive calendar entries. An unfinished today has a streak grace period. Use the arrows beside the dates to step back through earlier periods. Future and pre-start entries are kept, but excluded from statistics."

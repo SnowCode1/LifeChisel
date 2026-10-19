@@ -11,6 +11,7 @@ import {
 import { periodMet, scheduledOn } from './goalTiming.ts';
 import type { WeekStart } from './displayPreferences.ts';
 import { dateKey, dayNumber, type StatsRange } from './statistics.ts';
+import type { NumberCombine } from './statsLayout.ts';
 
 const modulo = (a: number, b: number) => ((a % b) + b) % b;
 /** 0 = Sunday, matching Date#getUTCDay. */
@@ -162,6 +163,7 @@ export type SeriesBin = {
   recorded: number;
   total: number;
   best: number | null;
+  lowest: number | null;
   /** Scheduled goal days, including an unfinished today. */
   scheduled: number;
   met: number;
@@ -195,6 +197,7 @@ export function binSeries(
         recorded: 0,
         total: 0,
         best: null,
+        lowest: null,
         scheduled: 0,
         met: 0,
         days: [],
@@ -211,6 +214,7 @@ export function binSeries(
       if (typeof item.value === 'number') {
         current.total += item.value;
         current.best = Math.max(current.best ?? item.value, item.value);
+        current.lowest = Math.min(current.lowest ?? item.value, item.value);
       }
     }
     if (item.outcome === 'met') current.met++;
@@ -222,6 +226,40 @@ export function binSeries(
       current.scheduled++;
   }
   return bins;
+}
+
+/**
+ * One figure for a week or month of a number habit (v25 combine): Total
+ * compares with a daily goal as the average per calendar day, blanks as
+ * zero; Average is the mean of recorded days; Highest and Lowest pick a day.
+ */
+export function binValue(bin: SeriesBin, combine: NumberCombine) {
+  if (!bin.recorded) return null;
+  if (combine === 'total')
+    return bin.eligible ? bin.total / bin.eligible : null;
+  if (combine === 'average') return bin.total / bin.recorded;
+  return combine === 'highest' ? bin.best : bin.lowest;
+}
+
+/**
+ * Calendar brightness (0–1) of a number day without a goal: totals brighten
+ * towards the window's highest; readings (v25 combine) spread between its
+ * lowest and highest, so 80 and 82 kg look different.
+ */
+export function valueLevel(days: SeriesDay[], combine: NumberCombine) {
+  const numbers = days.flatMap((day) =>
+    typeof day.value === 'number' && day.outcome !== 'future'
+      ? [day.value]
+      : [],
+  );
+  const high = Math.max(...numbers),
+    low = Math.min(...numbers);
+  return (value: number) =>
+    combine === 'total'
+      ? Math.min(1, value / Math.max(1, high))
+      : high > low
+        ? (value - low) / (high - low)
+        : 1;
 }
 
 export type SuccessMode = 'goal' | 'period' | 'recording';
@@ -514,6 +552,36 @@ export function timeTicks(
     } else if (date.endsWith('-01-01')) ticks.push({ day, kind: 'year' });
   }
   return ticks;
+}
+
+const AXIS_STEPS = [1, 2, 2.5, 5, 10];
+/**
+ * An axis fitted to readings rather than starting at zero: two round steps
+ * from a round minimum that cover every value. Only for dots and lines;
+ * bars always start at zero, because their length is read as the value.
+ */
+export function fittedRange(values: number[]) {
+  let low = Math.min(...values),
+    high = Math.max(...values);
+  if (!Number.isFinite(low) || !Number.isFinite(high))
+    return { min: 0, max: 1 };
+  if (!(high > low)) {
+    const pad = Math.max(Math.abs(high) * 0.05, 0.5);
+    low -= pad;
+    high += pad;
+  }
+  const power = 10 ** Math.floor(Math.log10((high - low) / 2));
+  for (let index = 0; index < 12; index++) {
+    const step =
+      AXIS_STEPS[index % AXIS_STEPS.length]! *
+      power *
+      10 ** Math.floor(index / AXIS_STEPS.length);
+    // Round away float noise so labels read 7, 8, 9 rather than 7.000001.
+    const min = Number((Math.floor(low / step) * step).toPrecision(12));
+    if (min + 2 * step >= high - 1e-9)
+      return { min, max: Number((min + 2 * step).toPrecision(12)) };
+  }
+  return { min: low, max: high };
 }
 
 const NICE_STEPS = [1, 1.2, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10];

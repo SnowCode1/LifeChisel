@@ -8,6 +8,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useHabitPages, type HabitTab } from './useHabitPages';
 import { HabitNotes } from './HabitNotes';
 import { HabitStatsScreen } from './HabitStatsScreen';
+import type { StatsLayout } from '@onpurpose/core/statsLayout';
 import { ChartScrubLock } from './ChartFrame';
 import { HabitSymbol } from './HabitSymbol';
 import { Icon } from './Icon';
@@ -39,6 +40,8 @@ export const HabitDetailsScreen = memo(function HabitDetailsScreen({
   onGoalEdit,
   onCellPress,
   editable,
+  statsLayout,
+  onStatsLayout,
 }: {
   habit: Habit;
   weekStart: WeekStart;
@@ -62,6 +65,9 @@ export const HabitDetailsScreen = memo(function HabitDetailsScreen({
   onGoalEdit: () => void;
   onCellPress: (habit: Habit, day: EntryDay) => void;
   editable: boolean;
+  /** v25: this habit's statistics layout (null: the default). */
+  statsLayout: StatsLayout | null;
+  onStatsLayout: (layout: StatsLayout | null) => void;
 }) {
   const theme = useTheme();
   const styles = useStyles();
@@ -217,6 +223,8 @@ export const HabitDetailsScreen = memo(function HabitDetailsScreen({
                       onCellPress={onCellPress}
                       onGoalEdit={onGoalEdit}
                       bottomInset={bottomInset}
+                      layout={statsLayout}
+                      onStatsLayout={onStatsLayout}
                     />
                   )}
                 </View>

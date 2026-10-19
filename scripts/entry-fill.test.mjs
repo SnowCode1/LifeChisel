@@ -122,8 +122,8 @@ async function storeFixture(t, habits = [walk, read, mood]) {
   return { store, repo, meta };
 }
 
-test('the writer version is 24 and fills validate their exact shape', () => {
-  assert.equal(eventMeta(1, 'x').version, 24);
+test('the writer version is 25 and fills validate their exact shape', () => {
+  assert.equal(eventMeta(1, 'x').version, 25);
   validateChange(ticked);
   validateChange(
     fill(
@@ -323,7 +323,7 @@ test('a fill is one Undo/Redo step, never coalesces, and survives SQLite and bac
     () =>
       applyEvent(store.getSnapshot().replay, {
         ...meta(events().length + 1),
-        version: 24,
+        version: 25,
         device: 'test-device',
         type: 'undo',
         targetId: store.getSnapshot().replay.undo.at(-1).id,
@@ -344,7 +344,7 @@ test('a fill is one Undo/Redo step, never coalesces, and survives SQLite and bac
         type: 'preference',
         change: { kind: 'haptics', before: true, after: false },
       }),
-    /version-24/,
+    /version-25/,
   );
   const v21 = replayEvents([
     { ...meta(1), version: 21, type: 'initialize', habits: [walk] },
@@ -375,7 +375,7 @@ test('a fill is one Undo/Redo step, never coalesces, and survives SQLite and bac
     '2026-10-14T06:00:00.000Z',
     digest,
   );
-  assert.equal(JSON.parse(backup).version, 24);
+  assert.equal(JSON.parse(backup).version, 25);
   const decoded = await decodeArchive(backup, digest);
   assert.deepEqual(decoded.events, events());
   assert.deepEqual(decoded.replay.state, store.getSnapshot().replay.state);

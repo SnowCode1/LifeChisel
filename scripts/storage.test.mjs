@@ -642,7 +642,7 @@ test('v5 start dates and spacing survive SQLite reload, undo/redo and backup rou
     '2026-10-04T06:00:00.000Z',
     digest,
   );
-  assert.equal(JSON.parse(text).version, 24);
+  assert.equal(JSON.parse(text).version, 25);
   const decoded = await decodeArchive(text, digest);
   assert.deepEqual(decoded.replay, reopened.getSnapshot().replay);
   const archive = JSON.parse(text);
@@ -817,7 +817,7 @@ test('v6 display settings persist through SQLite, preserve Redo and round-trip w
     '2026-10-04T08:00:00.000Z',
     digest,
   );
-  assert.equal(JSON.parse(archive).version, 24);
+  assert.equal(JSON.parse(archive).version, 25);
   const decoded = await decodeArchive(archive, digest);
   assert.deepEqual(decoded.replay, reopened.getSnapshot().replay);
   assert.equal(decoded.replay.state.values['walk:2026-10-04'], 1);
@@ -1067,7 +1067,7 @@ test('v8 text size persists across reload and backup without breaking habit grou
     '2026-10-05T03:00:00.000Z',
     digest,
   );
-  assert.equal(JSON.parse(text).version, 24);
+  assert.equal(JSON.parse(text).version, 25);
   const decoded = await decodeArchive(text, digest);
   assert.deepEqual(decoded.events, snapshot.events);
   assert.deepEqual(decoded.replay, snapshot.replay);
@@ -1213,7 +1213,7 @@ test('v9 completion preference survives SQLite reload and backup while preservin
     '2026-10-05T08:00:00.000Z',
     digest,
   );
-  assert.equal(JSON.parse(text).version, 24);
+  assert.equal(JSON.parse(text).version, 25);
   const decoded = await decodeArchive(text, digest);
   assert.equal(decoded.replay.state.hideCompleted, true);
   assert.equal(decoded.replay.redo.length, 1);

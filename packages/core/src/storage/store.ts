@@ -59,7 +59,7 @@ type Task = {
 };
 type QueueItem = { kind: 'append'; event: StoredEvent; replay: Replay } | Task;
 
-const WRITER_VERSION = 24 as const;
+const WRITER_VERSION = 25 as const;
 
 export class ChangeStore {
   private snapshot: StoreSnapshot = {

@@ -237,13 +237,13 @@
   padding: 0 4px;
 }
 
-/* Medium widths: the overview spans the page with four tiles a row; the
-   chart cards flow down two columns, so cards of different heights leave no
-   holes. */
+/* The overview is a band across the top: headline and goal, then tiles
+   that fill the row. Below it the chart cards flow down columns, so cards of
+   different heights leave no holes. */
+.overview-card .tiles {
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+}
 @container details (min-width: 640px) {
-  .overview-card .tiles {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
   .stats-columns {
     display: block;
     columns: 2;
@@ -257,22 +257,92 @@
     margin-bottom: 0;
   }
 }
-/* Wide: the overview column stays beside the cards. */
+/* Wide: headline beside the tiles, and three columns of cards. */
 @container details (min-width: 980px) {
-  .stats {
+  .overview-card {
     display: grid;
-    grid-template-columns: 280px minmax(0, 1fr);
-    align-items: start;
-    gap: 16px 20px;
+    grid-template-columns: minmax(220px, 1fr) minmax(0, 3fr);
+    align-items: center;
+    gap: 14px 24px;
   }
-  .stats-summary {
+  .overview-card > :not(.stats-overview, .tiles) {
+    grid-column: 1 / -1;
+  }
+  .stats-overview {
     display: flex;
-    position: sticky;
-    top: 0;
+    flex-direction: column;
+    gap: 6px;
   }
-  .overview-card .tiles {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .stats-columns {
+    columns: 3;
   }
+}
+
+/* Customize: each card gets a bar to move or hide it; hidden cards stay
+   listed as their bar alone so they can be shown again. */
+.range-bar .period-navigator {
+  margin-left: auto;
+}
+.range-bar .customize {
+  margin-left: auto;
+}
+.range-bar .customize.active {
+  color: var(--accent);
+  font-weight: 600;
+}
+.stats.editing .stats-section {
+  border-style: dashed;
+}
+.stats-slot.is-hidden h3 {
+  opacity: 0.55;
+}
+.section-controls {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin: -6px -8px -6px auto;
+}
+.section-controls .icon-button {
+  width: 30px;
+  height: 30px;
+  font-size: 16px;
+}
+.section-controls .icon-button:disabled {
+  opacity: 0.3;
+}
+.stats-edit-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 0 4px;
+}
+.stats-edit-bar p {
+  margin: 0;
+  font-size: 13px;
+}
+.combine-picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--rule);
+}
+.combine-picker .combine-label {
+  font-size: 13px;
+  font-weight: 600;
+}
+.combine-picker .segmented button {
+  height: 30px;
+  padding: 0 12px;
+  font-size: 13px;
+}
+.combine-picker p {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 12px;
 }
 .stats-overview p {
   margin: 0;
@@ -546,6 +616,24 @@
   height: 100%;
   border-radius: 3px;
 }
+.weekday-bars.fitted .track {
+  position: relative;
+  overflow: visible;
+  height: 2px;
+}
+.weekday-bars .track .dot {
+  position: absolute;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+.weekday-bars .weekday-scale > .muted {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+}
 .weekday-bars .value {
   font-size: 14px;
   font-weight: 600;
@@ -712,7 +800,8 @@ button.matrix-row:hover {
   height: 5px;
   border-radius: 50%;
 }
-/* Compact months for longer ranges. */
+/* Compact months for longer ranges: square days that fill each column
+   with the same small gap across and down. */
 .calendar-day {
   display: grid;
   place-items: center;
@@ -731,12 +820,13 @@ button.matrix-row:hover {
   gap: 4px;
   font-size: 12px;
 }
-.calendar-grid.compact .calendar-day {
-  height: 15px;
+.calendar-grid.compact {
+  gap: 2px;
 }
 .calendar-grid.compact .calendar-day button {
-  width: 13px;
-  height: 13px;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
   border-radius: 3px;
 }
 .journal > header {

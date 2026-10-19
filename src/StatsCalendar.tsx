@@ -21,10 +21,12 @@ import {
 } from '@onpurpose/core/statisticsFormatting';
 import {
   isRecorded,
+  valueLevel,
   weekStartOf,
   type Outcome,
   type SeriesDay,
 } from '@onpurpose/core/statsSeries';
+import type { NumberCombine } from '@onpurpose/core/statsLayout';
 import { themedStyles, useTheme } from './ThemeContext';
 import type { Theme } from '@onpurpose/core/theme';
 
@@ -49,7 +51,7 @@ function dayFill(
   habit: Habit,
   cell: Cell,
   colour: string,
-  numericMax: number,
+  level: (value: number) => number,
   theme: Theme,
 ): string {
   const recorded = isRecorded(habit, cell.item?.value),
@@ -72,9 +74,7 @@ function dayFill(
       const value = cell.item?.value;
       return theme.mix(
         colour,
-        typeof value === 'number'
-          ? 0.3 + 0.45 * Math.min(1, value / Math.max(1, numericMax))
-          : 0.3,
+        typeof value === 'number' ? 0.3 + 0.45 * level(value) : 0.3,
       );
     }
     case 'future':
@@ -118,6 +118,8 @@ export function StatsCalendar(props: {
   onDayPress: (habit: Habit, day: EntryDay) => void;
   categoryColours?: Map<string, string>;
   highlight?: string | null;
+  /** v25: how a number habit's days combine (calendar shading). */
+  combine?: NumberCombine;
 }) {
   return props.to - props.from + 1 <= 100 ? (
     <WeekRows {...props} />
@@ -160,6 +162,7 @@ function WeekRows({
   onDayPress,
   categoryColours,
   highlight,
+  combine = 'total',
 }: Parameters<typeof StatsCalendar>[0]) {
   const theme = useTheme();
   const styles = useStyles();
@@ -170,10 +173,7 @@ function WeekRows({
     start = weekStartOf(from, weekStart),
     end = weekStartOf(to, weekStart) + 6,
     cells = cellsFor(days, from, to, today, start, end),
-    numericMax = Math.max(
-      1,
-      ...days.map((item) => (typeof item.value === 'number' ? item.value : 0)),
-    ),
+    level = valueLevel(days, combine),
     rowHeight = Math.ceil((to - from < 45 ? 52 : 42) * Math.max(1, fontScale));
   const rows: Cell[][] = [];
   for (let i = 0; i < cells.length; i += 7) rows.push(cells.slice(i, i + 7));
@@ -206,7 +206,7 @@ function WeekRows({
                 right = inRun && joined(i + 1),
                 fill = bridged[i]
                   ? theme.mix(colour, 0.38)
-                  : dayFill(habit, cell, colour, numericMax, theme),
+                  : dayFill(habit, cell, colour, level, theme),
                 strong =
                   fill.startsWith('#') &&
                   fill.length === 7 &&
@@ -336,6 +336,7 @@ function MonthGrid({
   onDayPress,
   categoryColours,
   highlight,
+  combine = 'total',
 }: Parameters<typeof StatsCalendar>[0]) {
   const [width, setWidth] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
@@ -343,10 +344,7 @@ function MonthGrid({
   const styles = useStyles();
   const colour = theme.colour(habit.color),
     unit = habit.unit ?? '';
-  const numericMax = Math.max(
-    1,
-    ...days.map((item) => (typeof item.value === 'number' ? item.value : 0)),
-  );
+  const level = valueLevel(days, combine);
   const months: string[] = [];
   for (
     let month = dateKey(from).slice(0, 7);
@@ -375,7 +373,7 @@ function MonthGrid({
       return value.includes(highlight)
         ? (categoryColours?.get(highlight) ?? colour)
         : theme.ink(0x17);
-    return dayFill(habit, cell, colour, numericMax, theme);
+    return dayFill(habit, cell, colour, level, theme);
   };
   return (
     <View

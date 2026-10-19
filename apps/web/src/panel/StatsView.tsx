@@ -1,4 +1,10 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react';
 import { createPortal } from 'react-dom';
 import {
   weekDayOrder,
@@ -30,7 +36,6 @@ import {
   valueUnit,
 } from '@onpurpose/core/statsSeries';
 import {
-  formatStatistic as format,
   statisticDateLabel,
   statisticMonthLabel,
   statisticSpanLabel,
@@ -50,6 +55,25 @@ import {
   WeekdayBars,
 } from './charts.tsx';
 import { StatsCalendar } from './StatsCalendar.tsx';
+import {
+  moveStatsSection,
+  NUMBER_COMBINES,
+  numberCombine,
+  numberCombineHint,
+  numberCombineLabel,
+  setStatsSectionHidden,
+  statsSections,
+  statsSectionTitle,
+  type StatsLayout,
+  type StatsSectionId,
+} from '@onpurpose/core/statsLayout';
+import {
+  numberRulesNote,
+  numberSummary,
+  valueChartInfo,
+  valueChartTitle,
+  weekdayInfo,
+} from '@onpurpose/core/numberSummary';
 
 const RANGES: { value: StatsRange; label: string }[] = [
   { value: 30, label: '30 days' },
@@ -59,6 +83,8 @@ const RANGES: { value: StatsRange; label: string }[] = [
 ];
 const WEEKDAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 type Tile = { label: string; value: string };
+// Customize's move and hide buttons, shown in each section's header.
+const SectionControls = createContext<ReactNode>(null);
 
 // Statistics for one habit, computed by the same core functions as the
 // phone's screens; only the drawing is the web's own.
@@ -74,8 +100,9 @@ export function StatsView({
   onDay,
   onEditGoal,
   toolbarHost,
+  layout,
+  onStatsLayout,
 }: {
-  /** Shown in the overview column below the summary (the habit's notes). */
   /** Where the range tabs and period stepper render (the dialog's toolbar). */
   toolbarHost?: HTMLElement | null;
   habit: Habit;
@@ -93,14 +120,20 @@ export function StatsView({
     label: string,
     anchor: HTMLElement,
   ) => void;
+  /** This habit's saved statistics layout (v25; null: the default). */
+  layout: StatsLayout | null;
+  onStatsLayout: (layout: StatsLayout | null) => void;
 }) {
   const colour = theme.colour(habit.color);
   const [range, setRange] = useState<StatsRange>(30);
   const [offset, setOffset] = useState(0);
   const [category, setCategory] = useState<string | null>(null);
+  // Edit mode: reorder and hide sections, and choose how numbers combine.
+  const [editing, setEditing] = useState(false);
   const record =
     habitType(habit) === 'categorical' || habitType(habit) === 'text';
   const numeric = isNumericHabit(habit);
+  const combine = numeric ? numberCombine(layout) : 'total';
   const trackingStart = useMemo(
     () => habitTrackingStart(habit, values, events, today),
     [habit, values, events, today],
@@ -111,8 +144,10 @@ export function StatsView({
     span = window.to - from + 1;
   const habitStats = useMemo(
     () =>
-      record ? null : habitStatistics(habit, values, events, today, range, end),
-    [record, habit, values, events, today, range, end],
+      record
+        ? null
+        : habitStatistics(habit, values, events, today, range, end, combine),
+    [record, habit, values, events, today, range, end, combine],
   );
   const recordStats = useMemo(
     () =>
@@ -167,8 +202,6 @@ export function StatsView({
   const plural = (count: number, noun = 'day') =>
     `${count} ${count === 1 ? noun : `${noun}s`}`;
   const unit = habit.unit ?? '';
-  const withUnit = (value: number | null) =>
-    `${format(value)}${unit ? ` ${unit}` : ''}`;
   const periodNoun = period?.unit === 'week' ? 'weeks' : 'periods';
   const streakTiles = (
     existing: number,
@@ -198,48 +231,35 @@ export function StatsView({
   const tiles: Tile[] = [];
   const stats = habitStats ?? recordStats!;
   const periodGoals = stats.periodGoals;
-  if (habitStats) {
-    const goalShown =
-      habitStats.completion.active || habitStats.completion.eligible > 0;
-    headline = numeric
-      ? habitStats.recorded
-        ? withUnit(habitStats.total)
-        : 'Nothing recorded'
-      : habitStats.eligible
-        ? `${habitStats.successes} of ${plural(habitStats.eligible)}`
-        : 'No days yet';
-    note = numeric
-      ? habitStats.recorded
-        ? `Recorded on ${habitStats.recorded} of ${plural(habitStats.eligible)}`
-        : 'Your records will appear here.'
-      : habitStats.rate === null
-        ? 'Your records will appear here.'
-        : `${Math.round(habitStats.rate * 100)}% successful`;
-    if (numeric) {
-      if (goalShown)
-        tiles.push({
-          label: periodGoals.current
-            ? 'Days meeting the daily condition'
-            : 'Days meeting the goal',
-          value: habitStats.completion.eligible
-            ? `${habitStats.completion.successes} of ${habitStats.completion.eligible}`
-            : '—',
-        });
-      tiles.push(
-        { label: 'Average per day', value: withUnit(habitStats.average) },
-        {
-          label: 'Best day',
-          value: withUnit(habitStats.recorded ? habitStats.best : null),
-        },
-      );
-    }
+  if (habitStats && numeric) {
+    const summary = numberSummary(habitStats, combine, unit);
+    headline = summary.headline;
+    note = summary.note;
+    tiles.push(...summary.tiles);
     if (!periodGoals.current)
       tiles.push(
         ...streakTiles(
           tiles.length,
-          numeric && !habitStats.completion.active
-            ? 'Days recorded in a row'
-            : 'Current streak',
+          habitStats.completion.active
+            ? 'Current streak'
+            : 'Days recorded in a row',
+          habitStats.streak,
+          habitStats.bestStreak,
+        ),
+      );
+  } else if (habitStats) {
+    headline = habitStats.eligible
+      ? `${habitStats.successes} of ${plural(habitStats.eligible)}`
+      : 'No days yet';
+    note =
+      habitStats.rate === null
+        ? 'Your records will appear here.'
+        : `${Math.round(habitStats.rate * 100)}% successful`;
+    if (!periodGoals.current)
+      tiles.push(
+        ...streakTiles(
+          tiles.length,
+          'Current streak',
           habitStats.streak,
           habitStats.bestStreak,
         ),
@@ -295,9 +315,10 @@ export function StatsView({
     null,
   );
   const eligible = habitStats ? habitStats.eligible : recordStats!.eligible;
+  const goalShown = stats.completion.active || stats.completion.eligible > 0;
 
-  // Range tabs and the period stepper: in the dialog's toolbar when it
-  // has one, above the overview otherwise.
+  // Range tabs, the period stepper and Customize: in the dialog's toolbar
+  // when it has one, above the overview otherwise.
   const rangeBar = (
     <div className="range-bar">
       <div className="segmented range-tabs" role="tablist" aria-label="Range">
@@ -341,31 +362,210 @@ export function StatsView({
           ›
         </button>
       </div>
+      <button
+        type="button"
+        className={
+          editing ? 'text-button customize active' : 'text-button customize'
+        }
+        aria-pressed={editing}
+        disabled={!editable && !editing}
+        onClick={() => setEditing((value) => !value)}
+      >
+        {editing ? 'Done' : 'Customize'}
+      </button>
     </div>
   );
 
+  const valueBins = valueUnit(span);
+  const sections = statsSections(habit, layout);
+  const content: Record<StatsSectionId, () => ReactNode> = {
+    values: () =>
+      habitStats && (
+        <Section
+          title={valueChartTitle(combine, valueBins)}
+          subtitle={
+            habitStats.recorded ? null : 'Nothing recorded in this period'
+          }
+          info={valueChartInfo(combine, valueBins, goalShown)}
+        >
+          <ValueChart
+            key={`${range}:${offset}`}
+            habit={habit}
+            colour={colour}
+            theme={theme}
+            bins={binSeries(habit, days, valueBins, weekStart)}
+            unit={valueBins}
+            combine={combine}
+            from={from}
+            to={window.to}
+            today={today}
+            weekStart={weekStart}
+          />
+        </Section>
+      ),
+    success: () => (
+      <Section
+        title={mode === 'recording' ? 'Days recorded' : 'Success over time'}
+        subtitle={
+          trendNow === undefined || trendNow === null
+            ? null
+            : `Trend ${Math.round(trendNow * 100)}%${offset ? ` on ${statisticDateLabel(end)}` : ''}`
+        }
+        info={
+          mode === 'period'
+            ? `Columns show whether each finished period met its target. The line smooths success over about two ${periodNoun} either side; rest periods and the current period don’t count.`
+            : mode === 'recording'
+              ? 'Columns show the share of days with an entry. The line smooths that share over about two weeks either side. Today counts once it’s recorded.'
+              : 'Columns show the share of scheduled days that met the goal. The line smooths success over about two weeks either side. Days off don’t count, and today counts once it’s done.'
+        }
+      >
+        <SuccessChart
+          key={`${range}:${offset}`}
+          colour={colour}
+          theme={theme}
+          bins={binSeries(habit, days, successUnit(span), weekStart)}
+          unit={successUnit(span)}
+          observations={observed}
+          trend={trend}
+          mode={mode}
+          periodNoun={periodNoun}
+          from={from}
+          to={window.to}
+          today={today}
+          weekStart={weekStart}
+        />
+      </Section>
+    ),
+    streaks: () => (
+      <Section
+        title="Streaks"
+        subtitle={
+          longestRun
+            ? `Longest here: ${plural(longestRun.length, mode === 'period' ? periodNoun.replace(/s$/, '') : 'day')}, ${statisticSpanLabel(dateKey(longestRun.from), dateKey(longestRun.to), today)}`
+            : 'No streak in this period'
+        }
+        info={
+          mode === 'period'
+            ? 'Each bar is a streak of finished periods in a row that met their target; rest periods hold it and a missed period breaks it.'
+            : mode === 'recording'
+              ? 'Each bar is a streak of days in a row with an entry; a day without one breaks it, and an unfinished today keeps it.'
+              : 'Each bar is a streak of successful scheduled days in a row, carried across days off; a missed day breaks it, and an unfinished today keeps it.'
+        }
+      >
+        <StreakChart
+          key={`${range}:${offset}`}
+          colour={colour}
+          theme={theme}
+          runs={runs}
+          noun={mode === 'period' ? periodNoun : 'days'}
+          from={from}
+          to={window.to}
+          today={today}
+          weekStart={weekStart}
+        />
+      </Section>
+    ),
+    categories: () => (
+      <Section
+        title="Categories"
+        subtitle={
+          category
+            ? `Showing ${habit.categories?.find((option) => option.id === category)?.label} · select again for all`
+            : null
+        }
+        info="Each row shows when that category was chosen; longer ranges shade each week or month by how often. Several categories can share a day, so rows are never added together. The number is days in this period. Select a row to show only that category in the calendar and entries. Renamed and archived options keep their records."
+      >
+        <CategoryMatrix
+          habit={habit}
+          days={days}
+          colours={colours}
+          weekStart={weekStart}
+          theme={theme}
+          selected={category}
+          onSelect={setCategory}
+        />
+      </Section>
+    ),
+    calendar: () => (
+      <Section
+        title="Calendar"
+        info={
+          habitType(habit) === 'checkbox'
+            ? 'Select a day to check or uncheck it. Successful days join into one bar while the streak lasts, bridged across days off.'
+            : `Select a day to edit its entry. Bright days met their goal and faded days missed it; without a goal, brightness follows the value${numeric && combine !== 'total' ? ' between the period’s lowest and highest' : ''}.`
+        }
+      >
+        <StatsCalendar
+          key={`${range}:${offset}`}
+          habit={habit}
+          days={days}
+          from={from}
+          to={window.to}
+          today={today}
+          weekStart={weekStart}
+          colour={colour}
+          theme={theme}
+          editable={editable && !editing}
+          combine={combine}
+          highlight={category}
+          categoryColours={colours}
+          onDay={(date, label, anchor) => onDay(habit, date, label, anchor)}
+        />
+      </Section>
+    ),
+    weekday: () =>
+      habitStats && (
+        <Section
+          title="By day of the week"
+          info={
+            numeric
+              ? weekdayInfo(combine, unit)
+              : 'Share of each weekday’s scheduled days that were successful in the selected period.'
+          }
+        >
+          <WeekdayBars
+            rows={weekDayOrder(weekStart).map((day) => ({
+              day,
+              label: WEEKDAY_NAMES[day],
+              value:
+                habitStats.weekday.find((item) => item.day === day)?.value ??
+                null,
+            }))}
+            colour={colour}
+            numeric={numeric}
+            fitted={numeric && combine !== 'total'}
+            unit={unit}
+          />
+        </Section>
+      ),
+    timeOfDay: () => (
+      <Section
+        title="Time of day"
+        subtitle={
+          timeOfDay.peak !== null
+            ? `Most often ${hourRange(timeOfDay.peak)}`
+            : timeOfDay.recorded
+              ? 'No same-day entries in this period'
+              : 'Nothing recorded in this period'
+        }
+        info={`Each bar counts days by the hour their entry was first made, in the local time where it was made. Only entries made on the day they belong to count: this period has ${timeOfDay.counted} of ${timeOfDay.recorded} ${timeOfDay.recorded === 1 ? 'day' : 'days'}${timeOfDay.recorded - timeOfDay.counted ? `; ${timeOfDay.recorded - timeOfDay.counted} added on a later day ${timeOfDay.recorded - timeOfDay.counted === 1 ? 'is' : 'are'} left out` : ''}. Corrections keep the original time and undone changes never count.`}
+      >
+        {timeOfDay.counted > 0 && (
+          <TimeOfDayChart stats={timeOfDay} colour={colour} />
+        )}
+      </Section>
+    ),
+  };
+
   return (
-    // An overview column (summary card, notes, how it works) beside cards of
-    // statistics flowing in two columns; it stacks when narrow (container
-    // queries in panel.css).
-    <div className="stats">
+    // A summary band across the top (headline, tiles, goal), then cards of
+    // statistics flowing in columns (container queries in panel.css).
+    <div className={editing ? 'stats editing' : 'stats'}>
       {toolbarHost ? createPortal(rangeBar, toolbarHost) : rangeBar}
-      <div className="stats-summary">
-        <div className="stats-card overview-card">
-          <div className="stats-overview">
-            <p className="stats-headline">{headline}</p>
-            <p className="muted">{note}</p>
-          </div>
-          {tiles.length > 0 && (
-            <div className="tiles">
-              {tiles.map((tile) => (
-                <div key={tile.label} className="tile">
-                  <span className="muted">{tile.label}</span>
-                  <strong>{tile.value}</strong>
-                </div>
-              ))}
-            </div>
-          )}
+      <div className="stats-card overview-card">
+        <div className="stats-overview">
+          <p className="stats-headline">{headline}</p>
+          <p className="muted">{note}</p>
           <p className="goal-line">
             <span className="muted">Goal</span>{' '}
             {habitSummary(habit, values, today)}{' '}
@@ -378,212 +578,151 @@ export function StatsView({
               Edit
             </button>
           </p>
-          {offset === 0 && (
-            <PeriodProgress data={periodGoals} colour={colour} />
-          )}
         </div>
-        <details className="info-note">
-          <summary>How statistics work</summary>
-          <p>
-            {numeric
-              ? 'Averages divide totals by calendar days since the start, including today and blank days. Blanks stay empty; zero is a recorded total.'
-              : 'Success rates use scheduled days since the start, including today. Days off do not break a success streak; an unfinished today has a grace period.'}{' '}
-            Success uses each day’s effective goal and schedule, with blank days
-            never successful. Use the arrows beside the dates to step back
-            through earlier periods. Future entries and records before the start
-            date are excluded. Earlier records stay saved; edit the start date
-            to include them.
-          </p>
-        </details>
-      </div>
-      <div className="stats-sections">
-        <div className="stats-columns">
-          {numeric && habitStats && (
-            <Section
-              title={
-                valueUnit(span) === 'day' ? 'Daily totals' : 'Average per day'
-              }
-              subtitle={
-                habitStats.recorded ? null : 'Nothing recorded in this period'
-              }
-              info={
-                valueUnit(span) === 'day'
-                  ? 'Each bar is one day’s total. Bright bars met that day’s goal, faded bars missed it, and grey bars were on days off. The dashed line is the goal.'
-                  : `Each bar is the average per day for a ${valueUnit(span)}, counting blank days as zero, so it compares with the daily goal line.`
-              }
+        {tiles.length > 0 && (
+          <div className="tiles">
+            {tiles.map((tile) => (
+              <div key={tile.label} className="tile">
+                <span className="muted">{tile.label}</span>
+                <strong>{tile.value}</strong>
+              </div>
+            ))}
+          </div>
+        )}
+        {offset === 0 && <PeriodProgress data={periodGoals} colour={colour} />}
+        {editing && numeric && (
+          <div
+            className="combine-picker"
+            role="group"
+            aria-label="Combine days by"
+          >
+            <span className="combine-label">Combine days by</span>
+            <div
+              className="segmented"
+              role="radiogroup"
+              aria-label="Combine days by"
             >
-              <ValueChart
-                key={`${range}:${offset}`}
-                habit={habit}
-                colour={colour}
-                theme={theme}
-                bins={binSeries(habit, days, valueUnit(span), weekStart)}
-                unit={valueUnit(span)}
-                from={from}
-                to={window.to}
-                today={today}
-                weekStart={weekStart}
-              />
-            </Section>
-          )}
-          <Section
-            title={mode === 'recording' ? 'Days recorded' : 'Success over time'}
-            subtitle={
-              trendNow === undefined || trendNow === null
-                ? null
-                : `Trend ${Math.round(trendNow * 100)}%${offset ? ` on ${statisticDateLabel(end)}` : ''}`
-            }
-            info={
-              mode === 'period'
-                ? `Columns show whether each finished period met its target. The line smooths success over about two ${periodNoun} either side; rest periods and the current period don’t count.`
-                : mode === 'recording'
-                  ? 'Columns show the share of days with an entry. The line smooths that share over about two weeks either side. Today counts once it’s recorded.'
-                  : 'Columns show the share of scheduled days that met the goal. The line smooths success over about two weeks either side. Days off don’t count, and today counts once it’s done.'
-            }
-          >
-            <SuccessChart
-              key={`${range}:${offset}`}
-              colour={colour}
-              theme={theme}
-              bins={binSeries(habit, days, successUnit(span), weekStart)}
-              unit={successUnit(span)}
-              observations={observed}
-              trend={trend}
-              mode={mode}
-              periodNoun={periodNoun}
-              from={from}
-              to={window.to}
-              today={today}
-              weekStart={weekStart}
-            />
-          </Section>
-          <Section
-            title="Streaks"
-            subtitle={
-              longestRun
-                ? `Longest here: ${plural(longestRun.length, mode === 'period' ? periodNoun.replace(/s$/, '') : 'day')}, ${statisticSpanLabel(dateKey(longestRun.from), dateKey(longestRun.to), today)}`
-                : 'No streak in this period'
-            }
-            info={
-              mode === 'period'
-                ? 'Each bar is a streak of finished periods in a row that met their target; rest periods hold it and a missed period breaks it.'
-                : mode === 'recording'
-                  ? 'Each bar is a streak of days in a row with an entry; a day without one breaks it, and an unfinished today keeps it.'
-                  : 'Each bar is a streak of successful scheduled days in a row, carried across days off; a missed day breaks it, and an unfinished today keeps it.'
-            }
-          >
-            <StreakChart
-              key={`${range}:${offset}`}
-              colour={colour}
-              theme={theme}
-              runs={runs}
-              noun={mode === 'period' ? periodNoun : 'days'}
-              from={from}
-              to={window.to}
-              today={today}
-              weekStart={weekStart}
-            />
-          </Section>
-          {habitType(habit) === 'categorical' && (
-            <Section
-              title="Categories"
-              subtitle={
-                category
-                  ? `Showing ${habit.categories?.find((option) => option.id === category)?.label} · select again for all`
-                  : null
-              }
-              info="Each row shows when that category was chosen; longer ranges shade each week or month by how often. Several categories can share a day, so rows are never added together. The number is days in this period. Select a row to show only that category in the calendar and entries. Renamed and archived options keep their records."
-            >
-              <CategoryMatrix
-                habit={habit}
-                days={days}
-                colours={colours}
-                weekStart={weekStart}
-                theme={theme}
-                selected={category}
-                onSelect={setCategory}
-              />
-            </Section>
-          )}
-          <Section
-            title="Calendar"
-            info={
-              habitType(habit) === 'checkbox'
-                ? 'Select a day to check or uncheck it. Successful days join into one bar while the streak lasts, bridged across days off.'
-                : 'Select a day to edit its entry. Bright days met their goal and faded days missed it; without a goal, brightness follows the value.'
-            }
-          >
-            <StatsCalendar
-              key={`${range}:${offset}`}
-              habit={habit}
-              days={days}
-              from={from}
-              to={window.to}
-              today={today}
-              weekStart={weekStart}
-              colour={colour}
-              theme={theme}
-              editable={editable}
-              highlight={category}
-              categoryColours={colours}
-              onDay={(date, label, anchor) => onDay(habit, date, label, anchor)}
-            />
-          </Section>
-          {habitStats && (
-            <Section
-              title="By day of the week"
-              info={
-                numeric
-                  ? `Average ${unit || 'total'} per day for each weekday in the selected period. Blank days count as zero.`
-                  : 'Share of each weekday’s scheduled days that were successful in the selected period.'
-              }
-            >
-              <WeekdayBars
-                rows={weekDayOrder(weekStart).map((day) => ({
-                  day,
-                  label: WEEKDAY_NAMES[day],
-                  value:
-                    habitStats.weekday.find((item) => item.day === day)
-                      ?.value ?? null,
-                }))}
-                colour={colour}
-                numeric={numeric}
-                unit={unit}
-              />
-            </Section>
-          )}
-          <Section
-            title="Time of day"
-            subtitle={
-              timeOfDay.peak !== null
-                ? `Most often ${hourRange(timeOfDay.peak)}`
-                : timeOfDay.recorded
-                  ? 'No same-day entries in this period'
-                  : 'Nothing recorded in this period'
-            }
-            info={`Each bar counts days by the hour their entry was first made, in the local time where it was made. Only entries made on the day they belong to count: this period has ${timeOfDay.counted} of ${timeOfDay.recorded} ${timeOfDay.recorded === 1 ? 'day' : 'days'}${timeOfDay.recorded - timeOfDay.counted ? `; ${timeOfDay.recorded - timeOfDay.counted} added on a later day ${timeOfDay.recorded - timeOfDay.counted === 1 ? 'is' : 'are'} left out` : ''}. Corrections keep the original time and undone changes never count.`}
-          >
-            {timeOfDay.counted > 0 && (
-              <TimeOfDayChart stats={timeOfDay} colour={colour} />
-            )}
-          </Section>
-        </div>
-        {recordStats && (
-          <Entries
-            habit={habit}
-            days={days}
-            actions={actions}
-            category={category}
-            colours={colours}
-            colour={colour}
-            theme={theme}
-            today={today}
-            onDay={onDay}
-            onShowAll={() => setCategory(null)}
-            editable={editable}
-          />
+              {NUMBER_COMBINES.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  role="radio"
+                  aria-checked={combine === option}
+                  onClick={() => onStatsLayout({ ...layout, combine: option })}
+                >
+                  {numberCombineLabel(option)}
+                </button>
+              ))}
+            </div>
+            <p className="muted">{numberCombineHint(combine)}</p>
+          </div>
         )}
       </div>
+      {editing && (
+        <div className="stats-edit-bar">
+          <p className="muted">
+            Move sections with the arrows and hide the ones you don’t need. Each
+            habit keeps its own layout, on every device.
+          </p>
+          <button
+            type="button"
+            className="text-button"
+            disabled={!layout}
+            onClick={() => onStatsLayout(null)}
+          >
+            Reset to default
+          </button>
+        </div>
+      )}
+      <div className="stats-columns">
+        {sections.map(({ id, hidden }, index) => {
+          if (hidden && !editing) return null;
+          const title = statsSectionTitle(id, habit, layout);
+          const controls = (
+            <div className="section-controls">
+              <button
+                type="button"
+                className="icon-button"
+                aria-label={`Move ${title} up`}
+                disabled={index === 0}
+                onClick={() =>
+                  onStatsLayout(moveStatsSection(habit, layout, id, -1))
+                }
+              >
+                ↑
+              </button>
+              <button
+                type="button"
+                className="icon-button"
+                aria-label={`Move ${title} down`}
+                disabled={index === sections.length - 1}
+                onClick={() =>
+                  onStatsLayout(moveStatsSection(habit, layout, id, 1))
+                }
+              >
+                ↓
+              </button>
+              <button
+                type="button"
+                className="text-button"
+                aria-label={`${hidden ? 'Show' : 'Hide'} ${title}`}
+                onClick={() =>
+                  onStatsLayout(setStatsSectionHidden(layout, id, !hidden))
+                }
+              >
+                {hidden ? 'Show' : 'Hide'}
+              </button>
+            </div>
+          );
+          return (
+            <div
+              key={id}
+              className={hidden ? 'stats-slot is-hidden' : 'stats-slot'}
+            >
+              {hidden ? (
+                <section className="stats-section">
+                  <header>
+                    <h3>{title}</h3>
+                    {controls}
+                  </header>
+                </section>
+              ) : (
+                <SectionControls.Provider value={editing ? controls : null}>
+                  {content[id]()}
+                </SectionControls.Provider>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      {recordStats && (
+        <Entries
+          habit={habit}
+          days={days}
+          actions={actions}
+          category={category}
+          colours={colours}
+          colour={colour}
+          theme={theme}
+          today={today}
+          onDay={onDay}
+          onShowAll={() => setCategory(null)}
+          editable={editable}
+        />
+      )}
+      <details className="info-note">
+        <summary>How statistics work</summary>
+        <p>
+          {numeric
+            ? numberRulesNote(combine)
+            : 'Success rates use scheduled days since the start, including today. Days off do not break a success streak; an unfinished today has a grace period.'}{' '}
+          Success uses each day’s effective goal and schedule, with blank days
+          never successful. Use the arrows beside the dates to step back through
+          earlier periods. Future entries and records before the start date are
+          excluded. Earlier records stay saved; edit the start date to include
+          them. Customize reorders and hides sections for this habit.
+        </p>
+      </details>
     </div>
   );
 }
@@ -599,6 +738,7 @@ function Section({
   info: string;
   children: ReactNode;
 }) {
+  const controls = useContext(SectionControls);
   return (
     <section className="stats-section">
       <header>
@@ -607,6 +747,7 @@ function Section({
           <summary aria-label={`About ${title.toLowerCase()}`}>i</summary>
           <p>{info}</p>
         </details>
+        {controls}
       </header>
       {subtitle && <p className="muted">{subtitle}</p>}
       {children}

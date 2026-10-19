@@ -503,3 +503,12 @@ measure, not an achieved claim; acceptance thresholds are still to be agreed.
 - **iPhone review pending** for changes checked only on Android or in tests: v18
   size sliders, the category entry sheet, the 10 October statistics revision, v19
   themes, and History bursts, filters and day folding.
+- **Phone review pending for statistics Customize (v25):** checked only by
+  types, tests and the bundle exports, never on a phone. On both phones,
+  check Customize this page at the end of Statistics (and of a Categories
+  habit), ↑ ↓ and Hide/Show in each section's title row with larger text,
+  Reset and Done, the Combine days by choice on a number habit (headline,
+  tiles and weekday dots change; calendar days are not editable while
+  customizing), the Daily values dots on their fitted axis with tap and
+  hold-and-drag selection and VoiceOver/TalkBack, and that a layout made on
+  the web arrives through sync once the phone syncs.

@@ -113,7 +113,7 @@ test('the v24 fixture extends v23 exactly and replays devices, batches and their
     await encodeArchive(next.events, '2026-10-18T04:00:00.000Z', digest),
   );
   assert.equal(encoded.sha256, JSON.parse(fixture(24)).sha256);
-  assert.equal(encoded.version, 24);
+  assert.equal(encoded.version, 25);
 });
 
 test('v24 events need a device; older events must not carry one', () => {
@@ -299,6 +299,8 @@ test('log rewrites keep confirmed events, absorb queued edits and save sync stat
   store.change(entry('2026-10-02', null, 1));
   const remote = {
     ...meta(3, { device: 'there', id: 'remote-1' }),
+    // Pulled from a device on the current writer, after this one's edits.
+    version: 25,
     type: 'change',
     groupId: 'remote-1',
     change: entry('2026-10-05', null, 1),

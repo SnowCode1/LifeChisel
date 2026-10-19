@@ -2315,3 +2315,34 @@ credential, so B was a cleared profile of the same browser rather than a
 second authenticator. Found and fixed: the approval dialog stretched to its
 maximum height. Not checked: PRF on real passkey providers (Windows Hello,
 iCloud Keychain, Google Password Manager); `/passkey-check.html` tests that.
+
+## 19 October 2026
+
+### Statistics Customize and number combining (storage v25)
+
+`npm test` (475 tests) adds `scripts/storage-v25.test.mjs`: the v25 fixture
+extends v24 exactly and replays layouts the same on every device without
+History rows; layouts validate their exact shape and need v25; a layout
+saves, reloads from SQLite and round-trips a backup outside History while
+keeping Redo, an unchanged edit saves nothing and a stale before-value is
+refused, and Reset removes it; older events cannot follow v25; sections
+follow the saved order per type and a layout moved back to the default
+saves nothing; sync rebases layouts per habit (another habit's applies, the
+later edit of one habit wins). `scripts/number-combine.test.mjs` checks
+blank days (zero for Total, left out for readings, a blank weekday has no
+reading), negative highs, week bins, calendar levels, fitted axes and the
+summary wording. Existing tests now expect writer and container version 25.
+`npm run check` passed apart from `apps/landing/index.html`, which had
+unrelated uncommitted edits; `npm run web:build`, `npm run export:ios` and
+`npm run export:android` passed.
+
+Headless desktop Chrome on the development server with `?sample=health`
+(1400 × 1000 and 420 × 900): Sleep's Statistics showed the summary band
+with three columns of cards; Customize → Average changed the headline to
+the 7.5-hour average, the tiles to Change, Lowest and Highest, Daily values
+to dots on a 5–10 axis and the weekday rows to dots (Thursday 7.3 hours,
+where Total showed 3.6 because of blank days); Hide Streaks and moving By day
+of the week up worked, with the controls in each card's header; Year showed
+weekly averages as dots and the compact months as even squares without
+gaps; the narrow window stacked everything in one column. Not checked: any
+phone (no device was attached), Safari and Firefox, and screen readers.

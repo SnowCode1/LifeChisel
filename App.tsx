@@ -71,6 +71,10 @@ import {
 import { randomUUID } from 'expo-crypto';
 import { HabitDialog, type HabitDialogMode } from './src/HabitDialog';
 import { displayedHabitOrder, moveHabit } from '@onpurpose/core/habitOrdering';
+import {
+  statsLayoutChange,
+  type StatsLayout,
+} from '@onpurpose/core/statsLayout';
 import type { HabitAction } from './src/HabitName';
 import { useLocalToday } from './src/useLocalToday';
 import { feedback, setHapticsEnabled } from './src/haptics';
@@ -423,6 +427,19 @@ function PersistentApp({
     feedback('selection');
     setPanel({ page: 'settings', visible: true, deferGrid: true });
   }, []);
+
+  // v25: a habit's statistics layout, a preference outside History/Undo.
+  const changeStatsLayout = useCallback(
+    (habit: Habit, layout: StatsLayout | null) => {
+      const change = statsLayoutChange(
+        store.getSnapshot().replay.state,
+        habit,
+        layout,
+      );
+      if (change) store.change(change);
+    },
+    [store],
+  );
 
   function changeHaptics(value: boolean) {
     const before = store.getSnapshot().replay.state.hapticsEnabled;
@@ -1098,6 +1115,14 @@ function PersistentApp({
                           }
                           onEdit={editStats}
                           onGoalEdit={() => setGoalsId(statsHabit.id)}
+                          statsLayout={
+                            snapshot.replay.state.statsLayouts?.[
+                              statsHabit.id
+                            ] ?? null
+                          }
+                          onStatsLayout={(layout) =>
+                            changeStatsLayout(statsHabit, layout)
+                          }
                         />
                       </PerformanceBoundary>
                       {noteSheet && (

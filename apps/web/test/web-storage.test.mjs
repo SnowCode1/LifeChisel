@@ -53,7 +53,7 @@ test('the shared repository creates schema 2 and keeps saved entries and the dev
   const snapshot = second.getSnapshot();
   assert.equal(snapshot.status, 'ready');
   assert.equal(snapshot.events.length, 2);
-  assert.equal(snapshot.events[0].version, 24);
+  assert.equal(snapshot.events[0].version, 25);
   assert.equal(snapshot.device, device);
   assert.equal(snapshot.events[0].device, device);
   assert.equal(snapshot.replay.state.values[`${habit.id}:2026-10-13`], 1);

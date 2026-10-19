@@ -2645,3 +2645,36 @@ Status: decided; being built ([SYNC.md](SYNC.md#unlocking-a-new-device)).
   approving device's passkey when it has one.
 - Declined: dropping end-to-end encryption (option D), and authenticator
   apps, which prove sign-in (passkeys already do) rather than move a key.
+
+## 19 October 2026 — Statistics that fit what is tracked (storage v25)
+
+Status: built for both apps; phone review pending
+([STATISTICS.md](STATISTICS.md#how-number-days-combine)).
+
+- Founder feedback: number statistics assumed every number adds up. A weight
+  habit would show a total in kilograms; sleep showed “233 hours”, weekday
+  averages dragged down by blank days counted as zero (Wednesday 6.5 hours
+  although every recorded Wednesday was 8 or more), and bars from zero made
+  7.5 and 9 hours look alike. The web page's fixed overview column left
+  empty space, and year calendars on the web had gaps between day columns.
+- Founder decisions, from assistant options:
+  - Number habits choose how days combine: **Total, Average, Highest or
+    Lowest** (Total by default, keeping every earlier rule). “Best” was
+    declined as ambiguous: for a fastest time or weight loss, lower is
+    better. Average, Highest and Lowest leave blank days out.
+  - The choice applies to **the whole page**, not only the values chart, so
+    the headline and chart never disagree.
+  - It is chosen **in the statistics page, not when creating a habit**, to
+    keep creation simple: a statistics edit mode reorders and hides sections,
+    with the combine choice as the summary's own setting.
+  - Each habit keeps **its own layout, outside History and Undo**, synced
+    like other preferences (storage v25).
+  - **Readings are dots on a fitted axis; totals keep bars from zero.** A
+    bar from a raised baseline would exaggerate differences.
+  - The web page puts **the summary in a band across the top** with the
+    charts in columns below.
+- Assistant implementation: core `statsLayout.ts` and `numberSummary.ts`;
+  `habitStatistics` takes the combine choice; `binValue`, `fittedRange` and
+  `valueLevel` in `statsSeries.ts`. Best day became Highest day for every
+  number habit. The `statsLayout` preference compares per habit when sync
+  rebases. Per-section settings beyond the combine choice are not built.
