@@ -141,9 +141,15 @@ test('accounts never see each other', async () => {
     ...push(await epochOf(ada.token), 0, ['ada-1']),
     token: ada.token,
   });
-  await call('/v1/key', {
+  await call('/v1/keys/recovery', {
     method: 'PUT',
-    body: { wrapped: 'adaskey', previous: null },
+    body: {
+      kind: 'recovery',
+      label: 'Emergency recovery code',
+      credentialId: null,
+      wrapped: 'adaskey',
+      previous: null,
+    },
     token: ada.token,
   });
   const bobs = await (
@@ -151,10 +157,10 @@ test('accounts never see each other', async () => {
   ).json();
   assert.deepEqual(
     { ...bobs, epoch: undefined },
-    { epoch: undefined, head: 0, events: [], more: false },
+    { epoch: undefined, head: 0, events: [], more: false, links: 0 },
   );
-  const key = await (await call('/v1/key', { token: bob.token })).json();
-  assert.deepEqual(key, { wrapped: null });
+  const keys = await (await call('/v1/keys', { token: bob.token })).json();
+  assert.deepEqual(keys, { keys: [] });
 });
 
 test('without a valid session there is no access', async () => {
@@ -182,7 +188,8 @@ test('sync is refused unless the server allows free sync', async () => {
     (await call('/v1/events', { ...push('e1', 0, ['a']), token })).status,
     403,
   );
-  assert.equal((await call('/v1/key', { token })).status, 403);
+  assert.equal((await call('/v1/keys', { token })).status, 403);
+  assert.equal((await call('/v1/links', { token })).status, 403);
 });
 
 test('the allowlist limits who can sign up', async () => {
@@ -233,20 +240,84 @@ test('browsers may call only from the app origins', async () => {
   assert.deepEqual(await health.json(), { ok: true, protocol: 1 });
 });
 
-test('the wrapped key is shared by the account and replaced only knowingly', async () => {
+test('key copies are shared by the account and replaced only knowingly', async () => {
   const { call, signUp } = server();
   const { token } = await signUp('ada@example.com');
-  const put = (wrapped, previous) =>
-    call('/v1/key', { method: 'PUT', body: { wrapped, previous }, token });
-  assert.deepEqual(await (await call('/v1/key', { token })).json(), {
-    wrapped: null,
+  const put = (id, body) =>
+    call(`/v1/keys/${id}`, { method: 'PUT', body, token });
+  const recovery = (wrapped, previous) => ({
+    kind: 'recovery',
+    label: 'Emergency recovery code',
+    credentialId: null,
+    wrapped,
+    previous,
   });
-  assert.equal((await put('first', null)).status, 200);
-  const clash = await put('second', null);
+  assert.deepEqual(await (await call('/v1/keys', { token })).json(), {
+    keys: [],
+  });
+  assert.equal((await put('recovery', recovery('first', null))).status, 200);
+  const clash = await put('recovery', recovery('second', null));
   assert.equal(clash.status, 409);
-  assert.deepEqual(await clash.json(), { ok: false, wrapped: 'first' });
-  assert.equal((await put('second', 'first')).status, 200);
-  assert.equal((await put('not base64url!', 'second')).status, 400);
+  assert.equal((await clash.json()).copy.wrapped, 'first');
+  assert.equal(
+    (await put('recovery', recovery('second', 'first'))).status,
+    200,
+  );
+  assert.equal(
+    (await put('recovery', recovery('not base64url!', 'second'))).status,
+    400,
+  );
+  const passkey = {
+    kind: 'passkey',
+    label: 'Windows Hello',
+    credentialId: 'cred',
+    wrapped: 'pkcopy',
+    previous: null,
+  };
+  assert.equal((await put('pk-1', passkey)).status, 200);
+  const listed = (await (await call('/v1/keys', { token })).json()).keys;
+  assert.deepEqual(
+    listed.map((copy) => copy.id),
+    ['pk-1', 'recovery'],
+  );
+  const removed = await call('/v1/keys/pk-1', { method: 'DELETE', token });
+  assert.deepEqual(await removed.json(), { ok: true });
+  const kept = await call('/v1/keys/recovery', { method: 'DELETE', token });
+  assert.deepEqual(await kept.json(), { ok: false });
+});
+
+test('approval requests are relayed step by step and count in pulls', async () => {
+  const { call, signUp, epochOf } = server();
+  const { token } = await signUp('ada@example.com');
+  await epochOf(token);
+  const created = await call('/v1/links', {
+    method: 'POST',
+    body: { id: 'req1', label: 'Edge on Windows', newKey: 'newkey' },
+    token,
+  });
+  assert.equal(created.status, 200);
+  const pulled = await (await call('/v1/events?after=0', { token })).json();
+  assert.equal(pulled.links, 1);
+  const open = (await (await call('/v1/links', { token })).json()).links;
+  assert.deepEqual(
+    open.map((link) => [link.id, link.label]),
+    [['req1', 'Edge on Windows']],
+  );
+  const step = (name, value) =>
+    call('/v1/links/req1', {
+      method: 'POST',
+      body: { step: name, value },
+      token,
+    });
+  assert.equal((await step('commitment', 'early')).status, 409);
+  assert.equal((await step('approverKey', 'akey')).status, 200);
+  assert.equal((await step('approverKey', 'again')).status, 409);
+  const record = await (await call('/v1/links/req1', { token })).json();
+  assert.equal(record.approverKey, 'akey');
+  assert.equal((await call('/v1/links/missing', { token })).status, 404);
+  assert.equal((await step('declined', 'yes')).status, 200);
+  const after = await (await call('/v1/events?after=0', { token })).json();
+  assert.equal(after.links, 0);
 });
 
 test('a reset erases the cloud events and refuses pushes on the old epoch', async () => {
@@ -280,9 +351,15 @@ test('deleting the account erases its mailbox and its sign-in records', async ()
     ...push(await epochOf(token), 0, ['a']),
     token,
   });
-  await call('/v1/key', {
+  await call('/v1/keys/recovery', {
     method: 'PUT',
-    body: { wrapped: 'key', previous: null },
+    body: {
+      kind: 'recovery',
+      label: 'Emergency recovery code',
+      credentialId: null,
+      wrapped: 'key',
+      previous: null,
+    },
     token,
   });
   const mailbox = [...mailboxes.values()][0];
@@ -293,7 +370,7 @@ test('deleting the account erases its mailbox and its sign-in records', async ()
   });
   assert.equal(deleted.status, 200);
   assert.equal(mailbox.head(), 0);
-  assert.equal(mailbox.key(), null);
+  assert.deepEqual(mailbox.keys(), []);
   assert.equal(db.prepare('SELECT COUNT(*) AS n FROM user').get().n, 0);
   assert.equal(db.prepare('SELECT COUNT(*) AS n FROM session').get().n, 0);
   assert.equal((await call('/v1/events?after=0', { token })).status, 401);

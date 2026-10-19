@@ -73,6 +73,7 @@ export function Settings({
   sampleData = false,
   store,
   sync,
+  syncFailed = false,
   onReviewConflicts,
   snapshot,
   theme,
@@ -88,6 +89,8 @@ export function Settings({
   store: ChangeStore;
   /** Absent with sample data, which never syncs. */
   sync: SyncController | null;
+  /** The sync code could not load; the Sync page says so. */
+  syncFailed?: boolean;
   onReviewConflicts: () => void;
   snapshot: StoreSnapshot;
   theme: Theme;
@@ -99,9 +102,10 @@ export function Settings({
   onClose: () => void;
 }) {
   const titleId = useId();
-  const PAGES = ALL_PAGES.filter((item) => item.id !== 'sync' || sync);
+  const hasSync = !!sync || syncFailed;
+  const PAGES = ALL_PAGES.filter((item) => item.id !== 'sync' || hasSync);
   const [page, setPage] = useState<Page>(
-    initialPage === 'sync' && !sync ? 'backups' : initialPage,
+    initialPage === 'sync' && !hasSync ? 'backups' : initialPage,
   );
   const state = snapshot.replay.state;
   const set = <K extends WebPreference>(kind: K, value: StoredState[K]) =>
@@ -196,6 +200,12 @@ export function Settings({
                   Track only stay visible.
                 </p>
               </>
+            )}
+            {page === 'sync' && !sync && syncFailed && (
+              <p className="hint error" role="status">
+                Sync could not load. Your habits are saved in this browser as
+                usual. Reload the page to try again.
+              </p>
             )}
             {page === 'sync' && sync && (
               <SyncSettings

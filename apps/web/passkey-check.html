@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Passkey check</title>
+    <!--
+      Development only (docs/SYNC.md): checks whether this browser's passkey
+      provider supports the WebAuthn PRF extension that passkey unlock needs.
+      Vite serves it at /passkey-check.html; builds include only index.html.
+      Nothing is sent anywhere.
+    -->
+    <style>
+      :root {
+        color-scheme: dark;
+        --ink: #e8e8e8;
+        --quiet: #979797;
+        --accent: #74bba5;
+        --danger: #d99090;
+      }
+      body {
+        max-width: 640px;
+        margin: 40px auto;
+        padding: 0 16px;
+        font:
+          16px/1.5 system-ui,
+          sans-serif;
+        color: var(--ink);
+        background: #000;
+      }
+      button {
+        height: 40px;
+        padding: 0 18px;
+        border: 0;
+        border-radius: 10px;
+        font: inherit;
+        font-weight: 600;
+        color: #000;
+        background: var(--accent);
+        cursor: pointer;
+      }
+      button:disabled {
+        opacity: 0.4;
+      }
+      p.hint {
+        color: var(--quiet);
+        font-size: 14px;
+      }
+      ol {
+        padding-left: 20px;
+      }
+      li {
+        margin: 6px 0;
+      }
+      .yes {
+        color: var(--accent);
+      }
+      .no {
+        color: var(--danger);
+      }
+      #verdict {
+        margin-top: 20px;
+        font-size: 18px;
+        font-weight: 600;
+      }
+      pre {
+        overflow-x: auto;
+        font-size: 12px;
+        color: var(--quiet);
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Passkey check</h1>
+    <p>
+      Checks whether passkeys in this browser can unlock OnPurpose sync by
+      themselves (the WebAuthn PRF extension). It creates a test passkey named
+      <strong>“Passkey check (safe to delete)”</strong> and uses it twice.
+      Nothing leaves this page.
+    </p>
+    <p class="hint">
+      Afterwards you can delete the test passkey from your passkey manager
+      (Windows: Settings → Accounts → Passkeys; iPhone: Passwords app).
+    </p>
+    <button id="run" type="button">Run check</button>
+    <ol id="steps"></ol>
+    <div id="verdict" role="status"></div>
+    <pre id="details"></pre>
+    <script type="module">
+      const steps = document.getElementById('steps');
+      const verdict = document.getElementById('verdict');
+      const details = document.getElementById('details');
+      const run = document.getElementById('run');
+      const salt = new Uint8Array(
+        await crypto.subtle.digest(
+          'SHA-256',
+          new TextEncoder().encode('onpurpose-passkey-check'),
+        ),
+      );
+      const random = (n) => crypto.getRandomValues(new Uint8Array(n));
+      const hex = (buffer) =>
+        [...new Uint8Array(buffer)]
+          .map((b) => b.toString(16).padStart(2, '0'))
+          .join('');
+      const step = (text, ok) => {
+        const item = document.createElement('li');
+        item.textContent = text;
+        if (ok !== undefined) item.className = ok ? 'yes' : 'no';
+        steps.append(item);
+      };
+      run.addEventListener('click', async () => {
+        run.disabled = true;
+        steps.textContent = '';
+        verdict.textContent = '';
+        const report = { userAgent: navigator.userAgent };
+        try {
+          if (!window.PublicKeyCredential) {
+            step('This browser has no passkey support.', false);
+            return;
+          }
+          const created = await navigator.credentials.create({
+            publicKey: {
+              rp: { name: 'OnPurpose passkey check', id: location.hostname },
+              user: {
+                id: random(16),
+                name: 'passkey-check',
+                displayName: 'Passkey check (safe to delete)',
+              },
+              challenge: random(32),
+              pubKeyCredParams: [
+                { type: 'public-key', alg: -7 },
+                { type: 'public-key', alg: -257 },
+              ],
+              authenticatorSelection: {
+                residentKey: 'required',
+                userVerification: 'required',
+              },
+              extensions: { prf: { eval: { first: salt } } },
+            },
+          });
+          const createPrf = created.getClientExtensionResults().prf ?? {};
+          report.attachment = created.authenticatorAttachment;
+          report.createPrf = {
+            enabled: createPrf.enabled,
+            resultAtCreate: !!createPrf.results?.first,
+          };
+          step(
+            `Created a test passkey (${created.authenticatorAttachment ?? 'unknown'} authenticator).`,
+            true,
+          );
+          step(
+            createPrf.enabled
+              ? 'The provider says it supports PRF.'
+              : 'The provider did not report PRF support at creation.',
+            !!createPrf.enabled,
+          );
+          const outputs = [];
+          for (const attempt of [1, 2]) {
+            const got = await navigator.credentials.get({
+              publicKey: {
+                challenge: random(32),
+                rpId: location.hostname,
+                allowCredentials: [{ type: 'public-key', id: created.rawId }],
+                userVerification: 'required',
+                extensions: { prf: { eval: { first: salt } } },
+              },
+            });
+            const first = got.getClientExtensionResults().prf?.results?.first;
+            outputs.push(first ? hex(first) : null);
+            step(
+              first
+                ? `Sign-in ${attempt} produced a ${first.byteLength}-byte unlock secret.`
+                : `Sign-in ${attempt} produced no unlock secret.`,
+              !!first,
+            );
+          }
+          const works =
+            !!outputs[0] &&
+            outputs[0] === outputs[1] &&
+            outputs[0].length === 64;
+          if (outputs[0] && outputs[1])
+            step(
+              outputs[0] === outputs[1]
+                ? 'Both sign-ins gave the same secret, as unlocking needs.'
+                : 'The two secrets differ, so they cannot unlock a key.',
+              outputs[0] === outputs[1],
+            );
+          report.prfOnSignIn = !!outputs[0];
+          report.repeatable = outputs[0] === outputs[1];
+          verdict.textContent = works
+            ? 'Passkey unlock will work with this browser and passkey provider.'
+            : 'Passkey unlock will not work here; approval from another device and the emergency recovery code still will.';
+          verdict.className = works ? 'yes' : 'no';
+          report.works = works;
+        } catch (error) {
+          step(`Stopped: ${error.name}: ${error.message}`, false);
+          report.error = `${error.name}: ${error.message}`;
+        } finally {
+          details.textContent = JSON.stringify(report, null, 2);
+          run.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>

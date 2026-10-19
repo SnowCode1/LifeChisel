@@ -2618,3 +2618,30 @@ a production server do not exist. [SYNC.md](SYNC.md) and
   sign-in (a Google Cloud OAuth client), RevenueCat payments. Also not built:
   the account deletion web page, Turnstile, rate limits and quotas on the sync
   API, and a production server.
+
+## 19 October 2026 — Unlocking sync on a new device
+
+Status: decided; being built ([SYNC.md](SYNC.md#unlocking-a-new-device)).
+
+- Founder feedback: signing in with a passkey and then having to type the
+  recovery code was confusing; the code should be for when nothing else works.
+- Founder decisions, from assistant options:
+  - **B for convenience:** where the passkey provider supports the WebAuthn
+    PRF extension, signing in with the passkey also unlocks the account key,
+    in one prompt.
+  - **A as the fallback:** a new device can be approved from a device that
+    already syncs, after the person checks that a short code matches on both
+    screens.
+  - **The recovery code becomes the emergency recovery code**, needed only
+    when no passkey unlock and no other device are available.
+- Assistant design: the server keeps a list of wrapped copies of the account
+  key (the emergency code, and one per PRF passkey) instead of one. Better
+  Auth's passkey client already keeps extension results (which hold the PRF
+  secret) on the device and returns them to the caller, so its ceremony is
+  used as it is. Device approval uses an ephemeral ECDH
+  exchange relayed by the mailbox, with commitments before the nonces are
+  revealed (as in Bluetooth numeric comparison), so a 6-digit code leaves an
+  attacker in the middle one chance in a million. Approving asks for the
+  approving device's passkey when it has one.
+- Declined: dropping end-to-end encryption (option D), and authenticator
+  apps, which prove sign-in (passkeys already do) rather than move a key.

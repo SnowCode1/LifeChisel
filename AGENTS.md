@@ -392,7 +392,11 @@ one Durable Object mailbox per account that stores and orders end-to-end
 encrypted events it cannot read; keep the mailbox logic over its small SQL
 interface so Node tests cover it. Merging, conflicts and encryption stay on
 the device in core `sync/` (`engine.ts`, `rebase.ts`, `conflicts.ts`,
-`plan.ts`, `crypto.ts`, `client.ts`, `protocol.ts`). Rebases go through
+`plan.ts`, `crypto.ts`, `client.ts`, `protocol.ts`, `link.ts`). A new device
+unlocks with a passkey's PRF secret, else by approval from a synced device
+(`link.ts`: commit-then-reveal numeric comparison; never show a code before
+the commitment checks, never send the key before the person approves), else
+the emergency recovery code. PRF results stay on the device. Rebases go through
 `ChangeStore.rewriteLog` in the ordered write queue and never alter confirmed
 events; keep a recovery copy whenever pending edits change. The web side is
 `apps/web/src/sync/` (its controller loads after the grid; keep the Better

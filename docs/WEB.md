@@ -402,15 +402,22 @@ so opening the app never waits for it. Sample data never syncs.
 
 1. Sign in with a passkey, or on the development server with an allowed email
    and password.
-2. The first browser for an account creates the recovery code; the person
-   copies or downloads it and confirms before sync starts. Other browsers
-   type it to unlock.
-3. Sync then runs in the background: after edits, every minute and with Sync
+2. The first browser for an account shows Set up sync, which creates the
+   emergency recovery code; the person copies or downloads it and confirms
+   before sync starts.
+3. Another browser unlocks by itself when it signed in with a passkey that
+   can unlock (`sync/passkeys.ts`). Otherwise it shows "Approve this browser"
+   with a six-digit code, and a synced browser shows the "Sync a new device?"
+   dialog (`sync/ApprovalPrompt.tsx`, mounted by `App.tsx`) with the new
+   browser's name and code; approving asks for one of the account's passkeys
+   first. The waiting screen offers Ask again and the emergency code.
+4. Sync then runs in the background: after edits, every minute and with Sync
    now. When this browser and the account both have habits, the page asks
    whether to combine them (with habit matching), use the account's or use
    this browser's.
-4. The Account group adds a passkey, makes a new recovery code, signs out
-   (the habits stay) or deletes the account and its cloud copy.
+5. The Account group adds a passkey (which can then unlock other browsers),
+   makes a new emergency code, signs out (the habits stay) or deletes the
+   account and its cloud copy.
 
 The session token and the account key live in IndexedDB (`sync/secrets.ts`),
 apart from the habit database. In development, requests go to `/sync`, which

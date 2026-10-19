@@ -1,10 +1,12 @@
 // The mailbox API as a device sees it (docs/SYNC.md). The platform supplies
 // the transport (base address and session token); answers are checked here
 // rather than trusted.
+import type { LinkApi, LinkRecord } from './link.ts';
 import {
   isSyncId,
-  type KeyRequest,
-  type KeyResult,
+  type KeyCopy,
+  type KeyCopyRequest,
+  type KeyCopyResult,
   type MailboxEvent,
   type PullResponse,
   type PushRequest,
@@ -14,7 +16,7 @@ import {
 
 export type SyncTransport = (
   path: string,
-  init: { method: 'GET' | 'POST' | 'PUT'; body?: string },
+  init: { method: 'GET' | 'POST' | 'PUT' | 'DELETE'; body?: string },
 ) => Promise<Response>;
 
 /** No answer from the server (offline, or it could not be reached). */
@@ -53,18 +55,53 @@ function mailboxEvent(value: unknown): MailboxEvent {
   return value as MailboxEvent;
 }
 
-export type SyncApi = {
+export type SyncApi = LinkApi & {
   pull(after: number, limit?: number): Promise<PullResponse>;
   push(request: PushRequest): Promise<PushResponse>;
-  key(): Promise<string | null>;
-  putKey(request: KeyRequest): Promise<KeyResult>;
+  keys(): Promise<KeyCopy[]>;
+  putKey(id: string, request: KeyCopyRequest): Promise<KeyCopyResult>;
+  deleteKey(id: string): Promise<boolean>;
   reset(epoch: string): Promise<ResetResult>;
 };
+
+function keyCopy(value: unknown): KeyCopy {
+  if (
+    !isRecord(value) ||
+    !isSyncId(value.id) ||
+    (value.kind !== 'recovery' && value.kind !== 'passkey') ||
+    typeof value.label !== 'string' ||
+    (value.credentialId !== null && typeof value.credentialId !== 'string') ||
+    typeof value.wrapped !== 'string' ||
+    typeof value.createdAt !== 'string'
+  )
+    invalid();
+  return value as KeyCopy;
+}
+
+function linkRecord(value: unknown): LinkRecord {
+  const text = (field: unknown) =>
+    field === undefined || typeof field === 'string';
+  if (
+    !isRecord(value) ||
+    !isSyncId(value.id) ||
+    typeof value.label !== 'string' ||
+    typeof value.createdAt !== 'string' ||
+    typeof value.newKey !== 'string' ||
+    !text(value.approverKey) ||
+    !text(value.commitment) ||
+    !text(value.approverNonce) ||
+    !text(value.newNonce) ||
+    !text(value.sealedKey) ||
+    (value.declined !== undefined && value.declined !== true)
+  )
+    invalid();
+  return value as LinkRecord;
+}
 
 export function syncApi(transport: SyncTransport): SyncApi {
   async function call(
     path: string,
-    method: 'GET' | 'POST' | 'PUT',
+    method: 'GET' | 'POST' | 'PUT' | 'DELETE',
     body?: unknown,
     conflictOk = false,
   ): Promise<unknown> {
@@ -103,6 +140,7 @@ export function syncApi(transport: SyncTransport): SyncApi {
         !isSyncId(value.epoch) ||
         !isCount(value.head) ||
         typeof value.more !== 'boolean' ||
+        !isCount(value.links) ||
         !Array.isArray(value.events)
       )
         invalid();
@@ -115,6 +153,7 @@ export function syncApi(transport: SyncTransport): SyncApi {
         epoch: value.epoch,
         head: value.head,
         more: value.more,
+        links: value.links,
         events,
       };
     },
@@ -136,19 +175,49 @@ export function syncApi(transport: SyncTransport): SyncApi {
         invalid();
       return value as PushResponse;
     },
-    async key() {
-      const value = await call('/v1/key', 'GET');
-      if (
-        !isRecord(value) ||
-        (value.wrapped !== null && typeof value.wrapped !== 'string')
-      )
-        invalid();
-      return value.wrapped as string | null;
+    async keys() {
+      const value = await call('/v1/keys', 'GET');
+      if (!isRecord(value) || !Array.isArray(value.keys)) invalid();
+      return value.keys.map(keyCopy);
     },
-    async putKey(request) {
-      const value = await call('/v1/key', 'PUT', request, true);
+    async putKey(id, request) {
+      const value = await call(`/v1/keys/${id}`, 'PUT', request, true);
       if (!isRecord(value) || typeof value.ok !== 'boolean') invalid();
-      return value as KeyResult;
+      return {
+        ok: value.ok,
+        copy: value.copy === null ? null : keyCopy(value.copy),
+      };
+    },
+    async deleteKey(id) {
+      const value = await call(`/v1/keys/${id}`, 'DELETE');
+      return isRecord(value) && value.ok === true;
+    },
+    async createLink(request) {
+      const value = await call('/v1/links', 'POST', request);
+      if (!isRecord(value) || value.ok !== true) invalid();
+    },
+    async listLinks() {
+      const value = await call('/v1/links', 'GET');
+      if (!isRecord(value) || !Array.isArray(value.links)) invalid();
+      return value.links.map(linkRecord);
+    },
+    async getLink(id) {
+      try {
+        return linkRecord(await call(`/v1/links/${id}`, 'GET'));
+      } catch (error) {
+        if (error instanceof SyncHttpError && error.status === 404) return null;
+        throw error;
+      }
+    },
+    async postLink(id, step, value) {
+      try {
+        linkRecord(await call(`/v1/links/${id}`, 'POST', { step, value }));
+        return true;
+      } catch (error) {
+        if (error instanceof SyncHttpError && error.status === 409)
+          return false;
+        throw error;
+      }
     },
     async reset(epoch) {
       const value = await call('/v1/reset', 'POST', { epoch }, true);

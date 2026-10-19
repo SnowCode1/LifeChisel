@@ -8,6 +8,7 @@ const noSync: SyncSnapshot = {
   view: { stage: 'unavailable' },
   busy: false,
   notice: null,
+  approval: null,
 };
 const subscribeNothing = () => () => {};
 

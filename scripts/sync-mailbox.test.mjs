@@ -9,7 +9,9 @@ import {
   MAX_PAYLOAD_LENGTH,
   MAX_PULL_EVENTS,
   MAX_PUSH_EVENTS,
-  parseKeyRequest,
+  parseKeyCopyRequest,
+  parseLinkRequest,
+  parseLinkStep,
   parsePullQuery,
   parsePushRequest,
   parseResetRequest,
@@ -62,8 +64,9 @@ test('a new mailbox is empty and has an epoch', () => {
     head: 0,
     events: [],
     more: false,
+    links: 0,
   });
-  assert.equal(mailbox.key(), null);
+  assert.deepEqual(mailbox.keys(), []);
 });
 
 test('pushes are numbered in arrival order with one arrival time', () => {
@@ -166,31 +169,88 @@ test('pulls page by count and by payload size', () => {
   assert.equal(solo.pull(0, 1).events.length, 1);
 });
 
-test('the wrapped key is set once, then only replaced by whoever saw it', () => {
+const recovery = (wrapped, previous) => ({
+  kind: 'recovery',
+  label: 'Emergency recovery code',
+  credentialId: null,
+  wrapped,
+  previous,
+});
+const passkeyCopy = (wrapped, previous, credentialId = 'cred1') => ({
+  kind: 'passkey',
+  label: 'Windows Hello',
+  credentialId,
+  wrapped,
+  previous,
+});
+
+test('key copies are set once, then only replaced by whoever saw them', () => {
   const { mailbox } = openMailbox();
-  assert.deepEqual(mailbox.putKey({ wrapped: 'first', previous: 'x' }), {
-    ok: false,
-    wrapped: null,
-  });
-  assert.deepEqual(mailbox.putKey({ wrapped: 'first', previous: null }), {
-    ok: true,
-    wrapped: 'first',
-  });
-  assert.deepEqual(mailbox.putKey({ wrapped: 'other', previous: null }), {
-    ok: false,
-    wrapped: 'first',
-  });
-  assert.deepEqual(mailbox.putKey({ wrapped: 'second', previous: 'first' }), {
-    ok: true,
-    wrapped: 'second',
-  });
-  assert.equal(mailbox.key(), 'second');
+  assert.equal(mailbox.putKey('recovery', recovery('first', 'x')).ok, false);
+  assert.equal(mailbox.putKey('recovery', recovery('first', null)).ok, true);
+  const clash = mailbox.putKey('recovery', recovery('other', null));
+  assert.equal(clash.ok, false);
+  assert.equal(clash.copy.wrapped, 'first');
+  assert.equal(
+    mailbox.putKey('recovery', recovery('second', 'first')).ok,
+    true,
+  );
+  assert.equal(mailbox.putKey('pk-1', passkeyCopy('p1', null)).ok, true);
+  assert.deepEqual(
+    mailbox.keys().map((copy) => [copy.id, copy.kind, copy.wrapped]),
+    [
+      ['pk-1', 'passkey', 'p1'],
+      ['recovery', 'recovery', 'second'],
+    ],
+  );
+  // Passkey copies can be removed; the recovery copy cannot.
+  assert.equal(mailbox.deleteKey('recovery'), false);
+  assert.equal(mailbox.deleteKey('pk-1'), true);
+  assert.deepEqual(
+    mailbox.keys().map((copy) => copy.id),
+    ['recovery'],
+  );
+});
+
+test('approval requests are relayed one step at a time, then expire', () => {
+  let now = Date.parse('2026-10-19T00:00:00.000Z');
+  const { mailbox } = openMailbox(':memory:', () => new Date(now));
+  assert.ok(mailbox.createLink({ id: 'r1', label: 'Edge', newKey: 'nk' }));
+  assert.equal(
+    mailbox.createLink({ id: 'r1', label: 'Edge', newKey: 'x' }),
+    false,
+  );
+  assert.equal(mailbox.pull(0, 1).links, 1);
+  // Steps are written once, in order.
+  assert.equal(mailbox.postLink('r1', 'commitment', 'c'), null);
+  assert.ok(mailbox.postLink('r1', 'approverKey', 'ak'));
+  assert.equal(mailbox.postLink('r1', 'approverKey', 'other'), null);
+  assert.ok(mailbox.postLink('r1', 'commitment', 'c'));
+  assert.ok(mailbox.postLink('r1', 'approverNonce', 'an'));
+  assert.ok(mailbox.postLink('r1', 'newNonce', 'nn'));
+  assert.ok(mailbox.postLink('r1', 'sealedKey', 'sk'));
+  assert.equal(mailbox.link('r1').sealedKey, 'sk');
+  // Finished requests leave the open list and take no more steps.
+  assert.deepEqual(mailbox.links(), []);
+  assert.equal(mailbox.postLink('r1', 'declined', 'yes'), null);
+  // At most five open requests; expired ones disappear.
+  for (let index = 0; index < 5; index++)
+    assert.ok(mailbox.createLink({ id: `o${index}`, label: 'x', newKey: 'k' }));
+  assert.equal(
+    mailbox.createLink({ id: 'o5', label: 'x', newKey: 'k' }),
+    false,
+  );
+  assert.ok(mailbox.postLink('o0', 'declined', 'yes'));
+  assert.equal(mailbox.links().length, 4);
+  now += 11 * 60 * 1000;
+  assert.equal(mailbox.links().length, 0);
+  assert.equal(mailbox.link('r1'), null);
 });
 
 test('a reset erases events and starts a new epoch but keeps the key; erase removes all', () => {
   const { mailbox } = openMailbox();
   push(mailbox, 0, [sealed('a')]);
-  mailbox.putKey({ wrapped: 'key', previous: null });
+  mailbox.putKey('recovery', recovery('key', null));
   const before = mailbox.epoch();
   assert.deepEqual(mailbox.reset('wrong'), { ok: false, epoch: before });
   const reset = mailbox.reset(before);
@@ -198,7 +258,7 @@ test('a reset erases events and starts a new epoch but keeps the key; erase remo
   assert.notEqual(reset.epoch, before);
   assert.equal(mailbox.epoch(), reset.epoch);
   assert.equal(mailbox.head(), 0);
-  assert.equal(mailbox.key(), 'key');
+  assert.equal(mailbox.keys()[0].wrapped, 'key');
   // Events pushed against the old epoch are refused, then the new one works.
   assert.equal(
     mailbox.push({ epoch: before, expectedHead: 0, events: [sealed('b')] })
@@ -208,11 +268,11 @@ test('a reset erases events and starts a new epoch but keeps the key; erase remo
   assert.equal(push(mailbox, 0, [sealed('b')]).ok, true);
   mailbox.erase();
   assert.equal(mailbox.head(), 0);
-  assert.equal(mailbox.key(), null);
+  assert.deepEqual(mailbox.keys(), []);
   assert.notEqual(mailbox.epoch(), reset.epoch);
 });
 
-test('events survive reopening, layout 1 upgrades in place, and a newer layout is refused', () => {
+test('events survive reopening, layouts 1 and 2 upgrade in place, and a newer layout is refused', () => {
   const dir = mkdtempSync(join(tmpdir(), 'onpurpose-mailbox-'));
   try {
     // A layout-1 mailbox as first deployed: events only, no epoch.
@@ -234,12 +294,28 @@ INSERT INTO events VALUES (1, 'old', 'curl', '2026-10-18T00:00:00.000Z', 'eA');`
     const second = openMailbox(path);
     assert.equal(second.mailbox.head(), 2);
     assert.equal(second.mailbox.epoch(), epoch);
-    second.db.exec("UPDATE mailbox_meta SET value = 99 WHERE key = 'schema'");
+    second.db.close();
+
+    // A layout-2 mailbox with one wrapped key: it becomes the recovery copy.
+    const two = new DatabaseSync(join(dir, 'two.db'));
+    two.exec(`CREATE TABLE mailbox_meta (key TEXT PRIMARY KEY, value INTEGER NOT NULL);
+CREATE TABLE events (sequence INTEGER PRIMARY KEY CHECK(sequence > 0), id TEXT UNIQUE NOT NULL, device TEXT NOT NULL, received_at TEXT NOT NULL, payload TEXT NOT NULL);
+CREATE TABLE mailbox_text (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+INSERT INTO mailbox_meta (key, value) VALUES ('schema', 2);
+INSERT INTO mailbox_text VALUES ('epoch', 'e2'), ('wrapped_key', 'oldkey');`);
+    two.close();
+    const upgraded = openMailbox(join(dir, 'two.db'));
+    assert.equal(upgraded.mailbox.epoch(), 'e2');
+    assert.deepEqual(
+      upgraded.mailbox.keys().map((copy) => [copy.id, copy.kind, copy.wrapped]),
+      [['recovery', 'recovery', 'oldkey']],
+    );
+    upgraded.db.exec("UPDATE mailbox_meta SET value = 99 WHERE key = 'schema'");
     assert.throws(
-      () => new Mailbox(nodeSql(second.db)).migrate(),
+      () => new Mailbox(nodeSql(upgraded.db)).migrate(),
       /schema 99 is newer/,
     );
-    second.db.close();
+    upgraded.db.close();
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -288,14 +364,35 @@ test('push, key and reset requests are checked strictly', () => {
       false,
       JSON.stringify(value)?.slice(0, 80),
     );
-  assert.equal(parseKeyRequest({ wrapped: 'abc', previous: null }).ok, true);
-  for (const value of [
-    { wrapped: 'abc' },
-    { wrapped: 'a+b', previous: null },
-    { wrapped: 'x'.repeat(1025), previous: null },
-    { wrapped: 'abc', previous: 5 },
+  assert.equal(parseKeyCopyRequest('recovery', recovery('abc', null)).ok, true);
+  assert.equal(parseKeyCopyRequest('pk-1', passkeyCopy('abc', 'def')).ok, true);
+  for (const [id, value] of [
+    ['recovery', { ...recovery('abc', null), extra: 1 }],
+    ['recovery', recovery('a+b', null)],
+    ['recovery', recovery('x'.repeat(1025), null)],
+    ['recovery', recovery('abc', 5)],
+    ['pk-1', recovery('abc', null)],
+    ['recovery', passkeyCopy('abc', null)],
+    ['pk-1', passkeyCopy('abc', null, null)],
+    ['pk-1', { ...passkeyCopy('abc', null), label: '' }],
+    ['bad id', recovery('abc', null)],
   ])
-    assert.equal(parseKeyRequest(value).ok, false);
+    assert.equal(
+      parseKeyCopyRequest(id, value).ok,
+      false,
+      JSON.stringify(value),
+    );
+  assert.equal(
+    parseLinkRequest({ id: 'r1', label: 'Edge', newKey: 'abc' }).ok,
+    true,
+  );
+  assert.equal(
+    parseLinkRequest({ id: 'r1', label: '', newKey: 'abc' }).ok,
+    false,
+  );
+  assert.equal(parseLinkStep({ step: 'commitment', value: 'abc' }).ok, true);
+  assert.equal(parseLinkStep({ step: 'other', value: 'abc' }).ok, false);
+  assert.equal(parseLinkStep({ step: 'commitment', value: 'a b' }).ok, false);
   assert.equal(parseResetRequest({ epoch: 'e1' }).ok, true);
   assert.equal(parseResetRequest({ epoch: 'e 1' }).ok, false);
 });

@@ -20,6 +20,7 @@ import { dateRangeLabel, localDateKey } from '@onpurpose/core/calendar';
 import type { FillChange } from './grid/fillWave.ts';
 import { openStore } from './storage/openStore.ts';
 import type { SyncController } from './sync/controller.ts';
+import { ApprovalPrompt } from './sync/ApprovalPrompt.tsx';
 import {
   HabitGrid,
   type CellLookStyle,
@@ -69,6 +70,7 @@ import type { SettingsPage } from './settings/Settings.tsx';
 export function App() {
   const [store, setStore] = useState<ChangeStore | null>(null);
   const [sync, setSync] = useState<SyncController | null>(null);
+  const [syncFailed, setSyncFailed] = useState(false);
   const [openError, setOpenError] = useState<string | null>(null);
   useEffect(() => {
     openStore().then(
@@ -76,11 +78,18 @@ export function App() {
         setStore(opened);
         // Sync copies the saved log in the background (docs/SYNC.md); its
         // code loads after the grid, never in the way of opening it.
-        void import('./sync/controller.ts').then(({ SyncController }) => {
-          const controller = new SyncController(opened);
-          setSync(controller);
-          void controller.init();
-        });
+        // A failed load (a dropped connection, or a development server
+        // restarted under an open tab) is retried once, then shown in
+        // Settings → Sync rather than hiding sync silently.
+        const load = () => import('./sync/controller.ts');
+        void load()
+          .catch(() => new Promise((wait) => setTimeout(wait, 2000)).then(load))
+          .then(({ SyncController }) => {
+            const controller = new SyncController(opened);
+            setSync(controller);
+            void controller.init();
+          })
+          .catch(() => setSyncFailed(true));
       },
       (error: unknown) =>
         setOpenError(
@@ -98,6 +107,7 @@ export function App() {
       key={sample.enabled ? 'sample' : 'real'}
       store={sample.enabled ? sample.store! : store}
       sync={sample.enabled ? null : sync}
+      syncFailed={!sample.enabled && syncFailed}
       sampleData={sample.enabled}
       onSampleData={sample.available ? sample.setEnabled : undefined}
       samplePreset={
@@ -184,12 +194,14 @@ function useSampleData() {
 function Tracker({
   store,
   sync,
+  syncFailed,
   sampleData,
   onSampleData,
   samplePreset,
 }: {
   store: ChangeStore;
   sync: SyncController | null;
+  syncFailed: boolean;
   sampleData: boolean;
   onSampleData?: (value: boolean) => void;
   samplePreset?: SamplePresetChoice;
@@ -744,6 +756,7 @@ function Tracker({
           sampleData={sampleData}
           store={store}
           sync={sync}
+          syncFailed={syncFailed}
           onReviewConflicts={() => {
             setSettingsPage(null);
             setPanel({ kind: 'history' });
@@ -759,6 +772,7 @@ function Tracker({
         />
       )}
       <QuickUndoToast quickUndo={quickUndo} editable={store.canEdit()} />
+      {sync && <ApprovalPrompt sync={sync} />}
     </div>
   );
 }

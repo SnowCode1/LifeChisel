@@ -97,8 +97,15 @@ function world() {
       if (options.loseReply?.()) throw new Error('reply lost');
       return result;
     },
-    key: async () => mailbox.key(),
-    putKey: async (request) => mailbox.putKey(request),
+    keys: async () => structuredClone(mailbox.keys()),
+    putKey: async (id, request) => structuredClone(mailbox.putKey(id, request)),
+    deleteKey: async (id) => mailbox.deleteKey(id),
+    createLink: async (request) => {
+      if (!mailbox.createLink(request)) throw new Error('refused');
+    },
+    listLinks: async () => structuredClone(mailbox.links()),
+    getLink: async (id) => structuredClone(mailbox.link(id)),
+    postLink: async (id, step, value) => !!mailbox.postLink(id, step, value),
     reset: async (epoch) => mailbox.reset(epoch),
   });
   async function device(name, { habits = [], account = 'acct' } = {}) {

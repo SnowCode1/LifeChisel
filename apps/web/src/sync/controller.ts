@@ -1,6 +1,10 @@
 // Sync for this browser (docs/SYNC.md): sign-in, the account key and the
 // sync engine, with one snapshot for the interface. Saving habits never
 // waits on any of it; the engine copies the log in the background.
+//
+// A new browser unlocks the account key, in order of convenience: with the
+// passkey it signed in with (when the passkey supports PRF), by approval
+// from a device that already syncs, or with the emergency recovery code.
 import { createAuthClient } from 'better-auth/client';
 import { passkeyClient } from '@better-auth/passkey/client';
 import type { ChangeStore } from '@onpurpose/core/storage/store';
@@ -9,16 +13,38 @@ import {
   SyncHttpError,
   SyncOffline,
 } from '@onpurpose/core/sync/client';
-import { WrongRecoveryCode } from '@onpurpose/core/sync/crypto';
+import {
+  WrongRecoveryCode,
+  passkeyPrfInput,
+} from '@onpurpose/core/sync/crypto';
 import {
   SyncEngine,
+  accountHasKey,
+  addPasskeyUnlock,
   createAccountKey,
   replaceRecoveryCode,
   saveAccountKey,
   unlockAccountKey,
+  unlockWithPasskey,
   type SyncStatus,
 } from '@onpurpose/core/sync/engine';
+import {
+  LinkDeclined,
+  LinkExpired,
+  LinkTampered,
+  answerRequest,
+  requestApproval,
+  type PendingApproval,
+} from '@onpurpose/core/sync/link';
 import { SYNC_BASE, SYNC_SERVER, syncAvailable } from './config.ts';
+import {
+  confirmPresence,
+  deviceLabel,
+  evaluatePasskey,
+  prfEnabled,
+  prfExtension,
+  prfSecret,
+} from './passkeys.ts';
 import {
   TOKEN,
   accountKey,
@@ -32,21 +58,28 @@ export type SyncView =
   | { stage: 'unavailable' }
   | { stage: 'loading' }
   | { stage: 'signedOut' }
-  /** The account has no key yet: this device creates it. */
+  /** The account has no key yet: this browser sets it up. */
   | { stage: 'needsKey'; user: SyncUser }
-  /** A new recovery code to save before sync starts (or replacing one). */
+  /** A new emergency recovery code to save (first setup, or replacing). */
   | { stage: 'showCode'; user: SyncUser; code: string; replacing: boolean }
-  /** The account has a key; this device needs the recovery code. */
+  /** Waiting for another device to approve this one; code once known. */
+  | { stage: 'waiting'; user: SyncUser; code: string | null }
+  /** The emergency recovery code, when nothing else can unlock. */
   | { stage: 'needsCode'; user: SyncUser }
   | { stage: 'ready'; user: SyncUser; status: SyncStatus }
   /** The server could not be reached to check the session. */
   | { stage: 'offline' };
+/** A device asking this one for approval, with the code to compare. */
+export type ApprovalRequest = { id: string; label: string; code: string };
 export type SyncSnapshot = {
   view: SyncView;
   busy: boolean;
   /** The latest message for the person, error or not. */
   notice: { text: string; error: boolean } | null;
+  approval: ApprovalRequest | null;
 };
+
+type SignedInPasskey = { credentialId: string; secret: Uint8Array | null };
 
 const errorText = (error: unknown) =>
   error instanceof SyncOffline
@@ -55,17 +88,29 @@ const errorText = (error: unknown) =>
       ? error.message
       : 'Something went wrong. Please try again.';
 
+const LINK_CHECK_MS = 20_000;
+
 export class SyncController {
   private snapshot: SyncSnapshot = {
     view: { stage: syncAvailable ? 'loading' : 'unavailable' },
     busy: false,
     notice: null,
+    approval: null,
   };
   private listeners = new Set<() => void>();
   private readonly store: ChangeStore;
   private token: string | null = null;
   private engine: SyncEngine | null = null;
   private pending: { key: CryptoKey; wrapped: string } | null = null;
+  /** The passkey used to sign in this session, and its PRF secret if any. */
+  private passkey: SignedInPasskey | null = null;
+  private waiting: AbortController | null = null;
+  private answering: {
+    approval: PendingApproval;
+    abort: AbortController;
+  } | null = null;
+  private seenRequests = new Set<string>();
+  private linkTimer: ReturnType<typeof setInterval> | null = null;
   // True private fields: the auth client is a Proxy, and React's
   // development profiler walks the props it can see (this controller is one).
   readonly #auth;
@@ -95,6 +140,10 @@ export class SyncController {
         },
       }),
     );
+    if (typeof window !== 'undefined') {
+      // Someone setting up another device usually comes back to this one.
+      window.addEventListener('focus', () => void this.checkRequests());
+    }
   }
 
   getSnapshot = () => this.snapshot;
@@ -157,18 +206,30 @@ export class SyncController {
   }
 
   private async signedIn(user: SyncUser) {
-    const key = await readSecret<CryptoKey>(accountKey(user.id));
-    if (key) {
-      this.startEngine(user, key);
+    const stored = await readSecret<CryptoKey>(accountKey(user.id));
+    if (stored) {
+      await this.unlocked(user, stored);
       return;
     }
     try {
-      const wrapped = await this.#api.key();
-      this.set({
-        view: wrapped
-          ? { stage: 'needsCode', user }
-          : { stage: 'needsKey', user },
-      });
+      if (!(await accountHasKey(this.#api))) {
+        this.set({ view: { stage: 'needsKey', user } });
+        return;
+      }
+      // 1. The passkey just used to sign in, when it can unlock.
+      const passkey = this.passkey;
+      if (passkey?.secret) {
+        const key = await unlockWithPasskey(this.#api, user.id, {
+          credentialId: passkey.credentialId,
+          prfSecret: passkey.secret,
+        });
+        if (key) {
+          await this.unlocked(user, key);
+          return;
+        }
+      }
+      // 2. Approval from a device that already syncs.
+      this.waitForApproval(user);
     } catch (error) {
       if (error instanceof SyncHttpError && error.status === 403)
         this.set({
@@ -176,6 +237,20 @@ export class SyncController {
         });
       else throw error;
     }
+  }
+
+  // The account key is here: keep it, let this sign-in's passkey unlock next
+  // time, and start syncing.
+  private async unlocked(user: SyncUser, key: CryptoKey) {
+    await writeSecret(accountKey(user.id), key);
+    const passkey = this.passkey;
+    if (passkey?.secret)
+      await addPasskeyUnlock(this.#api, user.id, key, {
+        credentialId: passkey.credentialId,
+        label: deviceLabel(),
+        prfSecret: passkey.secret,
+      }).catch(() => {});
+    this.startEngine(user, key);
   }
 
   private startEngine(user: SyncUser, key: CryptoKey) {
@@ -187,6 +262,7 @@ export class SyncController {
       server: SYNC_SERVER,
       key,
       newId: () => crypto.randomUUID(),
+      onLinkRequests: () => void this.checkRequests(),
     });
     this.engine = engine;
     engine.subscribe(() => {
@@ -195,13 +271,27 @@ export class SyncController {
     });
     this.set({ view: { stage: 'ready', user, status: engine.getStatus() } });
     engine.start();
+    if (!this.linkTimer)
+      this.linkTimer = setInterval(() => {
+        if (typeof document === 'undefined' || !document.hidden)
+          void this.checkRequests();
+      }, LINK_CHECK_MS);
+    void this.checkRequests();
   }
 
   private async forget(account?: string) {
     this.engine?.stop();
     this.engine = null;
+    this.waiting?.abort();
+    this.waiting = null;
+    this.answering?.abort.abort();
+    this.answering = null;
+    if (this.linkTimer) clearInterval(this.linkTimer);
+    this.linkTimer = null;
     this.token = null;
     this.pending = null;
+    this.passkey = null;
+    this.set({ approval: null });
     await deleteSecret(TOKEN);
     if (account) await deleteSecret(accountKey(account));
   }
@@ -217,6 +307,7 @@ export class SyncController {
       });
       if (error)
         throw new Error(error.message ?? 'Could not create the account.');
+      this.passkey = null;
       await this.signedIn(data.user);
     });
   }
@@ -227,33 +318,85 @@ export class SyncController {
         password,
       });
       if (error) throw new Error(error.message ?? 'Could not sign in.');
+      this.passkey = null;
       await this.signedIn(data.user);
     });
   }
   signInWithPasskey() {
     return this.act(async () => {
-      const result = await this.#auth.signIn.passkey();
-      if (result?.error)
+      const result = await this.#auth.signIn.passkey({
+        extensions: prfExtension(await passkeyPrfInput()),
+        returnWebAuthnResponse: true,
+      });
+      if (!result || result.error)
         throw new Error(
-          result.error.message ?? 'Passkey sign-in did not finish.',
+          result?.error?.message ?? 'Passkey sign-in did not finish.',
         );
+      const webauthn = (
+        result as {
+          webauthn?: {
+            response: { id: string };
+            clientExtensionResults: unknown;
+          };
+        }
+      ).webauthn;
+      this.passkey = webauthn
+        ? {
+            credentialId: webauthn.response.id,
+            secret: prfSecret(webauthn.clientExtensionResults),
+          }
+        : null;
       const { data } = await this.#auth.getSession();
       if (!data) throw new Error('Passkey sign-in did not finish.');
       await this.signedIn(data.user);
     });
   }
+  /**
+   * Add a passkey for this account. When the account key is here and the
+   * passkey supports it, the passkey can unlock sync on new devices too.
+   */
   addPasskey() {
     return this.act(async () => {
+      const input = await passkeyPrfInput();
       const result = await this.#auth.passkey.addPasskey({
-        name: 'This browser',
+        name: deviceLabel(),
+        extensions: prfExtension(input),
+        returnWebAuthnResponse: true,
       });
-      if (result?.error)
-        throw new Error(result.error.message ?? 'The passkey was not added.');
-      return 'Passkey added. Next time you can sign in with it.';
+      if (!result || result.error)
+        throw new Error(result?.error?.message ?? 'The passkey was not added.');
+      const webauthn = (
+        result as {
+          webauthn?: {
+            response: { id: string };
+            clientExtensionResults: unknown;
+          };
+        }
+      ).webauthn;
+      const user = this.user();
+      const key = user && (await readSecret<CryptoKey>(accountKey(user.id)));
+      if (!webauthn || !user || !key)
+        return 'Passkey added. Next time you can sign in with it.';
+      const results = webauthn.clientExtensionResults;
+      let secret = prfSecret(results);
+      // Some providers give the secret only when signing in: ask once more.
+      if (!secret && prfEnabled(results))
+        secret = await evaluatePasskey(webauthn.response.id, input).catch(
+          () => null,
+        );
+      if (!secret)
+        return 'Passkey added. It signs you in; this passkey provider cannot unlock sync by itself, so new devices are approved from this one.';
+      await addPasskeyUnlock(this.#api, user.id, key, {
+        credentialId: webauthn.response.id,
+        label: deviceLabel(),
+        prfSecret: secret,
+      });
+      this.passkey = { credentialId: webauthn.response.id, secret };
+      return 'Passkey added. Signing in with it also unlocks sync on new devices.';
     });
   }
 
-  // The account key and recovery code.
+  // Setting up the account key, and the emergency recovery code.
 
   createKey() {
     return this.act(async () => {
@@ -275,16 +418,23 @@ export class SyncController {
       }
       const pending = this.pending;
       if (!pending) return;
-      if (!(await saveAccountKey(this.#api, pending.wrapped))) {
-        this.pending = null;
-        this.set({ view: { stage: 'needsCode', user: view.user } });
-        return 'Another device set up encryption first. Enter its recovery code.';
-      }
-      await writeSecret(accountKey(view.user.id), pending.key);
       this.pending = null;
-      this.startEngine(view.user, pending.key);
+      if (!(await saveAccountKey(this.#api, pending.wrapped))) {
+        // Another device set up the account meanwhile: unlock from it.
+        this.waitForApproval(view.user);
+        return;
+      }
+      await this.unlocked(view.user, pending.key);
     });
   }
+  /** Use the emergency recovery code instead of waiting for approval. */
+  useRecoveryCode = () => {
+    const user = this.user();
+    if (!user) return;
+    this.waiting?.abort();
+    this.waiting = null;
+    this.set({ view: { stage: 'needsCode', user }, notice: null });
+  };
   enterCode(code: string) {
     return this.act(async () => {
       const user = this.user();
@@ -295,11 +445,12 @@ export class SyncController {
           this.set({ view: { stage: 'needsKey', user } });
           return;
         }
-        await writeSecret(accountKey(user.id), key);
-        this.startEngine(user, key);
+        await this.unlocked(user, key);
       } catch (error) {
         if (error instanceof WrongRecoveryCode)
-          throw new Error('That recovery code does not match this account.');
+          throw new Error(
+            'That emergency recovery code does not match this account.',
+          );
         throw error;
       }
     });
@@ -321,6 +472,129 @@ export class SyncController {
     const key = await readSecret<CryptoKey>(accountKey(user.id));
     if (!key) throw new Error('This browser no longer has the account key.');
     return key;
+  }
+
+  // Approval between devices (core link.ts). This browser asks when it has
+  // no key; a browser that syncs answers.
+
+  /** Ask a device that already syncs to approve this one. */
+  waitForApproval = (user = this.user()) => {
+    if (!user) return;
+    this.waiting?.abort();
+    const abort = new AbortController();
+    this.waiting = abort;
+    this.set({ view: { stage: 'waiting', user, code: null }, notice: null });
+    requestApproval({
+      api: this.#api,
+      account: user.id,
+      label: deviceLabel(),
+      newId: () => crypto.randomUUID(),
+      signal: abort.signal,
+      onCode: (code) => {
+        if (this.waiting === abort)
+          this.set({ view: { stage: 'waiting', user, code } });
+      },
+    }).then(
+      async (key) => {
+        if (this.waiting !== abort) return;
+        this.waiting = null;
+        await this.unlocked(user, key);
+        this.set({
+          notice: { text: 'Approved. This browser now syncs.', error: false },
+        });
+      },
+      (error: unknown) => {
+        if (this.waiting !== abort || abort.signal.aborted) return;
+        this.waiting = null;
+        this.set({
+          view: { stage: 'waiting', user, code: null },
+          notice: {
+            text:
+              error instanceof LinkDeclined
+                ? 'The other device declined. Ask again, or use the emergency recovery code.'
+                : error instanceof LinkExpired
+                  ? 'The request expired. Ask again.'
+                  : error instanceof LinkTampered
+                    ? 'The devices did not agree, so nothing was shared. Ask again.'
+                    : errorText(error),
+            error: true,
+          },
+        });
+      },
+    );
+  };
+  /** True while this browser's request for approval is open. */
+  isWaiting = () => this.waiting !== null;
+
+  // On a device that syncs: notice requests and prepare the code to compare.
+  private async checkRequests() {
+    const view = this.snapshot.view;
+    if (view.stage !== 'ready' || this.answering) return;
+    try {
+      const requests = await this.#api.listLinks();
+      const next = requests.find(
+        (request) => !request.approverKey && !this.seenRequests.has(request.id),
+      );
+      if (!next) return;
+      this.seenRequests.add(next.id);
+      const abort = new AbortController();
+      const approval = await answerRequest({
+        api: this.#api,
+        account: view.user.id,
+        id: next.id,
+        signal: abort.signal,
+      });
+      if (!approval) return;
+      this.answering = { approval, abort };
+      this.set({
+        approval: {
+          id: approval.id,
+          label: approval.label,
+          code: approval.code,
+        },
+      });
+    } catch (error) {
+      if (error instanceof LinkTampered)
+        this.set({
+          notice: {
+            text: 'A device asked to sync, but the request was altered on the way, so it was refused.',
+            error: true,
+          },
+        });
+    }
+  }
+  /** The person checked the code: confirm with a passkey, then send the key. */
+  approve() {
+    return this.act(async () => {
+      const user = this.user();
+      const answering = this.answering;
+      if (!user || !answering) return;
+      const passkeys = await this.#auth.passkey
+        .listUserPasskeys()
+        .then((result) => result.data ?? [])
+        .catch(() => []);
+      if (
+        passkeys.length &&
+        !(await confirmPresence(
+          passkeys.map((passkey) => passkey.credentialID),
+        ))
+      )
+        throw new Error('Approval needs your passkey on this device.');
+      await answering.approval.approve(await this.key(user));
+      this.answering = null;
+      this.set({ approval: null });
+      return `${answering.approval.label} can now sync.`;
+    });
+  }
+  decline() {
+    return this.act(async () => {
+      const answering = this.answering;
+      if (!answering) return;
+      this.answering = null;
+      this.set({ approval: null });
+      await answering.approval.decline();
+      return 'Declined. Nothing was shared.';
+    });
   }
 
   // Syncing.

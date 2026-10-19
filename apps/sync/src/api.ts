@@ -1,15 +1,19 @@
 // The sync HTTP API (docs/SYNC.md), kept apart from Cloudflare's runtime so
 // the Node tests drive the same routes with real sign-in and a real mailbox.
 // The account comes only from the signed-in session, never from the request.
+import type { LinkRecord, LinkStep } from '@onpurpose/core/sync/link';
 import {
   MAX_BATCH_PAYLOAD,
   SYNC_PROTOCOL_VERSION,
-  parseKeyRequest,
+  parseKeyCopyRequest,
+  parseLinkRequest,
+  parseLinkStep,
   parsePullQuery,
   parsePushRequest,
   parseResetRequest,
-  type KeyRequest,
-  type KeyResult,
+  type KeyCopy,
+  type KeyCopyRequest,
+  type KeyCopyResult,
   type PullResponse,
   type PushRequest,
   type PushResponse,
@@ -21,8 +25,17 @@ type Maybe<T> = Promise<T> | T;
 export type MailboxClient = {
   push(request: PushRequest): Maybe<PushResponse>;
   pull(after: number, limit: number): Maybe<PullResponse>;
-  key(): Maybe<string | null>;
-  putKey(request: KeyRequest): Maybe<KeyResult>;
+  keys(): Maybe<KeyCopy[]>;
+  putKey(id: string, request: KeyCopyRequest): Maybe<KeyCopyResult>;
+  deleteKey(id: string): Maybe<boolean>;
+  createLink(request: {
+    id: string;
+    label: string;
+    newKey: string;
+  }): Maybe<boolean>;
+  links(): Maybe<LinkRecord[]>;
+  link(id: string): Maybe<LinkRecord | null>;
+  postLink(id: string, step: LinkStep, value: string): Maybe<LinkRecord | null>;
   reset(epoch: string): Maybe<ResetResult>;
   erase(): Maybe<void>;
 };
@@ -49,7 +62,7 @@ function corsHeaders(request: Request, origins: string[]) {
   return {
     'Access-Control-Allow-Origin': origin,
     'Access-Control-Allow-Credentials': 'true',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Expose-Headers': 'set-auth-token',
     'Access-Control-Max-Age': '86400',
@@ -87,19 +100,59 @@ export async function mailboxOf(
 }
 export const mailboxName = (userId: string) => `user:${userId}`;
 
-async function key(request: Request, config: ApiConfig) {
-  if (request.method !== 'GET' && request.method !== 'PUT')
-    return json({ error: 'Use GET or PUT.' }, 405);
+// Copies of the account key: GET /v1/keys, PUT and DELETE /v1/keys/:id.
+async function keys(request: Request, config: ApiConfig, id: string | null) {
   const access = await mailboxOf(request, config);
   if ('refused' in access) return access.refused;
-  if (request.method === 'GET')
-    return json({ wrapped: await access.mailbox.key() });
+  const mailbox = access.mailbox;
+  if (id === null) {
+    if (request.method !== 'GET') return json({ error: 'Use GET.' }, 405);
+    return json({ keys: await mailbox.keys() });
+  }
+  if (request.method === 'DELETE')
+    return json({ ok: await mailbox.deleteKey(id) });
+  if (request.method !== 'PUT')
+    return json({ error: 'Use PUT or DELETE.' }, 405);
   const read = await readJson(request, 8192);
   if ('error' in read) return read.error;
-  const parsed = parseKeyRequest(read.body);
+  const parsed = parseKeyCopyRequest(id, read.body);
   if (!parsed.ok) return json({ error: parsed.error }, 400);
-  const result = await access.mailbox.putKey(parsed.value);
+  const result = await mailbox.putKey(id, parsed.value);
   return json(result, result.ok ? 200 : 409);
+}
+
+// Device approval: POST and GET /v1/links, GET and POST /v1/links/:id.
+async function links(request: Request, config: ApiConfig, id: string | null) {
+  const access = await mailboxOf(request, config);
+  if ('refused' in access) return access.refused;
+  const mailbox = access.mailbox;
+  if (id === null) {
+    if (request.method === 'GET') return json({ links: await mailbox.links() });
+    if (request.method !== 'POST')
+      return json({ error: 'Use GET or POST.' }, 405);
+    const read = await readJson(request, 2048);
+    if ('error' in read) return read.error;
+    const parsed = parseLinkRequest(read.body);
+    if (!parsed.ok) return json({ error: parsed.error }, 400);
+    const created = await mailbox.createLink(parsed.value);
+    return json({ ok: created }, created ? 200 : 409);
+  }
+  if (request.method === 'GET') {
+    const link = await mailbox.link(id);
+    return link ? json(link) : json({ error: 'No such request.' }, 404);
+  }
+  if (request.method !== 'POST')
+    return json({ error: 'Use GET or POST.' }, 405);
+  const read = await readJson(request, 2048);
+  if ('error' in read) return read.error;
+  const parsed = parseLinkStep(read.body);
+  if (!parsed.ok) return json({ error: parsed.error }, 400);
+  const link = await mailbox.postLink(
+    id,
+    parsed.value.step,
+    parsed.value.value,
+  );
+  return link ? json(link) : json({ error: 'That step is not open.' }, 409);
 }
 
 async function reset(request: Request, config: ApiConfig) {
@@ -145,7 +198,12 @@ async function route(request: Request, config: ApiConfig) {
   if (url.pathname.startsWith('/api/auth/'))
     return config.auth.handler(request);
   if (url.pathname === '/v1/events') return events(request, config, url);
-  if (url.pathname === '/v1/key') return key(request, config);
+  const keyPath = /^\/v1\/keys(?:\/([A-Za-z0-9_-]{1,64}))?$/.exec(url.pathname);
+  if (keyPath) return keys(request, config, keyPath[1] ?? null);
+  const linkPath = /^\/v1\/links(?:\/([A-Za-z0-9_-]{1,64}))?$/.exec(
+    url.pathname,
+  );
+  if (linkPath) return links(request, config, linkPath[1] ?? null);
   if (url.pathname === '/v1/reset') return reset(request, config);
   return json({ error: 'Not found.' }, 404);
 }

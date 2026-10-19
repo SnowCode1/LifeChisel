@@ -14,7 +14,7 @@ import type { SyncController } from './controller.ts';
 import { syncAvailable } from './config.ts';
 
 /**
- * Settings → Sync (docs/SYNC.md): sign in, set up the recovery code, see
+ * Settings → Sync (docs/SYNC.md): sign in, unlock or set up sync, see
  * status and choose what to keep on first sync. Everything works without it.
  */
 export function SyncSettings({
@@ -55,13 +55,13 @@ export function SyncSettings({
       )}
       {view.stage === 'signedOut' && <SignIn sync={sync} busy={busy} />}
       {view.stage === 'needsKey' && (
-        <Group title="Set up encryption">
+        <Group title="Set up sync">
           <p className="hint">
             Your habits are encrypted on this device before they are sent, so
-            the server cannot read them. A recovery code unlocks them on your
-            other devices. Keep it somewhere safe: without it and without any
-            signed-in device, nobody can recover the cloud copy, not even us.
-            Backups you export are not affected.
+            the server cannot read them. Your other devices unlock them with
+            your passkey or by approving each other. An emergency recovery code
+            is the way back if you ever lose every device; keep it somewhere
+            safe.
           </p>
           <div className="sync-actions">
             <button
@@ -70,10 +70,13 @@ export function SyncSettings({
               disabled={busy}
               onClick={() => void sync.createKey()}
             >
-              Create recovery code
+              Set up sync
             </button>
           </div>
         </Group>
+      )}
+      {view.stage === 'waiting' && (
+        <Waiting code={view.code} busy={busy} sync={sync} />
       )}
       {view.stage === 'showCode' && (
         <RecoveryCode
@@ -220,24 +223,30 @@ function RecoveryCode({
   const [saved, setSaved] = useState(false);
   const [copied, setCopied] = useState(false);
   const download = () => {
-    const text = `OnPurpose recovery code\n\n${code}\n\nKeep this somewhere safe. It unlocks your synced habits on a new device.\n`;
+    const text = `OnPurpose emergency recovery code\n\n${code}\n\nKeep this somewhere safe. You only need it if you cannot sign in with your passkey or approve from another of your devices.\n`;
     const url = URL.createObjectURL(new Blob([text], { type: 'text/plain' }));
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'OnPurpose recovery code.txt';
+    link.download = 'OnPurpose emergency recovery code.txt';
     document.body.append(link);
     link.click();
     link.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
   return (
-    <Group title={replacing ? 'Your new recovery code' : 'Your recovery code'}>
+    <Group
+      title={
+        replacing
+          ? 'Your new emergency recovery code'
+          : 'Your emergency recovery code'
+      }
+    >
       <p className="hint">
         {replacing
           ? 'The old code no longer works. Save this one instead.'
-          : 'Save this code now, in a password manager or on paper. You need it to sync another device.'}
+          : 'Save this in a password manager or on paper. You only need it if you lose every device and cannot use your passkey. Without it then, nobody can recover your synced habits, not even us.'}
       </p>
-      <output className="recovery-code" aria-label="Recovery code">
+      <output className="recovery-code" aria-label="Emergency recovery code">
         {code}
       </output>
       <div className="sync-actions">
@@ -258,7 +267,7 @@ function RecoveryCode({
         </button>
       </div>
       <label className="setting-row">
-        <span>I have saved my recovery code</span>
+        <span>I have saved my emergency recovery code</span>
         <input
           type="checkbox"
           checked={saved}
@@ -279,13 +288,66 @@ function RecoveryCode({
   );
 }
 
+// This browser asked a device that already syncs to approve it.
+function Waiting({
+  code,
+  busy,
+  sync,
+}: {
+  code: string | null;
+  busy: boolean;
+  sync: SyncController;
+}) {
+  return (
+    <Group title="Approve this browser">
+      <p className="hint">
+        Your habits are encrypted so only your devices can read them. Open
+        OnPurpose on a device that already syncs; it will ask to approve this
+        browser.
+      </p>
+      {code ? (
+        <>
+          <p className="hint">Approve there if it shows this code:</p>
+          <output className="approval-code" aria-label="Code to compare">
+            {code}
+          </output>
+        </>
+      ) : (
+        <p className="sync-status">
+          {sync.isWaiting() ? 'Waiting for your other device…' : 'Not waiting.'}
+        </p>
+      )}
+      <div className="sync-actions">
+        {!sync.isWaiting() && (
+          <button
+            type="button"
+            className="done-button"
+            disabled={busy}
+            onClick={() => sync.waitForApproval()}
+          >
+            Ask again
+          </button>
+        )}
+        <button
+          type="button"
+          className="text-button"
+          disabled={busy}
+          onClick={sync.useRecoveryCode}
+        >
+          No other device? Use the emergency recovery code
+        </button>
+      </div>
+    </Group>
+  );
+}
+
 function EnterCode({ sync, busy }: { sync: SyncController; busy: boolean }) {
   const [code, setCode] = useState('');
   return (
-    <Group title="Unlock sync on this browser">
+    <Group title="Emergency recovery code">
       <p className="hint">
-        Enter the recovery code you saved when you set up sync. Letters and
-        dashes can be typed in any case.
+        Enter the emergency recovery code you saved when you set up sync.
+        Letters and dashes can be typed in any case.
       </p>
       <form
         className="sync-form"
@@ -295,7 +357,7 @@ function EnterCode({ sync, busy }: { sync: SyncController; busy: boolean }) {
         }}
       >
         <label>
-          Recovery code
+          Emergency recovery code
           <input
             className="recovery-input"
             autoComplete="off"
@@ -317,9 +379,9 @@ function EnterCode({ sync, busy }: { sync: SyncController; busy: boolean }) {
             type="button"
             className="text-button"
             disabled={busy}
-            onClick={() => void sync.signOut()}
+            onClick={() => sync.waitForApproval()}
           >
-            Sign out
+            Approve from another device instead
           </button>
         </div>
       </form>
@@ -585,7 +647,8 @@ function Account({ sync, busy }: { sync: SyncController; busy: boolean }) {
         <span>
           Passkey
           <span className="hint">
-            Sign in without a password on this device
+            Sign in without a password; where your passkey provider allows, it
+            also unlocks sync on new devices
           </span>
         </span>
         <button
@@ -599,7 +662,7 @@ function Account({ sync, busy }: { sync: SyncController; busy: boolean }) {
       </div>
       <div className="setting-row">
         <span>
-          Recovery code
+          Emergency recovery code
           <span className="hint">
             Lost it? Make a new one; the old one stops working
           </span>

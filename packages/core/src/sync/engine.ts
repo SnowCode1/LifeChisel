@@ -15,12 +15,19 @@ import {
   newAccountKey,
   newRecoveryCode,
   openEvent,
+  passkeyCopyId,
   sealEvent,
   unwrapAccountKey,
+  unwrapAccountKeyWithPasskey,
   wrapAccountKey,
+  wrapAccountKeyWithPasskey,
 } from './crypto.ts';
 import { combinePlan, hasHabitActions, suggestMatches } from './plan.ts';
-import { MAX_BATCH_PAYLOAD, MAX_PUSH_EVENTS } from './protocol.ts';
+import {
+  MAX_BATCH_PAYLOAD,
+  MAX_PUSH_EVENTS,
+  RECOVERY_COPY,
+} from './protocol.ts';
 import { rebase } from './rebase.ts';
 
 /** What the person sees about sync on this device. */
@@ -77,6 +84,8 @@ export type EngineOptions = {
   key: CryptoKey;
   newId: () => string;
   now?: () => Date;
+  /** Called when a pull shows devices waiting for approval (link.ts). */
+  onLinkRequests?: (count: number) => void;
 };
 
 type Pulled = {
@@ -249,6 +258,7 @@ export class SyncEngine {
     let cursor = after;
     for (;;) {
       const page = await api.pull(cursor);
+      if (page.links) this.options.onLinkRequests?.(page.links);
       if (epoch && page.epoch !== epoch) return this.pullAll(0);
       epoch = page.epoch;
       head = page.head;
@@ -468,45 +478,107 @@ export class SyncEngine {
   }
 }
 
-// Account key setup (docs/SYNC.md, Encryption).
+// Account key setup and unlocking (docs/SYNC.md, Unlocking a new device).
+// The server keeps copies of the key, one per unlock secret: the emergency
+// recovery code and each passkey that can produce a PRF secret.
 
-/** A new account key and recovery code; nothing is saved yet. */
+/** A new account key and emergency recovery code; nothing is saved yet. */
 export async function createAccountKey(account: string) {
   const key = await newAccountKey();
   const code = newRecoveryCode();
   return { key, code, wrapped: await wrapAccountKey(key, code, account) };
 }
 
+const RECOVERY_LABEL = 'Emergency recovery code';
+
 /**
- * Store the wrapped key for the account. False when another device set one
- * first; then this device must unlock with that recovery code instead.
+ * Store the recovery copy for a new account. False when another device set
+ * up the account first; then this device unlocks another way.
  */
 export async function saveAccountKey(api: SyncApi, wrapped: string) {
-  return (await api.putKey({ wrapped, previous: null })).ok;
+  const result = await api.putKey(RECOVERY_COPY, {
+    kind: 'recovery',
+    label: RECOVERY_LABEL,
+    credentialId: null,
+    wrapped,
+    previous: null,
+  });
+  return result.ok;
 }
 
-/** Unlock the account key on a new device with the recovery code. */
+/** True when the account's key is set up (on any device). */
+export async function accountHasKey(api: SyncApi): Promise<boolean> {
+  return (await api.keys()).some((copy) => copy.id === RECOVERY_COPY);
+}
+
+/** Unlock the account key with the emergency recovery code. */
 export async function unlockAccountKey(
   api: SyncApi,
   account: string,
   code: string,
 ): Promise<CryptoKey | null> {
-  const wrapped = await api.key();
-  if (!wrapped) return null;
-  return unwrapAccountKey(wrapped, code, account);
+  const copy = (await api.keys()).find((item) => item.id === RECOVERY_COPY);
+  if (!copy) return null;
+  return unwrapAccountKey(copy.wrapped, code, account);
 }
 
-/** Replace the recovery code; the old one stops working. */
+/** Replace the emergency recovery code; the old one stops working. */
 export async function replaceRecoveryCode(
   api: SyncApi,
   account: string,
   key: CryptoKey,
 ): Promise<string> {
-  const previous = await api.key();
+  const previous =
+    (await api.keys()).find((item) => item.id === RECOVERY_COPY)?.wrapped ??
+    null;
   const code = newRecoveryCode();
   const wrapped = await wrapAccountKey(key, code, account);
-  const result = await api.putKey({ wrapped, previous });
+  const result = await api.putKey(RECOVERY_COPY, {
+    kind: 'recovery',
+    label: RECOVERY_LABEL,
+    credentialId: null,
+    wrapped,
+    previous,
+  });
   if (!result.ok)
     throw new Error('The recovery code changed elsewhere; try again.');
   return code;
+}
+
+/**
+ * Let a passkey unlock the account: store a copy of the key encrypted with
+ * the passkey's PRF secret. Replaces that passkey's earlier copy.
+ */
+export async function addPasskeyUnlock(
+  api: SyncApi,
+  account: string,
+  key: CryptoKey,
+  passkey: { credentialId: string; label: string; prfSecret: Uint8Array },
+): Promise<void> {
+  const id = await passkeyCopyId(passkey.credentialId);
+  const previous =
+    (await api.keys()).find((item) => item.id === id)?.wrapped ?? null;
+  const result = await api.putKey(id, {
+    kind: 'passkey',
+    label: passkey.label.slice(0, 60) || 'Passkey',
+    credentialId: passkey.credentialId,
+    wrapped: await wrapAccountKeyWithPasskey(key, passkey.prfSecret, account),
+    previous,
+  });
+  if (!result.ok) throw new Error('The passkey changed elsewhere; try again.');
+}
+
+/**
+ * Unlock with the passkey just used to sign in, if it has a copy of the key.
+ * Null when this passkey cannot unlock (no copy, or no PRF secret).
+ */
+export async function unlockWithPasskey(
+  api: SyncApi,
+  account: string,
+  passkey: { credentialId: string; prfSecret: Uint8Array },
+): Promise<CryptoKey | null> {
+  const id = await passkeyCopyId(passkey.credentialId);
+  const copy = (await api.keys()).find((item) => item.id === id);
+  if (!copy) return null;
+  return unwrapAccountKeyWithPasskey(copy.wrapped, passkey.prfSecret, account);
 }

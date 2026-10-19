@@ -55,7 +55,7 @@ Worker.
 | Protocol         | Request/response shapes and limits shared by the server and both apps                  | `packages/core/src/sync/protocol.ts` |
 | Device sync      | Pull, decrypt, rebase, conflicts, push, first sync; shared by both apps                | `packages/core/src/sync/`            |
 | Sign-in          | Accounts, bearer sessions, passkeys; later Apple, Google and an emailed code           | `apps/sync/src/auth.ts`              |
-| Web app          | Sign-in, recovery code, status, first-sync choice, conflicts, restore as changes       | `apps/web/src/sync/`                 |
+| Web app          | Sign-in, unlocking, approvals, status, first-sync choice, conflicts, restore           | `apps/web/src/sync/`                 |
 | Payments (to do) | Unlock and sync entitlements on every platform                                         | RevenueCat                           |
 
 Why one mailbox per account: each handles one request at a time, so "refuse a
@@ -74,18 +74,29 @@ its current contents; erasing the cloud copy starts a new one, so a device
 notices instead of pushing onto it blindly.
 
 - `GET /v1/events?after=N&limit=M`: the epoch, the head (newest number), the
-  events numbered after `N` oldest first, and whether more remain.
+  events numbered after `N` oldest first, and whether more remain. It also
+  counts the open device approval requests (`links`), so a signed-in device
+  notices one without asking separately.
 - `POST /v1/events` with `{ epoch, expectedHead, events }`: appends the
   events in order, all or nothing, if both still match. Otherwise `409` with
   the reason: `behind` (pull first), `duplicate` (a retried push that had
   landed; pull to see it) or `reset` (the cloud copy was erased).
-- `GET /v1/key`, `PUT /v1/key` with `{ wrapped, previous }`: the account key
-  wrapped with the recovery code. Setting it is compare-and-set, so two
-  devices cannot replace each other's key.
+- `GET /v1/keys`: the account key's wrapped copies (see
+  [Unlocking a new device](#unlocking-a-new-device)), each with an ID, kind,
+  label and wrapped key. `PUT /v1/keys/:id` with
+  `{ kind, label, wrapped, previous }` saves one, compare-and-set, so two
+  devices cannot replace each other's copy; the copy named `recovery` is the
+  emergency recovery code's. `DELETE /v1/keys/:id` removes a passkey copy;
+  the recovery copy cannot be removed. At most 20 copies.
+- `POST /v1/links` with `{ id, label, newKey }`, `GET /v1/links` (the open
+  requests), `GET /v1/links/:id` and `POST /v1/links/:id` with
+  `{ step, value }`: the relay for device approval. Each step can be written
+  once and only in order; requests expire after ten minutes, and at most five
+  can be open.
 - `POST /v1/reset` with `{ epoch }`: erase the events and start a new epoch;
-  the key stays.
+  the key copies stay.
 - Account deletion is Better Auth's `POST /api/auth/delete-user`; it erases the
-  mailbox (events and key) before the sign-in records go.
+  mailbox (events, key copies and requests) before the sign-in records go.
 
 There is no other merge on the server. The limits live in `protocol.ts`; the
 device-side client (`client.ts`) checks every answer rather than trusting it.
@@ -187,24 +198,84 @@ Founder decision: from day one. Assistant implementation (`crypto.ts`):
   sync. Each event is encrypted with it before it leaves the device; the
   ciphertext is bound to the event's position, ID and device, so the server
   cannot reorder, renumber or swap events without decryption failing.
-- The person saves a **recovery code** once: 160 random bits shown as eight
-  groups of four characters (Crockford base32; I, L and O are read as 1, 1
-  and 0, and case and dashes do not matter). The server keeps the key only
-  wrapped with a key derived from the code and the account (HKDF-SHA-256).
-  On a new device the person signs in and types the code.
+- The server keeps the key only in **wrapped copies**, each encrypted with a
+  key that only the person can produce (HKDF-SHA-256, bound to the account
+  and to the kind of copy). There is one copy for the emergency recovery code
+  and one for each passkey that can unlock; how a new device gets the key is
+  described in [Unlocking a new device](#unlocking-a-new-device).
+- The person saves an **emergency recovery code** once: 160 random bits shown
+  as eight groups of four characters (Crockford base32; I, L and O are read as
+  1, 1 and 0, and case and dashes do not matter).
 - A signed-in device can make a new code (Settings → Sync); the old one stops
   working. For that the key is kept extractable, in IndexedDB in the browser
   (never `localStorage`). This replaces the earlier proposal of a
   non-extractable key: a page script could use either kind to decrypt, so not
   being able to make a new code was the larger risk.
-- The server sees: the account, event IDs, device IDs, sizes and times. It
-  never sees habit names, notes or values.
-- If every device and the recovery code are lost, nobody can read the cloud
-  copy, including us. Local backup files are unaffected. The app says this
-  when sync is set up.
-- Assistant proposals not built: approving a new device from a signed-in one
-  (a QR or short code), and passkeys that unlock the key. The phone still
-  needs a native AES-GCM library.
+- The server sees: the account, event IDs, device IDs, sizes and times, and
+  the names of the passkeys and devices involved in unlocking (such as "Edge
+  on Windows"). It never sees habit names, notes or values.
+- If every device, every unlocking passkey and the emergency code are lost,
+  nobody can read the cloud copy, including us. Local backup files are
+  unaffected. The app says this when sync is set up.
+- The phone still needs a native AES-GCM library.
+
+## Unlocking a new device
+
+Founder decision (19 October 2026, see DECISIONS.md): a passkey unlocks sync
+at sign-in for convenience; approving from a device that is already synced is
+the fallback; the recovery code becomes the **emergency recovery code**, for
+when neither is possible. Assistant implementation:
+
+A signed-in device tries, in order: the key it already holds; a passkey copy
+(if it signed in with a passkey that can unlock); otherwise it asks the
+person's other devices for approval, offering the emergency code as a link.
+An account with no key yet shows Set up sync.
+
+**Passkey unlock** (`crypto.ts`, `engine.ts`, web `passkeys.ts`). Passkeys
+with the WebAuthn PRF extension give the site a secret that only that passkey
+can produce, after the person's fingerprint, face or PIN. The app asks for it
+with the same input everywhere (SHA-256 of `onpurpose-passkey-unlock-v1`) at
+every passkey sign-in, and wraps the account key with a key derived from that
+secret. The copy is named after the passkey (`pk-` and a hash of its
+credential ID), so the server cannot tell which secret belongs to which
+passkey beyond that name. Better Auth's passkey client is used as is: with
+`returnWebAuthnResponse` it hands the extension result to the app and does not
+send it to the server. Adding a passkey in Settings → Sync stores its copy
+straight away when the provider supports PRF; otherwise the next passkey
+sign-in on a synced device does. A passkey synced through iCloud Keychain,
+Google Password Manager or another manager unlocks on every device it reaches.
+Support depends on the browser and the passkey provider:
+`/passkey-check.html` (development only) tests a browser.
+
+**Approval from another device** (`link.ts`). The server relays messages
+between the two devices but must not be able to slip in its own key. This is
+the numeric comparison used to pair Bluetooth devices:
+
+1. The new device makes a one-time P-256 key pair and posts a request with
+   its public key and a label ("Edge on Windows").
+2. A synced device that notices the request (on focus, every 20 seconds while
+   visible, or from a pull's `links` count) posts its own one-time public key.
+3. The new device posts a commitment: SHA-256 of both public keys and a random
+   nonce that it keeps secret for now.
+4. The approver posts its random nonce; then the new device reveals its own.
+   The approver checks it against the commitment.
+5. Both show a six-digit code computed from both keys and both nonces. A
+   relay that substituted keys would have had to commit before seeing the
+   approver's nonce, so it gets a matching code only by a one-in-a-million
+   guess, once per request.
+6. The person compares the codes and approves (confirming with one of the
+   account's passkeys when it has any). The approver then seals the account
+   key for the new device with a key from the ECDH secret and the whole
+   transcript, and the new device opens it. Declining, or closing the prompt,
+   ends the request.
+
+Each step is write-once in the mailbox, so a second approver cannot take over
+a request; a request lasts ten minutes. Signing in still needs the account
+(password or passkey); approval only moves the key.
+
+**Emergency recovery code**: typed on the new device, it unwraps the
+`recovery` copy as before. It is offered from the approval screen and in
+Settings → Sync.
 
 Encryption limits the harm of a breach, including a sign-in breach, but the
 account email, billing records and metadata are still personal data.
@@ -298,18 +369,21 @@ Founder-approved principle: the source is public, so nothing may depend on the
 app behaving. Every check that matters runs on the server with keys that never
 appear in the code, and every device distrusts what it pulls.
 
-| Threat                                                | Protection                                                                                                                                                                                 |
-| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| A modified app claims sync it has not paid for        | The Worker checks the entitlement with RevenueCat using a secret held only in Cloudflare. Until that exists, sync is refused everywhere except development servers (`DEV_FREE_SYNC`).      |
-| A modified app reads or writes another account        | The mailbox is chosen from the signed-in session (`user:<id>`), never from anything the request names.                                                                                     |
-| Leaked secrets                                        | Secrets are Worker secrets (`wrangler secret put`), never in the repository. The public local secret is refused off localhost.                                                             |
-| Password guessing and sign-up abuse                   | Better Auth rate limits per address, stored in D1. Before launch: Cloudflare Turnstile on sign-up and rate limits on the sync API.                                                         |
-| A fake app harvesting sign-ins                        | Passkeys belong to the apps' domain, so another app cannot use them.                                                                                                                       |
-| Abuse or running up costs                             | Payload and batch limits (in the protocol). Before launch: a storage quota per account. Only paying accounts may push.                                                                     |
-| A breached server or a Cloudflare insider             | Contents are encrypted, and each ciphertext is bound to its position, ID and device, so reordering, renumbering or swapping fails to decrypt. Withholding the newest events is not caught. |
-| A buggy or hostile device in the person's own account | Tampered data fails decryption, and pulled events must replay before anything is rewritten; on either failure sync stops and says so, and nothing on this device changes.                  |
-| Theft of the encryption key in the browser            | Kept in IndexedDB, never `localStorage`; Markdown is already rendered safely; strict security headers when the web app is hosted.                                                          |
-| Guessing a recovery code                              | 160 random bits, so guessing is not feasible.                                                                                                                                              |
+| Threat                                                 | Protection                                                                                                                                                                                 |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| A modified app claims sync it has not paid for         | The Worker checks the entitlement with RevenueCat using a secret held only in Cloudflare. Until that exists, sync is refused everywhere except development servers (`DEV_FREE_SYNC`).      |
+| A modified app reads or writes another account         | The mailbox is chosen from the signed-in session (`user:<id>`), never from anything the request names.                                                                                     |
+| Leaked secrets                                         | Secrets are Worker secrets (`wrangler secret put`), never in the repository. The public local secret is refused off localhost.                                                             |
+| Password guessing and sign-up abuse                    | Better Auth rate limits per address, stored in D1. Before launch: Cloudflare Turnstile on sign-up and rate limits on the sync API.                                                         |
+| A fake app harvesting sign-ins                         | Passkeys belong to the apps' domain, so another app cannot use them.                                                                                                                       |
+| Abuse or running up costs                              | Payload and batch limits (in the protocol). Before launch: a storage quota per account. Only paying accounts may push.                                                                     |
+| A breached server or a Cloudflare insider              | Contents are encrypted, and each ciphertext is bound to its position, ID and device, so reordering, renumbering or swapping fails to decrypt. Withholding the newest events is not caught. |
+| A buggy or hostile device in the person's own account  | Tampered data fails decryption, and pulled events must replay before anything is rewritten; on either failure sync stops and says so, and nothing on this device changes.                  |
+| Theft of the encryption key in the browser             | Kept in IndexedDB, never `localStorage`; Markdown is already rendered safely; strict security headers when the web app is hosted.                                                          |
+| Guessing a recovery code                               | 160 random bits, so guessing is not feasible.                                                                                                                                              |
+| A server answering a device approval with its own key  | The six-digit codes on both screens differ unless the server guesses one in a million before seeing the approver's nonce; the person declines, and the key never leaves the approver.      |
+| Someone approving their own device on a stolen session | Approval needs the person at a synced device, comparing codes and (with passkeys) confirming one. The new device can sign in but cannot read anything until then.                          |
+| A passkey copy read from the server                    | It opens only with the PRF secret, which only that passkey produces after user verification; the secret is never sent.                                                                     |
 
 One limit is accepted (founder agreement): the one-time unlock is enforced on
 the device, so anyone who builds the GPL source can remove the habit limit,
@@ -324,14 +398,22 @@ Anyone may also run their own sync server, at their own cost.
 | -------------------------- | -------------------------------------------------------------------------------------- |
 | `src/api.ts`               | Routes, sessions, the sync entitlement rule, CORS; no Cloudflare imports               |
 | `src/auth.ts`              | Better Auth settings: bearer tokens, passkeys, development passwords, deletion, limits |
-| `src/mailbox.ts`           | The account mailbox over a small SQL interface (layout 2: epoch and wrapped key)       |
+| `src/mailbox.ts`           | The account mailbox over a small SQL interface (layout 3: epoch, key copies, requests) |
 | `src/index.ts`             | Cloudflare wiring: the Durable Object, D1 and secrets                                  |
 | `migrations/0001_auth.sql` | D1 sign-in tables, generated by `scripts/generate-auth-schema.mjs`                     |
 
 `apps/web/src/sync/` holds the browser side: `controller.ts` (sign-in, key,
 engine and one snapshot for the interface; loaded after the grid opens),
-`SyncSettings.tsx` (Settings → Sync), `Conflicts.tsx` (top of History),
-`secrets.ts` (the session token and key in IndexedDB) and `config.ts`.
+`SyncSettings.tsx` (Settings → Sync, including the waiting and emergency code
+screens), `ApprovalPrompt.tsx` (the "Sync a new device?" dialog on a synced
+device), `passkeys.ts` (PRF requests and device labels), `Conflicts.tsx` (top
+of History), `secrets.ts` (the session token and key in IndexedDB) and
+`config.ts`. Mailboxes upgrade layout 1 or 2 to 3 when they wake; a layout 2
+wrapped key becomes the `recovery` copy.
+
+`apps/web/passkey-check.html` is served by the Vite dev server only: it makes
+a test passkey ("Passkey check (safe to delete)") and reports whether this
+browser and provider return a stable PRF secret. Nothing leaves the page.
 
 Sign-in: sessions are bearer tokens (the `set-auth-token` response header, then
 `Authorization: Bearer`), the same for the browser and the phone. Passkeys are
@@ -373,7 +455,8 @@ tool can leave `workerd.exe` holding the port.
 `npm run sync:build` bundles both environments without deploying (a dry run).
 `npm test` runs the mailbox and the API with real Better Auth against Node's
 SQLite, and two simulated devices syncing through a real mailbox with real
-encryption (`scripts/sync-engine.test.mjs`).
+encryption (`scripts/sync-engine.test.mjs`), and device approval and passkey
+copies, including a relay that swaps keys (`scripts/sync-link.test.mjs`).
 
 ### Deploying the development server
 
@@ -412,7 +495,9 @@ Cloudflare account alone; the phone follows.
    deployed as the development server.
 3. Storage v24 and schema 2 (founder-approved). **Done.**
 4. Device sync in core: push, pull, rebase and conflicts. **Done.**
-5. Encryption and the recovery code. **Done.**
+5. Encryption and the recovery code. **Done.** Passkey unlock and approval
+   from another device (19 October 2026). **Done** on the web; real-device PRF
+   support is still to be checked.
 6. The web app: sign-in, passkeys, sync, conflicts in History, first sync and
    restore as changes. **Done** against the development server.
 7. The phone: Sign in with Apple (needs the Apple Developer membership),

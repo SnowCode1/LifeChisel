@@ -5,7 +5,7 @@
 import type { StoredEvent } from '../storage/model.ts';
 import type { MailboxEvent, SealedEvent } from './protocol.ts';
 
-const subtle = () => globalThis.crypto.subtle;
+const subtle = () => crypto.subtle;
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
@@ -38,7 +38,7 @@ export function fromBase64Url(text: string): Uint8Array {
   return bytes;
 }
 const random = (length: number) =>
-  globalThis.crypto.getRandomValues(new Uint8Array(length));
+  crypto.getRandomValues(new Uint8Array(length));
 // Web Crypto takes plain buffers; views over decoded text are copied.
 const buffer = (bytes: Uint8Array): Uint8Array<ArrayBuffer> =>
   new Uint8Array(bytes);
@@ -166,12 +166,26 @@ function codeBytes(code: string): Uint8Array {
   return bytes;
 }
 
-// The code has 160 random bits, so a fast key derivation is enough; binding
-// to the account means a code never unlocks another account's key.
-async function wrappingKey(code: string, account: string) {
+// Wrapping the account key (docs/SYNC.md, Unlocking a new device). The
+// server keeps copies of the key, each encrypted with a key derived from one
+// unlock secret: the emergency recovery code, or a passkey's PRF output. Both
+// secrets have at least 160 random bits, so a fast key derivation is enough;
+// binding to the account means a secret never unlocks another account's key.
+type WrapKind = 'recovery' | 'passkey';
+const wrapVersions: Record<WrapKind, number> = { recovery: 1, passkey: 2 };
+const wrapSalts: Record<WrapKind, string> = {
+  recovery: 'onpurpose-recovery-v1',
+  passkey: 'onpurpose-passkey-v1',
+};
+
+async function wrappingKey(
+  secret: Uint8Array,
+  kind: WrapKind,
+  account: string,
+) {
   const material = await subtle().importKey(
     'raw',
-    buffer(codeBytes(code)),
+    buffer(secret),
     'HKDF',
     false,
     ['deriveKey'],
@@ -180,7 +194,7 @@ async function wrappingKey(code: string, account: string) {
     {
       name: 'HKDF',
       hash: 'SHA-256',
-      salt: encoder.encode('onpurpose-recovery-v1'),
+      salt: encoder.encode(wrapSalts[kind]),
       info: encoder.encode(account),
     },
     material,
@@ -190,18 +204,16 @@ async function wrappingKey(code: string, account: string) {
   );
 }
 
-const WRAP_VERSION = 1;
-
-/** The account key encrypted with a recovery code, for the server. */
-export async function wrapAccountKey(
+async function wrap(
   key: CryptoKey,
-  recoveryCode: string,
+  secret: Uint8Array,
+  kind: WrapKind,
   account: string,
 ): Promise<string> {
-  const code = normalizeRecoveryCode(recoveryCode);
-  if (!code) throw new Error('Invalid recovery code.');
   const iv = random(12);
-  const raw = new Uint8Array(await subtle().exportKey('raw', key));
+  const raw = new Uint8Array(
+    (await subtle().exportKey('raw', key)) as ArrayBuffer,
+  );
   const sealed = new Uint8Array(
     await subtle().encrypt(
       {
@@ -209,26 +221,25 @@ export async function wrapAccountKey(
         iv,
         additionalData: encoder.encode(`onpurpose-key-v1|${account}`),
       },
-      await wrappingKey(code, account),
+      await wrappingKey(secret, kind, account),
       raw,
     ),
   );
   const out = new Uint8Array(1 + iv.length + sealed.length);
-  out[0] = WRAP_VERSION;
+  out[0] = wrapVersions[kind];
   out.set(iv, 1);
   out.set(sealed, 1 + iv.length);
   return toBase64Url(out);
 }
 
-export async function unwrapAccountKey(
+async function unwrap(
   wrapped: string,
-  recoveryCode: string,
+  secret: Uint8Array,
+  kind: WrapKind,
   account: string,
-): Promise<CryptoKey> {
-  const code = normalizeRecoveryCode(recoveryCode);
-  if (!code) throw new WrongRecoveryCode();
+): Promise<CryptoKey | null> {
   const bytes = fromBase64Url(wrapped);
-  if (bytes[0] !== WRAP_VERSION) throw new Error('Unsupported key format.');
+  if (bytes[0] !== wrapVersions[kind]) return null;
   let raw: ArrayBuffer;
   try {
     raw = await subtle().decrypt(
@@ -237,14 +248,83 @@ export async function unwrapAccountKey(
         iv: buffer(bytes.subarray(1, 13)),
         additionalData: encoder.encode(`onpurpose-key-v1|${account}`),
       },
-      await wrappingKey(code, account),
+      await wrappingKey(secret, kind, account),
       buffer(bytes.subarray(13)),
     );
   } catch {
-    throw new WrongRecoveryCode();
+    return null;
   }
-  return subtle().importKey('raw', raw, { name: 'AES-GCM' }, true, [
+  return importAccountKey(new Uint8Array(raw));
+}
+
+/** An account key from its raw bytes (extractable, so it can be rewrapped). */
+export function importAccountKey(raw: Uint8Array): Promise<CryptoKey> {
+  return subtle().importKey('raw', buffer(raw), { name: 'AES-GCM' }, true, [
     'encrypt',
     'decrypt',
-  ]);
+  ]) as Promise<CryptoKey>;
+}
+
+/** The account key encrypted with the emergency recovery code. */
+export async function wrapAccountKey(
+  key: CryptoKey,
+  recoveryCode: string,
+  account: string,
+): Promise<string> {
+  const code = normalizeRecoveryCode(recoveryCode);
+  if (!code) throw new Error('Invalid recovery code.');
+  return wrap(key, codeBytes(code), 'recovery', account);
+}
+
+export async function unwrapAccountKey(
+  wrapped: string,
+  recoveryCode: string,
+  account: string,
+): Promise<CryptoKey> {
+  const code = normalizeRecoveryCode(recoveryCode);
+  const key = code
+    ? await unwrap(wrapped, codeBytes(code), 'recovery', account)
+    : null;
+  if (!key) throw new WrongRecoveryCode();
+  return key;
+}
+
+/**
+ * The PRF input every OnPurpose passkey is asked for. The passkey turns it
+ * into the same 32-byte secret on every device it syncs to; the secret never
+ * leaves the device.
+ */
+export async function passkeyPrfInput(): Promise<Uint8Array<ArrayBuffer>> {
+  return new Uint8Array(
+    await subtle().digest(
+      'SHA-256',
+      encoder.encode('onpurpose-passkey-unlock-v1'),
+    ),
+  );
+}
+
+/** The account key encrypted with a passkey's PRF secret. */
+export function wrapAccountKeyWithPasskey(
+  key: CryptoKey,
+  prfSecret: Uint8Array,
+  account: string,
+): Promise<string> {
+  return wrap(key, prfSecret, 'passkey', account);
+}
+
+/** The account key from a passkey's copy, or null when it does not open. */
+export function unwrapAccountKeyWithPasskey(
+  wrapped: string,
+  prfSecret: Uint8Array,
+  account: string,
+): Promise<CryptoKey | null> {
+  return unwrap(wrapped, prfSecret, 'passkey', account);
+}
+
+/** A short, stable ID for a passkey's copy of the key (server-safe). */
+export async function passkeyCopyId(credentialId: string): Promise<string> {
+  const digest = new Uint8Array(
+    await subtle().digest('SHA-256', encoder.encode(credentialId)),
+  );
+  return `pk-${toBase64Url(digest).slice(0, 40)}`;
 }

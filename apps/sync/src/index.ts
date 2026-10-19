@@ -2,9 +2,11 @@
 // in D1 through Better Auth; each account's events live in its own Durable
 // Object mailbox.
 import { DurableObject } from 'cloudflare:workers';
+import type { LinkRecord, LinkStep } from '@onpurpose/core/sync/link';
 import type {
-  KeyRequest,
-  KeyResult,
+  KeyCopy,
+  KeyCopyRequest,
+  KeyCopyResult,
   PullResponse,
   PushRequest,
   PushResponse,
@@ -60,12 +62,32 @@ export class AccountMailbox extends DurableObject<Env> {
     return this.mailbox.pull(after, limit);
   }
 
-  key(): string | null {
-    return this.mailbox.key();
+  keys(): KeyCopy[] {
+    return this.mailbox.keys();
   }
 
-  putKey(request: KeyRequest): KeyResult {
-    return this.mailbox.putKey(request);
+  putKey(id: string, request: KeyCopyRequest): KeyCopyResult {
+    return this.mailbox.putKey(id, request);
+  }
+
+  deleteKey(id: string): boolean {
+    return this.mailbox.deleteKey(id);
+  }
+
+  createLink(request: { id: string; label: string; newKey: string }): boolean {
+    return this.mailbox.createLink(request);
+  }
+
+  links(): LinkRecord[] {
+    return this.mailbox.links();
+  }
+
+  link(id: string): LinkRecord | null {
+    return this.mailbox.link(id);
+  }
+
+  postLink(id: string, step: LinkStep, value: string): LinkRecord | null {
+    return this.mailbox.postLink(id, step, value);
   }
 
   reset(epoch: string): ResetResult {

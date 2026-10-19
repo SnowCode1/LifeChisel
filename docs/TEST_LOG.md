@@ -2288,3 +2288,30 @@ device" in B's History. Found and fixed during these runs: React's
 development profiler crashed on the controller's Proxy-valued auth client.
 Not checked: conflicts and change-based restore in a browser (covered by the
 Node tests only), Safari and Firefox, and any phone.
+
+### Unlocking a new device: passkeys and approval
+
+`npm test` adds `scripts/sync-link.test.mjs`: an honest approval moves the
+account key and shows the same code on both sides, with nothing in the
+relayed record that opens it; a relay that answers each side with its own
+keys gets different codes, and declining keeps the key on the approver; a
+changed nonce in transit is caught before any code shows; a declined request
+ends, and a second approver cannot take one over; a passkey copy opens only
+with its own secret, credential and account. The mailbox and API tests add
+key copies (compare-and-set, the recovery copy that cannot be removed),
+request steps that are write-once and in order, expiry, the open-request
+count in pulls, and the layout 1 → 3 and 2 → 3 upgrades (a layout 2 key
+becomes the recovery copy).
+
+Headless desktop Chrome, an isolated local Worker and fictional accounts,
+with virtual authenticators that support PRF: browser A set up sync with the
+emergency code and added a passkey ("Passkey added", with unlock); browser B,
+holding the same passkey, signed in with it and synced with no code and
+showed A's tick; browser C signed in with a password, waited with a code, and
+A's "Sync a new device?" dialog showed the same code (808 684); approving
+(with A's passkey) synced C and showed A's tick; deleting the account worked.
+A virtual authenticator does not carry its PRF seed into a copied
+credential, so B was a cleared profile of the same browser rather than a
+second authenticator. Found and fixed: the approval dialog stretched to its
+maximum height. Not checked: PRF on real passkey providers (Windows Hello,
+iCloud Keychain, Google Password Manager); `/passkey-check.html` tests that.
