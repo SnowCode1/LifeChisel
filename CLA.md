@@ -18,7 +18,7 @@ maintainer in writing that it no longer applies to future contributions.
 - **"Maintainer"** means Daniel Adams, the copyright holder of OnPurpose, or a
   successor under section 9.
 - **"Project"** means the OnPurpose software, documentation and related
-  material published at <https://github.com/SnowCode1/OnPurpose> or any later
+  material published at <https://github.com/SnowCode1/LifeChisel> or any later
   location the Maintainer uses for it.
 - **"You"** means the individual who signs this agreement.
 - **"Contribution"** means any work of authorship, including changes or

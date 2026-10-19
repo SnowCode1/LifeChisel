@@ -61,6 +61,7 @@
     "landing:dev": "npm run dev -w @onpurpose/landing",
     "landing:build": "npm run build -w @onpurpose/landing",
     "landing:preview": "npm run preview -w @onpurpose/landing",
+    "site:build": "npm run landing:build && npm run web:build && node scripts/build-site.mjs",
     "sync:dev": "npm run dev -w @onpurpose/sync",
     "sync:build": "npm run build:check -w @onpurpose/sync",
     "sync:deploy:dev": "npm run deploy:dev -w @onpurpose/sync",

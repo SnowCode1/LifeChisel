@@ -42,8 +42,8 @@ You need Node.js 24 (see `.nvmrc`), npm and git. To run the app on a phone you
 also need Expo Go for SDK 57; a simulator or emulator works too.
 
 ```sh
-git clone https://github.com/SnowCode1/OnPurpose.git
-cd OnPurpose
+git clone https://github.com/SnowCode1/LifeChisel.git
+cd LifeChisel
 npm ci
 npm start
 ```

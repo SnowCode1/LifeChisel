@@ -1,7 +1,7 @@
 /**
- * Where the page's links go: the page's only settings. Hosting is not chosen
- * yet; `/app/` assumes the web app is served under the same site. In
- * development it is the web app's own development server.
+ * Where the page's links go: the page's only settings. The web app is served
+ * at `/app/` on the same site (docs/WEB.md, Hosting). In development it is the
+ * web app's own development server.
  */
 export const APP_URL = import.meta.env.DEV ? 'http://localhost:5173/' : '/app/';
 

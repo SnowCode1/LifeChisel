@@ -115,8 +115,8 @@ then the iPhone and Android buttons point at the closing section.
 
 `src/config.ts` holds `APP_URL` (`/app/` in builds, which assumes the web app is
 served under the same site, and the web app's development server
-`http://localhost:5173/` in development) and `STORE_URLS`. Hosting is not
-chosen yet; change them there when it is.
+`http://localhost:5173/` in development) and `STORE_URLS`. Both sites are
+hosted together on Vercel; see Hosting in [WEB.md](WEB.md#hosting).
 
 `npm run web:dev` (`scripts/web-dev.mjs`) starts both development servers, so
 the web app's brand and this page's links reach each other. Both ports are
@@ -139,5 +139,6 @@ Run from the repository root:
 
 - Store listings and their links.
 - A privacy policy and imprint, which store listings will need.
-- Final brand, domain, hosting and analytics (if any) for the page.
+- Final brand and analytics (if any) for the page. The domain (lifechisel.app)
+  and hosting are chosen but the site is private until launch.
 - Social preview images (`og:image`) and a sitemap.

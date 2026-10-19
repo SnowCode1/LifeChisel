@@ -3,7 +3,15 @@ const expoConfig = require('eslint-config-expo/flat');
 
 module.exports = defineConfig([
   expoConfig,
-  { ignores: ['**/dist/**', '.expo/**', '.dev/**', '**/.wrangler/**'] },
+  {
+    ignores: [
+      '**/dist/**',
+      'site-dist/**',
+      '.expo/**',
+      '.dev/**',
+      '**/.wrangler/**',
+    ],
+  },
   {
     // Cloudflare's runtime provides cloudflare:* modules; there is no file.
     files: ['apps/sync/**'],

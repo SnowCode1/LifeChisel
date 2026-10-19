@@ -380,13 +380,13 @@ If both apps need something, it belongs in core.
 
 ## Stack
 
-| Piece     | Choice                                  | Why                                                                                       |
-| --------- | --------------------------------------- | ----------------------------------------------------------------------------------------- |
-| Framework | React 19 with TypeScript                | Same language and component model as the phone app, so knowledge and core code carry over |
-| Build     | Vite                                    | Fast development server, small static production build; no server code                    |
-| Grid      | Plain DOM table and CSS                 | Browsers already scroll, zoom, select and announce tables well; see "Why not Skia" below  |
-| Storage   | SQLite WebAssembly in a worker, on OPFS | Runs the phone's own `sqliteRepository`, schema 1 and event log unchanged                 |
-| Hosting   | Any static host (none chosen yet)       | The build is static files; no backend, login or special headers are required              |
+| Piece     | Choice                                    | Why                                                                                       |
+| --------- | ----------------------------------------- | ----------------------------------------------------------------------------------------- |
+| Framework | React 19 with TypeScript                  | Same language and component model as the phone app, so knowledge and core code carry over |
+| Build     | Vite                                      | Fast development server, small static production build; no server code                    |
+| Grid      | Plain DOM table and CSS                   | Browsers already scroll, zoom, select and announce tables well; see "Why not Skia" below  |
+| Storage   | SQLite WebAssembly in a worker, on OPFS   | Runs the phone's own `sqliteRepository`, schema 1 and event log unchanged                 |
+| Hosting   | Vercel, at `/app/` under the landing page | The build is static files; no backend, login or special headers are required; see Hosting |
 
 ### Why not Skia
 
@@ -461,6 +461,26 @@ web, and the other way round. The database also holds this browser's device
 ID, sync state and open conflicts (SQL schema 2, see
 [STORAGE.md](STORAGE.md)).
 
+## Hosting
+
+The landing page and this app are one static site on Vercel (Pro plan) at
+`lifechisel.app`: the landing page at the root and this app at `/app/` (Vite's
+`base` for builds). `vercel.json` at the repository root tells Vercel to run
+`npm ci` and `npm run site:build`, which builds both and lets
+`scripts/build-site.mjs` copy them into `site-dist/`; hashed files under
+`assets/` are cached for a year.
+
+- **Deploys:** Vercel builds on every push to GitHub. The production branch
+  deploys to `lifechisel.app`; other branches get preview addresses.
+- **Private until launch:** Deployment Protection covers All Deployments with
+  Vercel Authentication, so only members of the Vercel team can open any
+  address, the production domain included. Testers get a Shareable Link from
+  the project page instead of an account. Password Protection was not chosen
+  (US$20 a month extra per project on Pro).
+- **Sync is off there:** builds show sync only when `VITE_SYNC_URL` is set,
+  and it is not set, so the hosted app has no sync until a production sync
+  server exists ([SYNC.md](SYNC.md)).
+
 ## Commands
 
 Run from the repository root:
@@ -470,6 +490,7 @@ Run from the repository root:
 | `npm run web:dev`     | Development servers for this app and the landing page  |
 | `npm run web:build`   | Typecheck and build static files into `apps/web/dist/` |
 | `npm run web:preview` | Serve the production build locally                     |
+| `npm run site:build`  | Build both sites and assemble them into `site-dist/`   |
 
 `npm run check` typechecks the phone and web apps, and `npm test` includes
 `apps/web/test/`, which runs the browser storage path against SQLite
