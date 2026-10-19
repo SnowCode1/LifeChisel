@@ -162,6 +162,12 @@ and uncertainty about whether something was saved.
 - Keep statistics calm and uncluttered: plain numbers rather than a dominant
   percentage, a slim goal row, and chart explanations behind info controls.
   Statistics retains streaks, completion charts and numeric charts.
+- Statistics fit what is tracked (19 October 2026): a number habit chooses
+  how its days combine (Total, Average, Highest or Lowest) for the whole page,
+  in a statistics edit mode rather than when creating the habit. The edit
+  mode also reorders and hides sections; each habit keeps its own layout,
+  outside History and synced. Readings use dots on a fitted axis, totals keep
+  bars from zero. On the web the summary is a band above the charts.
 - Tap days in the statistics calendar to toggle checkboxes or edit numeric totals
   using the same entry behaviour as the grid. Today navigation scrolls back quickly.
 - Give each habit up to eight optional named notes (17 October 2026; earlier,

@@ -116,7 +116,7 @@ test('style reload/backup persist while preserving Undo, Redo and entry grouping
       digest,
     ),
     decoded = await decodeArchive(backup, digest);
-  assert.equal(JSON.parse(backup).version, 24);
+  assert.equal(JSON.parse(backup).version, 25);
   await store.exclusive(() => store.replace(decoded.events));
   assert.equal(store.getSnapshot().replay.state.checkboxStyle, 'boxes');
   assert.deepEqual(store.getSnapshot().events, events);
@@ -131,7 +131,7 @@ test('style reload/backup persist while preserving Undo, Redo and entry grouping
           change: { kind: 'haptics', before: true, after: false },
         },
       ]),
-    /version-24/,
+    /version-25/,
   );
 });
 test('week shading follows fixed Monday/Sunday weeks across year, leap day, DST and pre-epoch dates', () => {

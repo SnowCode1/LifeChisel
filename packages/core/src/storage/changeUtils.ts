@@ -33,7 +33,8 @@ export function isPreference(change: Change): change is PreferenceChange {
     change.kind === 'streakNumbers' ||
     change.kind === 'roundCheckboxes' ||
     change.kind === 'connectorThickness' ||
-    change.kind === 'joinedEndsOnly'
+    change.kind === 'joinedEndsOnly' ||
+    change.kind === 'statsLayout'
   );
 }
 export function sameValue(left: unknown, right: unknown): boolean {

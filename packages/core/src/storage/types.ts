@@ -11,6 +11,7 @@ import type {
 } from '../displayPreferences.ts';
 import type { GridSize } from '../gridSizing.ts';
 import type { ThemeMode } from '../theme.ts';
+import type { StatsLayout } from '../statsLayout.ts';
 
 export type StoredState = {
   habits: Habit[];
@@ -48,6 +49,8 @@ export type StoredState = {
    * because this one has not chosen its own yet. Present only when nonempty.
    */
   inheritedPreferences?: DevicePreferenceKind[];
+  /** v25: each habit's statistics layout, by habit id (absent: default). */
+  statsLayouts?: Record<string, StatsLayout>;
 };
 /**
  * v24: preferences tied to one screen or one device's hardware. Each device
@@ -150,7 +153,19 @@ export type Change =
   | { kind: 'connectorThickness'; before: number | null; after: number }
   // v21: joined runs show only their end boxes.
   | { kind: 'joinedEndsOnly'; before: boolean | null; after: boolean }
+  | StatsLayoutChange
   | BatchChange;
+/**
+ * v25: one habit's statistics page (section order, hidden sections, how
+ * numbers combine). A preference: synced, outside History and Undo. null is
+ * the default layout.
+ */
+export type StatsLayoutChange = {
+  kind: 'statsLayout';
+  habitId: string;
+  before: StatsLayout | null;
+  after: StatsLayout | null;
+};
 export type PreferenceChange = Extract<
   Change,
   {
@@ -179,7 +194,8 @@ export type PreferenceChange = Extract<
       | 'streakNumbers'
       | 'roundCheckboxes'
       | 'connectorThickness'
-      | 'joinedEndsOnly';
+      | 'joinedEndsOnly'
+      | 'statsLayout';
   }
 >;
 /** A habit action that may sit inside a batch (v24). */
@@ -220,7 +236,8 @@ export type EventMeta = {
     | 21
     | 22
     | 23
-    | 24;
+    | 24
+    | 25;
   id: string;
   sequence: number;
   recordedAt: string;
@@ -257,7 +274,8 @@ export type CurrentChangeEvent = EventMeta & {
     | 21
     | 22
     | 23
-    | 24;
+    | 24
+    | 25;
 } & (
     | { type: 'change'; groupId: string; change: HabitChange }
     | { type: 'undo' | 'redo'; targetId: string; change: HabitChange }
@@ -311,4 +329,5 @@ export type Replay = {
   hasV22: boolean;
   hasV23: boolean;
   hasV24: boolean;
+  hasV25: boolean;
 };

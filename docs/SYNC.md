@@ -181,6 +181,7 @@ assistant proposal that grid sizes travel with sync.
 | Synced to every device                   | Kept per device                             |
 | ---------------------------------------- | ------------------------------------------- |
 | Week start, Hide completed               | Text size                                   |
+| Statistics layouts (v25)                 |                                             |
 | Theme mode and both backgrounds          | Grid sizes (name column, day columns, rows) |
 | Checkbox style, cell look, week dividers | Haptics, tap animations                     |
 |                                          | Home view (already per device)              |
@@ -503,7 +504,7 @@ Cloudflare account alone; the phone follows.
 7. The phone: Sign in with Apple (needs the Apple Developer membership),
    Google sign-in (needs a free Google Cloud OAuth client), emailed codes, a
    native AES-GCM library and the same sync screens. The phone already writes
-   v24 events and schema 2.
+   current events and schema 2.
 8. RevenueCat entitlements, the paywall, the account deletion web page.
 9. Before launch: Turnstile, sync rate limits, storage quotas, the production
    server and its address, the privacy policy and store forms.

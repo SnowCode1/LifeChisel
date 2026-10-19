@@ -7,6 +7,7 @@ import {
   summarizeCompletion,
 } from './completionStatistics.ts';
 import type { StoredEvent } from './storage/model.ts';
+import type { NumberCombine } from './statsLayout.ts';
 
 const DAY = 86400000;
 export const dayNumber = (date: string) =>
@@ -78,6 +79,8 @@ export function habitStatistics(
   // The selected window can step back in time; streaks, goals and the
   // tracking start still describe today.
   endKey: string = todayKey,
+  // v25: how a number habit's days combine for weekdays (see statsLayout).
+  combine: NumberCombine = 'total',
 ) {
   const today = dayNumber(todayKey),
     end = Math.min(today, dayNumber(endKey)),
@@ -133,6 +136,9 @@ export function habitStatistics(
       ? matching.filter((item) => item.value === 1).length
       : goalSummary.successes;
     const total = matching.reduce((sum, item) => sum + item.value, 0);
+    const lowest = matching.length
+      ? matching.reduce((low, item) => Math.min(low, item.value), Infinity)
+      : null;
     return {
       recorded: matching.length,
       eligible: numeric ? eligible : goalSummary.eligible,
@@ -145,8 +151,17 @@ export function habitStatistics(
         : goalSummary.rate,
       average: eligible ? total / eligible : null,
       best: matching.length
-        ? matching.reduce((best, item) => Math.max(best, item.value), 0)
+        ? matching.reduce((best, item) => Math.max(best, item.value), -Infinity)
         : null,
+      lowest,
+      /** The mean of recorded days only (blank days left out). */
+      recordedAverage: matching.length ? total / matching.length : null,
+      /** Last recorded value minus the first, within the window. */
+      change:
+        matching.length > 1
+          ? matching.at(-1)!.value - matching[0]!.value
+          : null,
+      latest: matching.at(-1)?.value ?? null,
     };
   }
   const summary = summarize(start, end);
@@ -185,7 +200,13 @@ export function habitStatistics(
     return {
       day,
       value: numeric
-        ? part.average
+        ? combine === 'total'
+          ? part.average
+          : combine === 'average'
+            ? part.recordedAverage
+            : combine === 'highest'
+              ? part.best
+              : part.lowest
         : part.rate === null
           ? null
           : part.rate * 100,

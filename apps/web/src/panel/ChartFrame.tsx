@@ -115,7 +115,12 @@ export function ChartFrame({
           onBlur={() => setSelected(null)}
           style={{ height }}
         >
-          <svg width={width} height={height} aria-hidden="true">
+          <svg
+            width={width}
+            height={height}
+            overflow="visible"
+            aria-hidden="true"
+          >
             {axis.map((line) => (
               <line
                 key={line.label}

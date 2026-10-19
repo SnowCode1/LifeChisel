@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { createContext, useContext, useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { appear } from './motion';
@@ -6,6 +6,19 @@ import { Text, useAppWindowDimensions } from './Typography';
 import { Icon } from './Icon';
 import type { StatsRange } from '@onpurpose/core/statistics';
 import { themedStyles, useTheme } from './ThemeContext';
+import { isNumericHabit, type Habit } from '@onpurpose/core/habits';
+import {
+  moveStatsSection,
+  NUMBER_COMBINES,
+  numberCombine,
+  numberCombineHint,
+  numberCombineLabel,
+  setStatsSectionHidden,
+  statsSections,
+  statsSectionTitle,
+  type StatsLayout,
+  type StatsSectionId,
+} from '@onpurpose/core/statsLayout';
 
 // Shared statistics building blocks. Both statistics screens use these so
 // layout, spacing and explanations stay consistent; neither imports the other.
@@ -209,6 +222,7 @@ export function StatsSection({
   const theme = useTheme();
   const styles = useStyles();
   const [expanded, setExpanded] = useState(false);
+  const controls = useContext(SectionControls);
   return (
     <View style={styles.section}>
       <View style={styles.titleRow}>
@@ -235,6 +249,7 @@ export function StatsSection({
             />
           </Pressable>
         )}
+        {controls}
       </View>
       {!!subtitle && <Text style={styles.subtitle}>{subtitle}</Text>}
       {expanded && !!info && (
@@ -244,6 +259,220 @@ export function StatsSection({
       )}
       {children}
     </View>
+  );
+}
+
+// Customize (storage v25): each habit keeps its own section order, hidden
+// sections and, for numbers, how days combine. Controls sit in each
+// section's title row while editing; hidden sections then show as a title.
+const SectionControls = createContext<ReactNode>(null);
+
+/** The habit's sections in its saved order; hidden ones only while editing. */
+export function CustomizableSections({
+  habit,
+  layout,
+  editing,
+  onStatsLayout,
+  content,
+}: {
+  habit: Habit;
+  layout: StatsLayout | null;
+  editing: boolean;
+  onStatsLayout: (layout: StatsLayout | null) => void;
+  content: Partial<Record<StatsSectionId, () => ReactNode>>;
+}) {
+  const theme = useTheme();
+  const styles = useStyles();
+  const sections = statsSections(habit, layout).filter(
+    (section) => content[section.id],
+  );
+  return sections.map(({ id, hidden }, index) => {
+    if (hidden && !editing) return null;
+    const title = statsSectionTitle(id, habit, layout);
+    const move = (step: -1 | 1) =>
+      onStatsLayout(moveStatsSection(habit, layout, id, step));
+    const controls = editing && (
+      <View style={styles.controls}>
+        {([-1, 1] as const).map((step) => {
+          const disabled =
+            step === -1 ? index === 0 : index === sections.length - 1;
+          return (
+            <Pressable
+              key={step}
+              accessibilityRole="button"
+              accessibilityLabel={`Move ${title} ${step === -1 ? 'up' : 'down'}`}
+              accessibilityState={{ disabled }}
+              disabled={disabled}
+              onPress={() => move(step)}
+              style={({ pressed }) => [
+                styles.controlButton,
+                { opacity: disabled ? 0.25 : pressed ? 0.5 : 1 },
+              ]}
+            >
+              <View
+                style={{
+                  transform: [{ rotate: step === -1 ? '180deg' : '0deg' }],
+                }}
+              >
+                <Icon name="chevron" size={18} color={theme.ink(0xc8)} />
+              </View>
+            </Pressable>
+          );
+        })}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`${hidden ? 'Show' : 'Hide'} ${title}`}
+          onPress={() =>
+            onStatsLayout(setStatsSectionHidden(layout, id, !hidden))
+          }
+          style={({ pressed }) => [
+            styles.controlText,
+            { opacity: pressed ? 0.5 : 1 },
+          ]}
+        >
+          <Text style={[styles.controlLabel, { color: theme.link }]}>
+            {hidden ? 'Show' : 'Hide'}
+          </Text>
+        </Pressable>
+      </View>
+    );
+    return (
+      <SectionControls.Provider key={id} value={controls || null}>
+        {hidden ? (
+          <View style={{ opacity: 0.6 }}>
+            <StatsSection title={title} />
+          </View>
+        ) : (
+          content[id]!()
+        )}
+      </SectionControls.Provider>
+    );
+  });
+}
+
+/** Shown at the top while customizing: how numbers combine, Reset, Done. */
+export function CustomizePanel({
+  habit,
+  layout,
+  onStatsLayout,
+  onDone,
+}: {
+  habit: Habit;
+  layout: StatsLayout | null;
+  onStatsLayout: (layout: StatsLayout | null) => void;
+  onDone: () => void;
+}) {
+  const theme = useTheme();
+  const styles = useStyles();
+  const combine = numberCombine(layout);
+  return (
+    <View style={styles.panel}>
+      <View style={styles.panelHeader}>
+        <Text accessibilityRole="header" style={styles.title}>
+          Customize
+        </Text>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Reset to default"
+          accessibilityState={{ disabled: !layout }}
+          disabled={!layout}
+          onPress={() => onStatsLayout(null)}
+          style={({ pressed }) => [
+            styles.controlText,
+            { opacity: !layout ? 0.35 : pressed ? 0.5 : 1 },
+          ]}
+        >
+          <Text style={[styles.controlLabel, { color: theme.link }]}>
+            Reset
+          </Text>
+        </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          onPress={onDone}
+          style={({ pressed }) => [
+            styles.controlText,
+            { opacity: pressed ? 0.5 : 1 },
+          ]}
+        >
+          <Text
+            style={[
+              styles.controlLabel,
+              { color: theme.link, fontWeight: '600' },
+            ]}
+          >
+            Done
+          </Text>
+        </Pressable>
+      </View>
+      <Text style={styles.infoText}>
+        Move sections with the arrows and hide the ones you don’t need. Each
+        habit keeps its own layout, on every device.
+      </Text>
+      {isNumericHabit(habit) && (
+        <>
+          <Text style={styles.panelLabel}>Combine days by</Text>
+          <View accessibilityRole="radiogroup" style={styles.ranges}>
+            {NUMBER_COMBINES.map((option) => {
+              const selected = combine === option;
+              return (
+                <Pressable
+                  key={option}
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: selected }}
+                  onPress={() => onStatsLayout({ ...layout, combine: option })}
+                  style={[
+                    styles.range,
+                    { flexBasis: '20%' },
+                    selected && { backgroundColor: theme.ink(0x2c) },
+                  ]}
+                >
+                  <Text
+                    numberOfLines={1}
+                    style={[
+                      styles.rangeText,
+                      selected && { color: theme.ink(0xff) },
+                    ]}
+                  >
+                    {numberCombineLabel(option)}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+          <Text style={styles.infoText}>{numberCombineHint(combine)}</Text>
+        </>
+      )}
+    </View>
+  );
+}
+
+/** Opens or closes Customize; sits at the end of the statistics. */
+export function CustomizeButton({
+  editing,
+  disabled,
+  onPress,
+}: {
+  editing: boolean;
+  disabled: boolean;
+  onPress: () => void;
+}) {
+  const theme = useTheme();
+  const styles = useStyles();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ disabled }}
+      disabled={disabled}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.customize,
+        { opacity: disabled ? 0.35 : pressed ? 0.5 : 1 },
+      ]}
+    >
+      <Text style={[styles.controlLabel, { color: theme.link }]}>
+        {editing ? 'Done customizing' : 'Customize this page'}
+      </Text>
+    </Pressable>
   );
 }
 
@@ -350,4 +579,32 @@ const useStyles = themedStyles((t) => ({
     backgroundColor: t.ink(0x12),
   },
   infoText: { color: t.ink(0xad), fontSize: 13, lineHeight: 19 },
+  controls: { flexDirection: 'row', alignItems: 'center', marginRight: -8 },
+  controlButton: {
+    width: 40,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  controlText: {
+    minHeight: 44,
+    paddingHorizontal: 8,
+    justifyContent: 'center',
+  },
+  controlLabel: { fontSize: 15 },
+  panel: {
+    gap: 10,
+    padding: 14,
+    borderRadius: 16,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: t.ink(0x40),
+    backgroundColor: t.ink(0x0c),
+  },
+  panelHeader: { flexDirection: 'row', alignItems: 'center', marginRight: -8 },
+  panelLabel: { color: t.ink(0xd0), fontSize: 14, fontWeight: '600' },
+  customize: {
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 }));

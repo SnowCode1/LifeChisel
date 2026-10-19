@@ -16,6 +16,7 @@ import {
   isPreference,
   preferenceBefore,
   replayEvents,
+  statsLayoutBefore,
   sameValue,
   type BatchItem,
   type Change,
@@ -27,6 +28,7 @@ import {
   type StoredState,
 } from '../storage/model.ts';
 import type { SyncConflict } from './conflicts.ts';
+import { WRITER_VERSION } from '../storage/newEvents.ts';
 
 export type RebaseInput = {
   /** Confirmed events then the newly pulled ones, numbered from 1. */
@@ -60,6 +62,8 @@ function effectiveTime(recordedAt: string, latest: string): string {
 
 // The values a change touches, so the guess can ask "which edit was later?".
 function fieldKeys(change: Change): string[] {
+  if (change.kind === 'statsLayout')
+    return [`p:${change.kind}:${change.habitId}`];
   if (isPreference(change)) return [`p:${change.kind}`];
   switch (change.kind) {
     case 'entry':
@@ -494,11 +498,14 @@ function rebasePreference(
   context: Context,
   change: PreferenceChange,
 ): PreferenceChange | null {
-  const current = preferenceBefore(state, change.kind);
+  const current =
+    change.kind === 'statsLayout'
+      ? statsLayoutBefore(state, change.habitId)
+      : preferenceBefore(state, change.kind);
   if (sameValue(current, change.after)) return null;
   if (
     !sameValue(current, change.before) &&
-    !localWins(context, `p:${change.kind}`)
+    !localWins(context, fieldKeys(change)[0]!)
   )
     return null;
   return { ...change, before: current } as PreferenceChange;
@@ -507,9 +514,11 @@ function rebasePreference(
 function meta(
   event: StoredEvent,
   sequence: number,
-): EventMeta & { version: 24 } {
+): EventMeta & { version: typeof WRITER_VERSION } {
+  // Rewritten edits take the current writer version, so they can follow any
+  // newer event pulled from another device.
   return {
-    version: 24,
+    version: WRITER_VERSION,
     id: event.id,
     sequence,
     recordedAt: event.recordedAt,

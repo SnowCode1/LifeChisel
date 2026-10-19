@@ -7,7 +7,7 @@ Read `PROJECT_GOALS.md`, `docs/DEVELOPMENT.md`, and `docs/DECISIONS.md`;
 (project owner and maintainer) is new to the stack: explain technical choices in
 plain language and connect them to the product goal.
 
-Current storage writers and backup exports are v24 with SQL schema 2;
+Current storage writers and backup exports are v25 with SQL schema 2;
 `docs/STORAGE.md` is the authority. Version numbers in the sections below record
 when a feature's fields arrived, and each older version must keep replaying
 unchanged.
@@ -343,6 +343,22 @@ The habit editors have no notes field. Today tiles' bottom row of Notes and
 Statistics buttons (opening the sheet on that page via `initialTab`/
 `initialView`) is a trial; it takes tile height, never the name's width.
 
+## Statistics layouts (v25)
+
+Read docs/STATISTICS.md. Each habit's statistics page has Customize
+(founder decision, 19 October 2026): reorder and hide sections, and for
+number habits choose how days combine (Total, Average, Highest, Lowest). Core
+`statsLayout.ts` owns section IDs, order, normalization and
+`statsLayoutChange`; the `statsLayout` preference is per habit, outside
+History/Undo and synced. The combine choice drives the whole page through
+core `numberSummary.ts` (headline, tiles, wording), `habitStatistics(...,
+combine)`, `binValue`, `valueLevel` and `fittedRange`: Total keeps blank days
+as zero and bars from zero; the others leave blanks out and draw dots on a
+fitted axis. Never draw bars from a raised baseline. Phone: `StatsLayout.tsx`
+(`CustomizableSections`, `CustomizePanel`, `CustomizeButton`); web:
+`panel/StatsView.tsx` (summary band, sections in columns). Customize is not
+offered when creating a habit.
+
 ## Web app
 
 `apps/web` is a Vite + React DOM app written for browsers, not a port of the phone
@@ -405,8 +421,8 @@ props). Choose the mailbox only from the signed-in session; keep sync refused
 unless `DEV_FREE_SYNC` (development servers only) or, later, the server's
 entitlement check allows it; keep secrets out of the repository. Regenerate
 `migrations/0001_auth.sql` with `scripts/generate-auth-schema.mjs` only before
-it has been applied, then add numbered migrations. The phone writes v24 and
-schema 2 but has no sync screens yet.
+it has been applied, then add numbered migrations. The phone writes the
+current events and schema 2 but has no sync screens yet.
 
 ## UI and accessibility
 

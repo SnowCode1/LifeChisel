@@ -1,4 +1,4 @@
-import { Line, Rect } from 'react-native-svg';
+import { Circle, Line, Path, Rect } from 'react-native-svg';
 import { ChartFrame, type ChartSlot } from './ChartFrame';
 import type { WeekStart } from '@onpurpose/core/displayPreferences';
 import type { Habit } from '@onpurpose/core/habits';
@@ -12,12 +12,22 @@ import {
   statisticTickLabel,
 } from '@onpurpose/core/statisticsFormatting';
 import {
+  binValue,
+  fittedRange,
   niceMaximum,
   timeTicks,
   type BinUnit,
   type SeriesBin,
 } from '@onpurpose/core/statsSeries';
 import { useTheme } from './ThemeContext';
+import {
+  numberCombineLabel,
+  type NumberCombine,
+} from '@onpurpose/core/statsLayout';
+import {
+  valueChartStyle,
+  valueChartTitle,
+} from '@onpurpose/core/numberSummary';
 
 const OUTCOME_TEXT: Record<string, string> = {
   met: 'goal met',
@@ -27,15 +37,18 @@ const OUTCOME_TEXT: Record<string, string> = {
 };
 
 /**
- * Daily totals with goal success encoded in colour (one chart instead of a
- * separate completion chart). Longer ranges show the average per calendar day
- * of each week or month, brighter when more scheduled days met the goal, so
- * bars stay comparable with the daily goal line.
+ * Daily values with goal success encoded in colour (one chart instead of a
+ * separate completion chart). Totals are bars from zero; longer ranges show
+ * the average per calendar day of each week or month, brighter when more
+ * scheduled days met the goal, so bars stay comparable with the daily goal
+ * line. Readings (Average, Highest, Lowest; v25) are dots joined by a line on
+ * an axis fitted to them, since a bar's length would claim a zero baseline.
  */
 export function ValueChart({
   habit,
   bins,
   unit,
+  combine,
   from,
   to,
   today,
@@ -44,6 +57,7 @@ export function ValueChart({
   habit: Habit;
   bins: SeriesBin[];
   unit: BinUnit;
+  combine: NumberCombine;
   from: number;
   to: number;
   today: string;
@@ -52,7 +66,8 @@ export function ValueChart({
   const theme = useTheme();
   const colour = theme.colour(habit.color),
     label = habit.unit ?? '',
-    span = to - from + 1;
+    span = to - from + 1,
+    dots = valueChartStyle(combine) === 'dots';
   const withUnit = (value: number) =>
     `${format(value)}${label ? ` ${label}` : ''}`;
   const rows = bins.map((bin) => {
@@ -63,9 +78,7 @@ export function ValueChart({
         ? typeof last.value === 'number'
           ? last.value
           : null
-        : bin.recorded && bin.eligible
-          ? bin.total / bin.eligible
-          : null;
+        : binValue(bin, combine);
     const targets =
       rule?.kind === 'number' &&
       (unit === 'day' ? bin.scheduled : bin.scheduled)
@@ -81,9 +94,13 @@ export function ValueChart({
           : colour;
     return { bin, value, targets, fill };
   });
-  const maximum = niceMaximum(
-    Math.max(0, ...rows.flatMap((row) => [row.value ?? 0, ...row.targets])),
-  );
+  const shown = rows.flatMap((row) => [
+    ...(row.value === null ? [] : [row.value]),
+    ...row.targets,
+  ]);
+  const { min, max: maximum } = dots
+    ? fittedRange(shown)
+    : { min: 0, max: niceMaximum(Math.max(0, ...shown)) };
   const goal = rows.findLast((row) => row.targets.length)?.targets;
   const slots: ChartSlot[] = rows.map(({ bin, value }) => {
     const start = dateKey(bin.from),
@@ -110,11 +127,13 @@ export function ValueChart({
         value === null
           ? 'No entries'
           : [
-              `${withUnit(value)} per day`,
+              `${withUnit(value)} ${combine === 'total' ? 'per day' : numberCombineLabel(combine).toLowerCase()}`,
               bin.scheduled
                 ? `goal met ${bin.met} of ${bin.scheduled} days`
                 : '',
-              `total ${withUnit(bin.total)}`,
+              combine === 'total'
+                ? `total ${withUnit(bin.total)}`
+                : `${bin.recorded} recorded`,
             ]
               .filter(Boolean)
               .join(' · ');
@@ -140,10 +159,12 @@ export function ValueChart({
     else goalRuns.push({ first: index, last: index, targets: row.targets });
   });
   const y = (value: number, height: number) =>
-    height - (value / maximum) * (height - 2);
+    height - ((value - min) / (maximum - min)) * (height - 2);
+  const centre = (index: number, width: number) =>
+    ((slots[index].x0 + slots[index].x1) / 2) * width;
   return (
     <ChartFrame
-      name={unit === 'day' ? 'Daily totals chart' : 'Average per day chart'}
+      name={`${valueChartTitle(combine, unit)} chart`}
       colour={colour}
       slots={slots}
       ticks={timeTicks(from, to, weekStart).map((tick) => ({
@@ -152,13 +173,22 @@ export function ValueChart({
       }))}
       axis={[
         { y: 0, label: format(maximum) },
-        ...(goal ? [{ y: 1 - goal[0] / maximum, label: format(goal[0]) }] : []),
-        { y: 1, label: '0' },
+        ...(goal
+          ? [
+              {
+                y: 1 - (goal[0] - min) / (maximum - min),
+                label: format(goal[0]),
+              },
+            ]
+          : []),
+        { y: 1, label: format(min) },
       ]}
       legend={
         unit === 'day'
           ? `${label ? label[0].toUpperCase() + label.slice(1) : 'Total'} per day`
-          : `Average ${label || 'total'} per day, by ${unit}`
+          : combine === 'total'
+            ? `Average ${label || 'total'} per day, by ${unit}`
+            : `${numberCombineLabel(combine)} ${label || 'value'}, by ${unit}`
       }
       draw={({ width, height, selected }) => (
         <>
@@ -192,8 +222,39 @@ export function ValueChart({
               />
             );
           })}
+          {dots && (
+            <Path
+              d={rows
+                .map((row, index) =>
+                  row.value === null
+                    ? ''
+                    : `${centre(index, width).toFixed(1)} ${y(row.value, height).toFixed(1)}`,
+                )
+                .filter(Boolean)
+                .map((point, index) => `${index ? 'L' : 'M'}${point}`)
+                .join('')}
+              stroke={colour}
+              strokeWidth={1.5}
+              strokeLinejoin="round"
+              fill="none"
+              opacity={0.45}
+            />
+          )}
           {rows.map(({ bin, value, fill }, index) => {
             if (value === null || !fill) return null;
+            if (dots) {
+              const slotWidth = (slots[index].x1 - slots[index].x0) * width,
+                radius = Math.max(2, Math.min(4, slotWidth * 0.32));
+              return (
+                <Circle
+                  key={bin.from}
+                  cx={centre(index, width)}
+                  cy={y(value, height)}
+                  r={selected === index ? radius + 1.5 : radius}
+                  fill={fill}
+                />
+              );
+            }
             const slot = slots[index],
               slotWidth = (slot.x1 - slot.x0) * width,
               gap = Math.min(2, slotWidth * 0.18),

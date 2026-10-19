@@ -174,7 +174,7 @@ test('v18 grid sizes persist in SQLite/backup without changing legacy logs, hist
     '2026-10-09T04:00:00.000Z',
     digest,
   );
-  assert.equal(JSON.parse(backup).version, 24);
+  assert.equal(JSON.parse(backup).version, 25);
   const decoded = await decodeArchive(backup, digest);
   assert.deepEqual(decoded.events, events);
   await store.exclusive(() => store.replace(decoded.events));
@@ -188,7 +188,7 @@ test('v18 grid sizes persist in SQLite/backup without changing legacy logs, hist
         type: 'preference',
         change: { kind: 'haptics', before: true, after: false },
       }),
-    /version-24/,
+    /version-25/,
   );
   const previous = JSON.parse(
     readFileSync(

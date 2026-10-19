@@ -81,8 +81,8 @@ introduced each feature.
 | Number                     | Where it lives     | Current | Meaning                                                                                                                                            |
 | -------------------------- | ------------------ | ------: | -------------------------------------------------------------------------------------------------------------------------------------------------- |
 | SQL `PRAGMA user_version`  | SQLite database    |       2 | Table layout. Changes only through an explicit migration.                                                                                          |
-| Event `version`            | Each event         |      24 | Format the event was written in. Old events keep their version and that version's rules. Replay accepts 1–24; a log never returns to an older one. |
-| Export container `version` | Backup JSON header |      24 | Format of the export file. The importer accepts 1–24, and a container cannot hold events newer than its own version.                               |
+| Event `version`            | Each event         |      25 | Format the event was written in. Old events keep their version and that version's rules. Replay accepts 1–25; a log never returns to an older one. |
+| Export container `version` | Backup JSON header |      25 | Format of the export file. The importer accepts 1–25, and a container cannot hold events newer than its own version.                               |
 
 ### Glossary
 
@@ -134,7 +134,9 @@ Global preferences, saved as `preference` events outside History and Undo (see
   spacing, column spacing/density and name-width choices they replaced;
 - text size;
 - theme mode and the dark and light backgrounds;
-- week start, and date fading (still saved and replayed, but no longer shown).
+- week start, and date fading (still saved and replayed, but no longer shown);
+- each habit's statistics layout (v25): section order, hidden sections and
+  how a number habit's days combine.
 
 Outside the log: recoverable description drafts and bookmarks (a separate local
 store; see [Description drafts](#description-drafts)), the home view (Grid,
@@ -207,7 +209,7 @@ can remove the data. Optional sync copies the log to an account (see
 - `current_state`: one derived JSON projection with its last committed sequence.
 - `recovery_archives`: complete pre-restore event logs retained locally.
 - `device` (schema 2): this device's ID, created once and written into every
-  v24 event.
+  event from v24.
 - `sync_state` (schema 2): the account, server, epoch and confirmed count
   while this device syncs; empty otherwise.
 - `sync_conflicts` (schema 2): conflicts found while rebasing, until reviewed.
@@ -382,7 +384,7 @@ pending saves and captures a stable log. The export is a readable JSON container
 of **changes**, not a replacement snapshot of habit/day values. Every event
 version has a synthetic example in [docs/examples](examples/), from
 [the unchanged version-1 fixture](examples/storage-v1.json) to
-[the newest fixture](examples/storage-v24.json); see
+[the newest fixture](examples/storage-v25.json); see
 [Version history](#version-history).
 
 The container has `format: "onpurpose.changes"`, `version`, `exportedAt`,
@@ -489,7 +491,8 @@ the phone (see [SYNC.md](SYNC.md)). Each edit currently revalidates and rewrites
 ## Version history
 
 Each version adds fields or change kinds; earlier events keep their meaning.
-Versions up to 23 left the SQL schema at 1; v24 moved it to 2. None rewrites
+Versions up to 23 left the SQL schema at 1; v24 moved it to 2, and v25 keeps
+it there. None rewrites
 or reseeds anything, and each makes older event versions reject the new fields or kinds. Once a log contains a
 version, older events cannot follow it.
 
@@ -519,6 +522,7 @@ version, older events cannot follow it.
 |      22 | `entries` change: one fill across several days of a habit                                |
 |      23 | `note` change and named notes kept apart from habit definitions                          |
 |      24 | Event `device`, device-scoped preferences, `batch` changes; SQL schema 2 for sync        |
+|      25 | `statsLayout` preference: each habit's statistics sections and number combining          |
 
 ### Version 1: the original log
 
@@ -889,6 +893,37 @@ a v24 event, backups accept container version 24, and SQL moves to schema 2.
 The [v24 fixture](examples/storage-v24.json) extends the v23 example: a text
 size chosen on one device and then another, a tick from the second device, a
 restore batch, its Undo and its Redo.
+
+### Version 25: statistics layouts
+
+Each habit's statistics page can be customized (founder request, 19 October
+2026; see [STATISTICS.md](STATISTICS.md#customize)). One preference kind,
+`{ kind: 'statsLayout', habitId, before, after }`, saves one habit's layout;
+`null` is the default layout. A layout is an object with at least one of:
+
+- `order`: section IDs in the chosen order (`values`, `success`, `streaks`,
+  `categories`, `calendar`, `weekday`, `timeOfDay`), each at most once;
+  sections it leaves out follow in default order, and IDs another habit type
+  uses are kept so a type change and back restores the order;
+- `hidden`: section IDs to leave out;
+- `combine`: how a number habit's days combine, `total` (the default),
+  `average`, `highest` or `lowest`.
+
+The projection gains `statsLayouts`, a map from habit ID to its layout,
+absent when every habit uses the default. Replay checks `before` against the
+stored layout (compared by value). Like other preferences it stays outside
+History and Undo, preserves Redo and correction groups, and is shared by every
+device through sync; a rebase compares layouts per habit, so two devices
+editing different habits never conflict and the later edit of one habit
+wins. The apps save normalized layouts (`normalizeStatsLayout` drops default
+values; a layout back at the default saves `null`) through core
+`statsLayoutChange`. Layouts are kept when a habit is archived or deleted.
+Older event versions reject the kind, older events cannot follow a v25 event,
+backups accept container version 25, and SQL stays at schema 2. The
+[v25 fixture](examples/storage-v25.json) extends the v24 example: the browser
+hides Walk's Time of day, the phone moves its calendar first, and the archived
+text habit gets a layout that is then reset. `scripts/generate-storage-v25.mjs`
+reproduces it.
 
 ## References
 

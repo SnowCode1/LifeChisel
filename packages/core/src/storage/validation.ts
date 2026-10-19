@@ -28,6 +28,7 @@ import { isThemeMode } from '../theme.ts';
 import { isHabitIcon } from '../habitIcons.ts';
 import { habitType, type Habit } from '../habits.ts';
 import { isPreference, sameValue } from './changeUtils.ts';
+import { isStatsLayout } from '../statsLayout.ts';
 import type { Change, HabitNote, StoredEvent } from './types.ts';
 
 // Exact field/version validation stays independent of state transitions. Keep
@@ -259,7 +260,7 @@ export function entryFits(
 }
 export function validateChange(
   value: unknown,
-  version = 24,
+  version = 25,
 ): asserts value is Change {
   object(value);
   if (value.kind === 'batch') {
@@ -505,6 +506,15 @@ export function validateChange(
         isConnectorThickness(value.after),
       'Invalid connector thickness.',
     );
+  } else if (value.kind === 'statsLayout') {
+    keys(value, ['kind', 'habitId', 'before', 'after']);
+    insist(version >= 25, 'Statistics layouts require version 25.');
+    id(value.habitId);
+    insist(
+      (value.before === null || isStatsLayout(value.before)) &&
+        (value.after === null || isStatsLayout(value.after)),
+      'Invalid statistics layout.',
+    );
   } else if (value.kind === 'joinedEndsOnly') {
     keys(value, ['kind', 'before', 'after']);
     insist(version >= 21, 'Streak ends only requires version 21.');
@@ -595,7 +605,8 @@ export function validateEvent(value: unknown): asserts value is StoredEvent {
       value.version === 21 ||
       value.version === 22 ||
       value.version === 23 ||
-      value.version === 24,
+      value.version === 24 ||
+      value.version === 25,
     'Unsupported event version.',
   );
   // From v24 every event names the device that wrote it.

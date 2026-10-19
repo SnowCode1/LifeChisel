@@ -182,8 +182,9 @@ the title switches between **Notes** (with the note count) and **Statistics**,
 like the phone's habit sheet (founder decision, 17 October 2026: you read one
 or the other, so neither is squeezed beside the other). The page opens on
 Notes when the habit has any, otherwise on Statistics. In Statistics the
-toolbar also holds the range tabs (30 days, 90 days, Year, All time) and the
-‹ period › stepper, so they stay put while the page scrolls; Statistics stays
+toolbar also holds the range tabs (30 days, 90 days, Year, All time), the
+‹ period › stepper and Customize, so they stay put while the page scrolls;
+Statistics stays
 mounted once seen, keeping its range and scroll. The dialog is capped at
 1160 px and has a steady height (the window less a margin, at most 1100 px),
 so switching views or notes never resizes it. Esc, Close or a click outside
@@ -195,12 +196,14 @@ Everything is a card with the same edge (`--card-edge`); tiles inside a card
 are raised rather than bordered. The layout follows the dialog's own width
 (container queries):
 
-- **Wide:** an overview column (headline, tiles, goal and quota progress; then
-  How statistics work) stays beside the statistics. Every chart card flows
-  down two columns, so cards of different heights leave no gaps and no chart
-  is wider than about 360 px; only the entries journal spans the full width.
-- **Medium:** the overview spans the page (four tiles a row) above the same
-  two columns.
+- **Wide:** a summary band across the top (headline, note and goal beside
+  the tiles, then quota progress), and every chart card flowing down three
+  columns below it, so cards of different heights leave no gaps and no chart
+  is wider than about 360 px; the entries journal and How statistics work
+  span the full width (founder decision, 19 October 2026; the earlier
+  280 px overview column left empty space under it and is superseded).
+- **Medium:** the band stacks the headline above the tiles, and the cards
+  flow in two columns.
 - **Phones:** one column, with the switch, the range tabs and the stepper on
   their own rows.
 
@@ -235,10 +238,15 @@ followed left most of its Notes tab empty; a Notes card beside the statistics
   images show only their alt text, so reading never loads remote content.
 - **Statistics** use the phone's core calculations (`habitStatistics`,
   `recordStatistics`, `statsSeries`, `periodStatistics`, `timeOfDay`)
-  with the same ranges, period stepping, headline, tiles and wording. Charts
+  with the same ranges, period stepping, headline, tiles and wording (core
+  `numberSummary` for number habits). Customize (core `statsLayout`) adds ↑ ↓
+  and Hide or Show to each card's header, Combine days by to the summary band
+  for number habits, and Reset to default; see
+  [STATISTICS.md](STATISTICS.md#customize). Charts
   are SVG in a shared `ChartFrame`: hover, or focus and the arrow keys, select
   a bar and one reading line (a live region) names it. Sections: daily totals
-  (numbers), categories (with filtering), success over time with the trend,
+  or values (numbers; bars from zero for totals, dots on a fitted axis for
+  readings), categories (with filtering), success over time with the trend,
   streaks, calendar, by day of the week, time of day, and an entries journal
   for text and categories. Calendar days tick checkboxes or open the entry
   popover.

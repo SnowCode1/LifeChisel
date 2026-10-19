@@ -80,6 +80,7 @@ export const emptyReplay = (): Replay => ({
   hasV22: false,
   hasV23: false,
   hasV24: false,
+  hasV25: false,
 });
 export const GROUP_INACTIVITY_MS = 2 * 60 * 1000;
 
@@ -104,8 +105,8 @@ function sameChange(left: Change, right: Change): boolean {
     left.kind === right.kind &&
     sameValue(left.before, right.before) &&
     sameValue(left.after, right.after) &&
-    (isPreference(left) ||
-      (!isPreference(right) && left.habitId === right.habitId)) &&
+    (!('habitId' in left) ||
+      ('habitId' in right && left.habitId === right.habitId)) &&
     (left.kind !== 'entry' ||
       (right.kind === 'entry' && left.date === right.date))
   );
@@ -139,8 +140,8 @@ function sameField(left: Change, right: Change) {
     return false;
   return (
     left.kind === right.kind &&
-    (isPreference(left) ||
-      (!isPreference(right) && left.habitId === right.habitId)) &&
+    (!('habitId' in left) ||
+      ('habitId' in right && left.habitId === right.habitId)) &&
     (left.kind !== 'entry' ||
       (right.kind === 'entry' && left.date === right.date))
   );
@@ -243,6 +244,7 @@ function reduceEvent(
       hasV22: event.version >= 22,
       hasV23: event.version >= 23,
       hasV24: event.version >= 24,
+      hasV25: event.version >= 25,
     };
   }
   insist(
@@ -288,6 +290,10 @@ function reduceEvent(
   insist(
     !previous.hasV11 || event.version >= 11,
     'Older events cannot follow version-11 events.',
+  );
+  insist(
+    !previous.hasV25 || event.version >= 25,
+    'Older events cannot follow version-25 events.',
   );
   insist(
     !previous.hasV24 || event.version >= 24,
@@ -512,6 +518,7 @@ function reduceEvent(
     hasV22: previous.hasV22 || event.version >= 22,
     hasV23: previous.hasV23 || event.version >= 23,
     hasV24: previous.hasV24 || event.version >= 24,
+    hasV25: previous.hasV25 || event.version >= 25,
   };
 }
 const firstThemeDefaults = {
@@ -565,7 +572,7 @@ function initialPreference(
  */
 export function preferenceBefore(
   state: StoredState,
-  kind: PreferenceChange['kind'],
+  kind: Exclude<PreferenceChange['kind'], 'statsLayout'>,
 ): unknown {
   if (kind === 'haptics') return state.hapticsEnabled;
   if (kind === 'columnSpacing') return state.columnSpacing ?? 'compact';
@@ -584,6 +591,10 @@ export function preferenceBefore(
     return state[kind] ?? displayDefaults[kind];
   return state[kind] ?? null;
 }
+/** v25: the saved statistics layout of one habit (null: the default). */
+export function statsLayoutBefore(state: StoredState, habitId: string) {
+  return state.statsLayouts?.[habitId] ?? null;
+}
 function withInherited(
   state: StoredState,
   inherited: DevicePreferenceKind[],
@@ -598,7 +609,7 @@ function reduceChange(
   state: StoredState,
   change: Change,
   mutable: boolean,
-  version = 24,
+  version = 25,
   foreign = false,
 ): StoredState {
   validateChange(change, version);
@@ -663,6 +674,19 @@ function reduceChange(
       'Preference precondition failed.',
     );
     next = { ...state, [change.kind]: change.after };
+  } else if (change.kind === 'statsLayout') {
+    insist(
+      sameValue(state.statsLayouts?.[change.habitId] ?? null, change.before),
+      'Preference precondition failed.',
+    );
+    const { [change.habitId]: _previous, ...others } = state.statsLayouts ?? {};
+    const layouts = change.after
+      ? { ...others, [change.habitId]: change.after }
+      : others;
+    const { statsLayouts: _layouts, ...rest } = state;
+    next = Object.keys(layouts).length
+      ? { ...rest, statsLayouts: layouts }
+      : rest;
   } else if (
     change.kind === 'todayOutlines' ||
     change.kind === 'missedDays' ||
@@ -1005,6 +1029,7 @@ export function describeChange(change: Change, state: StoredState): string {
     return change.label === 'restore'
       ? 'Restored from a backup'
       : 'Combined with another device';
+  if (change.kind === 'statsLayout') return 'Statistics layout';
   if (change.kind === 'connectorThickness')
     return `Connector thickness · ${change.after}%`;
   if (

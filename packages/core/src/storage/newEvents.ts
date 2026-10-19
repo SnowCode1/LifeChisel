@@ -4,7 +4,7 @@ import { presetDescriptions } from '../presetDescriptions.ts';
 import { LEGACY_NOTE_TITLE } from '../notes.ts';
 import type { EventMeta, StoredEvent } from './model.ts';
 
-export const WRITER_VERSION = 24;
+export const WRITER_VERSION = 25;
 
 // Every app writes new events with the current writer version; keep the phone
 // and web stores on one definition so they cannot drift apart. From v24 each

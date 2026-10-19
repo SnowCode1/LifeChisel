@@ -54,23 +54,37 @@ for checkbox and Daily total habits (`HabitStatsScreen.tsx`) is:
 2. **Period dates** with ‹ › to step back by whole ranges. A future start date
    shows “Starts” and the date instead.
 3. **Headline** with a short note. Checkbox habits show, for example, “20 of 30
-   days” and “67% successful”. Daily total habits show the period's total and
-   “Recorded on N of M days”.
-4. **Number tiles** in an even two-column grid. Daily total habits add Days
-   meeting the goal (when a goal applies), Average per day and Best day. Current
-   and Longest streak follow; without a goal, numeric habits show Days recorded
-   in a row instead. When the count would be odd, current and longest streak
+   days” and “67% successful”. Number habits show the period's figure for how
+   their days combine (see [How number days combine](#how-number-days-combine)),
+   for example “233 hours” and “Total · recorded on 28 of 30 days”, or “8.3
+   hours” and “Average · recorded on 28 of 30 days”.
+4. **Number tiles** in an even two-column grid. Number habits add Days meeting
+   the goal (when a goal applies), then by combine choice: Total adds Average
+   per day and Highest day; Average adds Change, first to last, Lowest and
+   Highest; Highest and Lowest add Average and the other extreme. Current and
+   Longest streak follow; without a goal, numeric habits show Days recorded in
+   a row instead. When the count would be odd, current and longest streak
    share one tile. Daily streak tiles are hidden while a period goal is active.
+   (“Best day” was renamed Highest day on 19 October 2026: for an “at most”
+   goal or a fastest time, the highest day is not the best.)
 5. **Goal row** (`GoalSummary compact`), opening the Goal editor. The habit
    editor keeps the full goal card.
 6. **Period progress**, a compact card shown for the current window only.
-7. **Charts:** Daily totals or Average per day (Daily total habits), Success
-   over time (Days recorded when there is no goal), Streaks, Calendar, By day of
-   the week, then Time of day.
-8. **How statistics work**, a collapsed explanation.
+7. **Charts**, by default in this order: Daily totals or Daily values
+   (number habits), Success over time (Days recorded when there is no goal),
+   Streaks, Calendar, By day of the week, then Time of day. Each habit can
+   reorder and hide them (see [Customize](#customize)).
+8. **Customize this page**, then **How statistics work**, a collapsed
+   explanation.
+
+On the web the page is wider (founder request, 19 October 2026): the
+headline, goal and tiles form one band across the top, and the chart cards
+flow below it in three columns (two at medium widths, one on a phone-sized
+window). The earlier fixed overview column left empty space beside the
+charts and is superseded.
 
 Categories and Free text habits use `RecordStatsScreen.tsx` with the same range
-tabs, dates, tiles, goal row and period progress. Their headline counts days
+tabs, dates, tiles, goal row, period progress and Customize. Their headline counts days
 meeting the goal when one applies, otherwise days recorded. Recording tiles are
 hidden when they would repeat the goal tiles. The sections are Categories
 (Categories habits only), Success over time or Days recorded, Streaks, Calendar,
@@ -94,6 +108,47 @@ beside the field, both above the keyboard.
 `src/StatsLayout.tsx` owns the shared range tabs, ‹ › period stepping, titled
 sections and tiles used by both statistics screens.
 
+## How number days combine
+
+Founder decision, 19 October 2026: a number habit is not always an amount
+that adds up. Pages read or minutes walked add up, but sleep, weight, mood or
+a resting heart rate are readings, where a total means nothing and a blank day
+is not zero. Each number habit therefore chooses how its days combine, in
+Customize (not when creating the habit, to keep that simple):
+
+| Choice  | For                     | Period figure    | Weeks, months, weekdays  | Blank days    |
+| ------- | ----------------------- | ---------------- | ------------------------ | ------------- |
+| Total   | Pages, minutes, glasses | Total            | Average per calendar day | Count as zero |
+| Average | Sleep, weight, mood     | Mean of recorded | Mean of recorded days    | Left out      |
+| Highest | A personal best         | Highest day      | Highest day              | Left out      |
+| Lowest  | A fastest time          | Lowest day       | Lowest day               | Left out      |
+
+Total is the default and keeps every earlier rule, including the
+founder-confirmed average over all calendar days. The choice applies to the
+whole page (founder decision), so the headline, tiles, values chart, weekday
+figures and calendar shading never disagree. Goals, success, streaks and
+period quotas do not change with it: they judge each day against its goal.
+Core `numberSummary.ts` owns the headline, note, tiles and wording;
+`habitStatistics` takes the choice for weekday figures; `binValue` combines
+weeks and months.
+
+## Customize
+
+Founder decision, 19 October 2026: the statistics page has an edit mode, so
+each habit shows what matters for it (a weight habit can hide streaks).
+Customize this page (at the end of the phone page; Customize in the web
+toolbar) shows, for every section, ↑ ↓ to move it and Hide or Show; hidden
+sections stay listed by title while editing. Number habits also get the
+Combine days by choice, with one line explaining it. Reset returns the habit
+to the default layout. Calendar days are not editable while customizing.
+
+Each habit keeps its own layout (founder decision). It is a preference: saved
+at once, outside History and Undo, and the same on every device through sync
+(storage v25, [STORAGE.md](STORAGE.md#version-25-statistics-layouts)). Core
+`statsLayout.ts` owns the section list per habit type, ordering, hiding and
+normalization. The Entries list of Categories and Free text habits always
+stays last. Per-section settings beyond Combine days by are not built.
+
 ## Windows and colour
 
 - **Windows.** `statsWindow` gives the range ending today, stepped back by whole
@@ -111,13 +166,20 @@ Value axes sit in a shared 30-point column. Time ticks mark weeks (from the Week
 starts on day) for windows up to about six weeks, months up to about 400 days,
 and years beyond.
 
-- **Daily totals** (Daily total habits): one bar per day for windows up to 100
-  days, coloured by that day's goal outcome. The effective goal is a dashed line
-  that runs continuously across consecutive bars with the same target, or a
-  faint band for a Between goal. Longer windows show the average per calendar
-  day of each week (up to about 400 days) or month, counting blank days as zero,
-  so the bars compare with the daily goal; brightness follows the share of
-  scheduled days met.
+- **Daily totals** (number habits that add up): one bar per day for windows
+  up to 100 days, coloured by that day's goal outcome. The effective goal is a
+  dashed line that runs continuously across consecutive bars with the same
+  target, or a faint band for a Between goal. Longer windows show the average
+  per calendar day of each week (up to about 400 days) or month, counting
+  blank days as zero, so the bars compare with the daily goal; brightness
+  follows the share of scheduled days met. Bars always start at zero, because
+  a bar's length is read as its value.
+- **Daily values** (Average, Highest or Lowest): the same days, weeks or months
+  as dots joined by a faint line, on an axis fitted to the values and the goal
+  (two round steps, for example 7–9 hours, from core `fittedRange`), so 7.5 and
+  9 hours look different (founder request, 19 October 2026). Longer windows
+  show each week's or month's average, highest or lowest recorded day, titled
+  for example Average each week.
 - **Success over time:** faint columns are each week's share of scheduled days
   met (each month's beyond about 400 days). The line is a centred Gaussian
   smoothing of the success observations (sigma 7 calendar days, so about two
@@ -152,14 +214,19 @@ and years beyond.
   reading with an Edit button. Met days use the habit colour, missed days a
   faint tint, days off stay close to the background, and today stays neutral
   until done. Without a goal, numeric intensity scales against the window's
-  highest total; zero stays coloured, blanks stay empty and future dates are
-  dim. Day cells have no selection or Today border (founder request); Today is
+  highest total, or for readings between its lowest and highest value (core
+  `valueLevel`); zero stays coloured, blanks stay empty and future dates are
+  dim. On the web, compact month days are squares that fill each column with
+  the same small gap across and down. Day cells have no selection or Today border (founder request); Today is
   identified in its accessibility label. Numeric backgrounds dim separately from
   their text, and text contrast is chosen against the actual background so small
   totals and zero keep readable dates.
-- **By day of the week** (checkbox and Daily total habits): the share of each
-  weekday's scheduled days that succeeded, or the average per weekday (blank
-  days count as zero), for the selected window, ordered by Week starts on.
+- **By day of the week** (checkbox and number habits): the share of each
+  weekday's scheduled days that succeeded, or for numbers the weekday's
+  figure by combine choice (Total: average per day with blank days as zero;
+  otherwise the mean, highest or lowest recorded day), for the selected window,
+  ordered by Week starts on. Shares and totals are bars from zero; readings
+  are dots on a fitted track with its ends labelled.
 - **Categories:** one row per category in saved order with automatic OKLCH
   colours (golden-angle hue steps from the habit colour, fixed lightness), as a
   timeline (days, or weeks/months shaded by how often) or by weekday. Rows never
@@ -234,8 +301,10 @@ helpers and category colours.
   neutral. The current streak ends today if checked, otherwise yesterday, so an
   unfinished today has a grace period. A missing earlier day breaks the streak.
   Archiving does not bridge gaps.
-- Founder-confirmed numeric averages divide the total by all calendar days in
-  the period since the start, including blank days and today. For example, 30
+- Founder-confirmed numeric averages for habits that add up (Total) divide
+  the total by all calendar days in the period since the start, including
+  blank days and today. Readings (Average, Highest, Lowest) use recorded days
+  only; see [How number days combine](#how-number-days-combine). For example, 30
   minutes across four days averages 7.5 minutes/day even with only three
   records. Blanks stay blank in storage and daily charts; an explicit zero
   remains a recorded day. A period with calendar days but no records averages

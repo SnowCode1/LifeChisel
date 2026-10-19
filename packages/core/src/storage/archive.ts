@@ -1,4 +1,5 @@
 import { replayEvents, type StoredEvent } from './model.ts';
+import { WRITER_VERSION } from './newEvents.ts';
 
 export const MAX_ARCHIVE_BYTES = 20 * 1024 * 1024;
 export const MAX_ARCHIVE_EVENTS = 100000;
@@ -15,7 +16,7 @@ export async function encodeArchive(
   const archive = JSON.stringify(
     {
       format: 'onpurpose.changes',
-      version: 24,
+      version: WRITER_VERSION,
       exportedAt,
       eventCount: events.length,
       sha256: await digest(body),
@@ -70,7 +71,8 @@ export async function decodeArchive(text: string, digest: Digest) {
       archive.version !== 21 &&
       archive.version !== 22 &&
       archive.version !== 23 &&
-      archive.version !== 24)
+      archive.version !== 24 &&
+      archive.version !== 25)
   )
     throw new Error('Unsupported backup format or version.');
   if (

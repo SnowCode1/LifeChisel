@@ -12,6 +12,7 @@ import { Modal } from '../ui/Modal.tsx';
 import { NoteNameDialog } from '../notes/NoteNameDialog.tsx';
 import { NotesView } from './NotesView.tsx';
 import { StatsView } from './StatsView.tsx';
+import type { StatsLayout } from '@onpurpose/core/statsLayout';
 
 export type HabitView = 'notes' | 'statistics';
 
@@ -38,6 +39,8 @@ export function HabitDetails({
   onClose,
   onDay,
   onEditGoal,
+  statsLayout,
+  onStatsLayout,
   onSelectNote,
   onCreateNote,
   onSaveNote,
@@ -63,6 +66,9 @@ export function HabitDetails({
   onEdit: () => void;
   onClose: () => void;
   onEditGoal: () => void;
+  /** This habit's saved statistics layout (v25; null: the default). */
+  statsLayout: StatsLayout | null;
+  onStatsLayout: (layout: StatsLayout | null) => void;
   onSelectNote: (note: HabitNote) => void;
   /** Saves a new note, written in place after it was named. */
   onCreateNote: (title: string, text: string) => boolean;
@@ -232,6 +238,8 @@ export function HabitDetails({
                 editable={editable}
                 onDay={onDay}
                 onEditGoal={onEditGoal}
+                layout={statsLayout}
+                onStatsLayout={onStatsLayout}
               />
             </div>
           )}

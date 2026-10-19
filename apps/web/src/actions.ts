@@ -14,6 +14,10 @@ import {
   type Change,
   type StoredState,
 } from '@onpurpose/core/storage/model';
+import {
+  statsLayoutChange,
+  type StatsLayout,
+} from '@onpurpose/core/statsLayout';
 import { displayDefaults } from '@onpurpose/core/displayPreferences';
 import { displayedHabitOrder } from '@onpurpose/core/habitOrdering';
 
@@ -160,6 +164,19 @@ export function useHabitActions(store: ChangeStore, quickUndo: QuickUndo) {
             ? null
             : displayDefaults[kind as keyof typeof displayDefaults]);
         return store.change({ kind, before, after } as Change);
+      },
+      /**
+       * Saves a habit's statistics layout (v25), outside History and Undo
+       * like other preferences; null returns it to the default.
+       */
+      setStatsLayout(habit: Habit, layout: StatsLayout | null) {
+        if (!store.canEdit()) return false;
+        const change = statsLayoutChange(
+          store.getSnapshot().replay.state,
+          habit,
+          layout,
+        );
+        return !change || store.change(change);
       },
       /** Appends categories created while recording an entry, as one edit. */
       addCategories(habitId: string, added: HabitCategory[]) {

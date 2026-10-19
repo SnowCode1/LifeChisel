@@ -15,6 +15,8 @@ import {
 } from '@onpurpose/core/statisticsFormatting';
 import {
   binSeries,
+  binValue,
+  fittedRange,
   niceMaximum,
   streakRows,
   timeTicks,
@@ -31,6 +33,14 @@ import { levelFill, outcomeFill } from '@onpurpose/core/outcomeColours';
 import type { TimeOfDayStatistics } from '@onpurpose/core/timeOfDay';
 import type { Theme } from '@onpurpose/core/theme';
 import { ChartFrame, type ChartSlot } from './ChartFrame.tsx';
+import {
+  numberCombineLabel,
+  type NumberCombine,
+} from '@onpurpose/core/statsLayout';
+import {
+  valueChartStyle,
+  valueChartTitle,
+} from '@onpurpose/core/numberSummary';
 
 const percent = (rate: number) => `${Math.round(rate * 100)}%`;
 const ticksFor = (from: number, to: number, weekStart: WeekStart) =>
@@ -177,13 +187,18 @@ const OUTCOME_TEXT: Record<string, string> = {
   off: 'not scheduled',
 };
 
-/** Daily totals (or the average per day of longer bins) with the goal line. */
+/**
+ * A number habit's values with the goal line. Totals are bars from zero
+ * (daily, or the average per day of longer bins); readings (Average,
+ * Highest, Lowest) are dots joined by a line on an axis fitted to them.
+ */
 export function ValueChart({
   habit,
   colour,
   theme,
   bins,
   unit,
+  combine,
   from,
   to,
   today,
@@ -194,13 +209,15 @@ export function ValueChart({
   theme: Theme;
   bins: SeriesBin[];
   unit: BinUnit;
+  combine: NumberCombine;
   from: number;
   to: number;
   today: string;
   weekStart: WeekStart;
 }) {
   const label = habit.unit ?? '',
-    span = to - from + 1;
+    span = to - from + 1,
+    dots = valueChartStyle(combine) === 'dots';
   const withUnit = (value: number) =>
     `${format(value)}${label ? ` ${label}` : ''}`;
   const rows = bins.map((bin) => {
@@ -211,9 +228,7 @@ export function ValueChart({
         ? typeof last.value === 'number'
           ? last.value
           : null
-        : bin.recorded && bin.eligible
-          ? bin.total / bin.eligible
-          : null;
+        : binValue(bin, combine);
     const targets =
       rule?.kind === 'number' && bin.scheduled
         ? rule.operator === 'between'
@@ -228,10 +243,16 @@ export function ValueChart({
           : colour;
     return { bin, value, targets, fill, last };
   });
-  const maximum = niceMaximum(
-    Math.max(0, ...rows.flatMap((row) => [row.value ?? 0, ...row.targets])),
-  );
+  const shown = rows.flatMap((row) => [
+    ...(row.value === null ? [] : [row.value]),
+    ...row.targets,
+  ]);
+  const { min, max } = dots
+    ? fittedRange(shown)
+    : { min: 0, max: niceMaximum(Math.max(0, ...shown)) };
   const goal = rows.findLast((row) => row.targets.length)?.targets;
+  const binWord =
+    combine === 'total' ? 'per day' : numberCombineLabel(combine).toLowerCase();
   const slots: ChartSlot[] = rows.map(({ bin, value, last }) => {
     const start = dateKey(bin.from),
       end = dateKey(bin.to);
@@ -253,11 +274,13 @@ export function ValueChart({
         : value === null
           ? 'No entries'
           : [
-              `${withUnit(value)} per day`,
+              `${withUnit(value)} ${binWord}`,
               bin.scheduled
                 ? `goal met ${bin.met} of ${bin.scheduled} days`
                 : '',
-              `total ${withUnit(bin.total)}`,
+              combine === 'total'
+                ? `total ${withUnit(bin.total)}`
+                : `${bin.recorded} recorded`,
             ]
               .filter(Boolean)
               .join(' · ');
@@ -271,59 +294,90 @@ export function ValueChart({
   });
   return (
     <ChartFrame
-      name={unit === 'day' ? 'Daily totals' : 'Average per day'}
+      name={valueChartTitle(combine, unit)}
       slots={slots}
       height={140}
       ticks={ticksFor(from, to, weekStart)}
       axis={[
-        { y: 0, label: format(maximum) },
-        { y: 0.5, label: format(maximum / 2) },
-        { y: 1, label: '0' },
+        { y: 0, label: format(max) },
+        { y: 0.5, label: format((min + max) / 2) },
+        { y: 1, label: format(min) },
       ]}
       legend={
         goal
-          ? `Bright bars met the goal · dashed line at ${goal.map(format).join('–')}${label ? ` ${label}` : ''}`
+          ? `${dots ? 'Bright dots' : 'Bright bars'} met the goal · dashed line at ${goal.map(format).join('–')}${label ? ` ${label}` : ''}`
           : 'Add a goal to colour days by success'
       }
-      draw={({ width, height, selected }) => (
-        <>
-          {rows.map((row, index) => {
-            if (row.value === null) return null;
-            const slot = slots[index],
-              slotWidth = (slot.x1 - slot.x0) * width,
-              gap = Math.min(2, slotWidth * 0.15),
-              barHeight = Math.max(2, (row.value / maximum) * (height - 2));
-            return (
-              <rect
-                key={row.bin.from}
-                x={slot.x0 * width + gap}
-                y={height - barHeight}
-                width={Math.max(1, slotWidth - gap * 2)}
-                height={barHeight}
-                rx={Math.min(3, slotWidth * 0.2)}
-                fill={row.fill}
-                opacity={selected === null || selected === index ? 1 : 0.7}
+      draw={({ width, height, selected }) => {
+        const y = (value: number) =>
+          height - ((value - min) / (max - min)) * (height - 2) - 1;
+        const centre = (index: number) =>
+          ((slots[index].x0 + slots[index].x1) / 2) * width;
+        let line = '';
+        if (dots)
+          rows.forEach((row, index) => {
+            if (row.value === null) return;
+            line += `${line ? 'L' : 'M'}${centre(index).toFixed(1)} ${y(row.value).toFixed(1)}`;
+          });
+        return (
+          <>
+            {line && (
+              <path
+                d={line}
+                stroke={colour}
+                strokeWidth={1.5}
+                strokeLinejoin="round"
+                fill="none"
+                opacity={0.45}
               />
-            );
-          })}
-          {goal?.map((target) => {
-            const y = height - (target / maximum) * (height - 2) - 1;
-            return (
+            )}
+            {rows.map((row, index) => {
+              if (row.value === null) return null;
+              const slot = slots[index],
+                slotWidth = (slot.x1 - slot.x0) * width;
+              if (dots) {
+                const radius = Math.max(2, Math.min(4, slotWidth * 0.32));
+                return (
+                  <circle
+                    key={row.bin.from}
+                    cx={centre(index)}
+                    cy={y(row.value)}
+                    r={selected === index ? radius + 1.5 : radius}
+                    fill={row.fill}
+                  />
+                );
+              }
+              const gap = Math.min(2, slotWidth * 0.15),
+                barHeight = Math.max(2, (row.value / max) * (height - 2));
+              return (
+                <rect
+                  key={row.bin.from}
+                  x={slot.x0 * width + gap}
+                  y={height - barHeight}
+                  width={Math.max(1, slotWidth - gap * 2)}
+                  height={barHeight}
+                  rx={Math.min(3, slotWidth * 0.2)}
+                  fill={row.fill}
+                  opacity={selected === null || selected === index ? 1 : 0.7}
+                />
+              );
+            })}
+            {goal?.map((target) => (
               <line
                 key={target}
                 x1={0}
                 x2={width}
-                y1={y}
-                y2={y}
+                y1={y(target)}
+                y2={y(target)}
                 stroke={colour}
                 strokeWidth={1.5}
                 strokeDasharray="5 4"
                 opacity={0.8}
               />
-            );
-          })}
-        </>
-      )}
+            ))}
+          </>
+        );
+      }}
     />
   );
 }
@@ -603,23 +657,32 @@ export function StreakChart({
   );
 }
 
-/** Average or success share for each weekday in the selected period. */
+/**
+ * Success share or number for each weekday in the selected period. Totals
+ * and shares are bars from zero; readings are dots on a fitted track, so
+ * 8.3 and 8.8 hours look different.
+ */
 export function WeekdayBars({
   rows,
   colour,
   numeric,
+  fitted = false,
   unit,
 }: {
   rows: { day: number; label: string; value: number | null }[];
   colour: string;
   numeric: boolean;
+  fitted?: boolean;
   unit: string;
 }) {
-  const maximum = numeric
-    ? Math.max(1, ...rows.map((row) => row.value ?? 0))
-    : 100;
+  const shown = rows.flatMap((row) => (row.value === null ? [] : [row.value]));
+  const { min, max } = fitted
+    ? fittedRange(shown)
+    : { min: 0, max: numeric ? Math.max(1, ...shown) : 100 };
+  const position = (value: number) =>
+    Math.max(0, Math.min(100, ((value - min) / (max - min)) * 100));
   return (
-    <ul className="weekday-bars">
+    <ul className={fitted ? 'weekday-bars fitted' : 'weekday-bars'}>
       {rows.map((row) => (
         <li
           key={row.day}
@@ -627,12 +690,23 @@ export function WeekdayBars({
         >
           <span className="muted">{row.label}</span>
           <span className="track">
-            <span
-              style={{
-                width: `${Math.max(0, ((row.value ?? 0) / maximum) * 100)}%`,
-                backgroundColor: colour,
-              }}
-            />
+            {row.value !== null &&
+              (fitted ? (
+                <span
+                  className="dot"
+                  style={{
+                    left: `${position(row.value)}%`,
+                    backgroundColor: colour,
+                  }}
+                />
+              ) : (
+                <span
+                  style={{
+                    width: `${position(row.value)}%`,
+                    backgroundColor: colour,
+                  }}
+                />
+              ))}
           </span>
           <span className="value">
             {format(row.value)}
@@ -640,6 +714,16 @@ export function WeekdayBars({
           </span>
         </li>
       ))}
+      {fitted && shown.length > 0 && (
+        <li className="weekday-scale" aria-hidden="true">
+          <span />
+          <span className="muted">
+            <span>{format(min)}</span>
+            <span>{format(max)}</span>
+          </span>
+          <span />
+        </li>
+      )}
     </ul>
   );
 }

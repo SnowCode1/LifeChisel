@@ -604,6 +604,10 @@ function Tracker({
               onClose={() => setDetailsId(null)}
               onDay={panelDay}
               onEditGoal={() => setGoalHabitId(detailsHabit.id)}
+              statsLayout={state.statsLayouts?.[detailsHabit.id] ?? null}
+              onStatsLayout={(layout) =>
+                actions.setStatsLayout(detailsHabit, layout)
+              }
               notes={detailsNotes}
               note={detailsNote}
               versions={detailsVersions}
