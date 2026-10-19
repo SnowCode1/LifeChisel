@@ -339,7 +339,7 @@ test('v19 theme preferences persist in SQLite/backup outside History and Redo', 
     '2026-10-10T04:00:00.000Z',
     digest,
   );
-  assert.equal(JSON.parse(backup).version, 23);
+  assert.equal(JSON.parse(backup).version, 24);
   const decoded = await decodeArchive(backup, digest);
   assert.deepEqual(decoded.events, events);
   await store.exclusive(() => store.replace(decoded.events));
@@ -353,7 +353,7 @@ test('v19 theme preferences persist in SQLite/backup outside History and Redo', 
         type: 'preference',
         change: { kind: 'haptics', before: true, after: false },
       }),
-    /version-23/,
+    /version-24/,
   );
   const previous = JSON.parse(
     readFileSync(

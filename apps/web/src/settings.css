@@ -342,3 +342,125 @@ label.setting-row:has(> .switch) > span:first-child {
     width: 100%;
   }
 }
+
+/* Settings → Sync and change-based restore (docs/SYNC.md). */
+.sync-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.sync-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px;
+}
+.sync-group > .setting-row {
+  margin: 0 -16px;
+}
+.sync-group > .setting-row:first-child {
+  margin-top: -14px;
+}
+.sync-group > .hint {
+  margin: 0;
+}
+.sync-actions,
+.sync-options {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.sync-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.sync-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+.sync-form input {
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--surface-edge);
+  border-radius: 10px;
+  color: var(--ink);
+  background-color: var(--background);
+}
+.sync-form input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.recovery-input {
+  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  letter-spacing: 0.04em;
+}
+.recovery-code {
+  display: block;
+  padding: 14px 16px;
+  border: 1px dashed var(--surface-edge);
+  border-radius: 12px;
+  font-family: ui-monospace, 'SFMono-Regular', Consolas, monospace;
+  font-size: 17px;
+  letter-spacing: 0.06em;
+  line-height: 1.6;
+  word-break: break-word;
+  user-select: all;
+  color: var(--ink-strong);
+  background-color: var(--background);
+}
+.sync-status {
+  font-weight: 600;
+}
+.sync-status.error {
+  color: var(--danger);
+}
+.sync-summary {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 4px 14px;
+  margin: 0;
+  font-size: 14px;
+}
+.sync-summary dt {
+  color: var(--ink-quiet);
+}
+.sync-summary dd {
+  margin: 0;
+}
+.sync-matches {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sync-matches li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 12px;
+}
+.sync-matches select {
+  height: 34px;
+  max-width: 100%;
+}
+.restore-choice {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 16px 14px;
+  border-bottom: 1px solid var(--rule);
+}
+.restore-choice p {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+}

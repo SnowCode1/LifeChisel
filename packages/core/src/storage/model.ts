@@ -11,7 +11,13 @@ import {
   MAX_NOTES,
   noteChangeSummary,
 } from '../notes.ts';
-import { inverse, isPreference, sameValue } from './changeUtils.ts';
+import {
+  inverse,
+  isDevicePreference,
+  isNoChange,
+  isPreference,
+  sameValue,
+} from './changeUtils.ts';
 import {
   entryFits,
   insist,
@@ -20,11 +26,13 @@ import {
 } from './validation.ts';
 import type {
   Change,
+  DevicePreferenceKind,
   EventMeta,
   HabitChange,
   HabitNote,
   NoteChange,
   HistoryAction,
+  PreferenceChange,
   Replay,
   StoredEvent,
   StoredState,
@@ -33,7 +41,13 @@ import type {
 // Preserve this public entry point for existing stores, exports and consumers.
 // Runtime dependency direction: types -> utilities/validation -> replay.
 export type * from './types.ts';
-export { inverse, isPreference, sameValue } from './changeUtils.ts';
+export {
+  inverse,
+  isDevicePreference,
+  isNoChange,
+  isPreference,
+  sameValue,
+} from './changeUtils.ts';
 export { validDate, validateChange, validateEvent } from './validation.ts';
 
 export const emptyReplay = (): Replay => ({
@@ -65,10 +79,13 @@ export const emptyReplay = (): Replay => ({
   hasV21: false,
   hasV22: false,
   hasV23: false,
+  hasV24: false,
 });
 export const GROUP_INACTIVITY_MS = 2 * 60 * 1000;
 
 function sameChange(left: Change, right: Change): boolean {
+  if (left.kind === 'batch' || right.kind === 'batch')
+    return sameValue(left, right);
   if (left.kind === 'order')
     return (
       right.kind === 'order' &&
@@ -93,8 +110,16 @@ function sameChange(left: Change, right: Change): boolean {
       (right.kind === 'entry' && left.date === right.date))
   );
 }
-export function applyEvent(previous: Replay, event: StoredEvent): Replay {
-  return reduceEvent(previous, event, false);
+/**
+ * Apply one event. `localDevice` is the replaying device; without it every
+ * event counts as this device's own, which is always true of local edits.
+ */
+export function applyEvent(
+  previous: Replay,
+  event: StoredEvent,
+  localDevice?: string,
+): Replay {
+  return reduceEvent(previous, event, false, localDevice);
 }
 function sameField(left: Change, right: Change) {
   if (
@@ -103,6 +128,8 @@ function sameField(left: Change, right: Change) {
     left.kind === 'order' ||
     left.kind === 'entries' ||
     left.kind === 'note' ||
+    left.kind === 'batch' ||
+    right.kind === 'batch' ||
     right.kind === 'deleteHabit' ||
     right.kind === 'habit' ||
     right.kind === 'order' ||
@@ -134,11 +161,13 @@ export function canCoalesce(
     change.kind === 'deleteHabit' ||
     change.kind === 'order' ||
     change.kind === 'entries' ||
-    change.kind === 'note'
+    change.kind === 'note' ||
+    change.kind === 'batch'
   )
     return false;
   const elapsed = Date.parse(meta.recordedAt) - Date.parse(group.recordedAt);
   return (
+    group.change.kind !== 'batch' &&
     sameField(group.change, change) &&
     sameValue(group.change.after, change.before) &&
     elapsed >= 0 &&
@@ -164,6 +193,7 @@ function reduceEvent(
   previous: Replay,
   event: StoredEvent,
   mutable: boolean,
+  localDevice?: string,
 ): Replay {
   validateEvent(event);
   if (event.type === 'initialize') {
@@ -212,6 +242,7 @@ function reduceEvent(
       hasV21: event.version >= 21,
       hasV22: event.version >= 22,
       hasV23: event.version >= 23,
+      hasV24: event.version >= 24,
     };
   }
   insist(
@@ -257,6 +288,10 @@ function reduceEvent(
   insist(
     !previous.hasV11 || event.version >= 11,
     'Older events cannot follow version-11 events.',
+  );
+  insist(
+    !previous.hasV24 || event.version >= 24,
+    'Older events cannot follow version-24 events.',
   );
   insist(
     !previous.hasV23 || event.version >= 23,
@@ -380,7 +415,7 @@ function reduceEvent(
             canCoalesce(lastGroup, event, event.change),
           'Invalid edit group or inactivity window.',
         );
-        if (!sameValue(lastGroup.change.before, lastGroup.change.after)) {
+        if (!isNoChange(lastGroup.change)) {
           insist(
             undo.at(-1)?.id === lastGroup.id,
             'Group is no longer the latest action.',
@@ -393,21 +428,21 @@ function reduceEvent(
           sequence: event.sequence,
           change: {
             ...event.change,
-            before: lastGroup.change.before,
+            before: (lastGroup.change as { before: unknown }).before,
           } as HabitChange,
           editCount: lastGroup.editCount + 1,
           lastChangedSequence: event.sequence,
         };
       }
-      if (!sameValue(action.change.before, action.change.after))
-        undo.push(action);
+      if (!isNoChange(action.change)) undo.push(action);
       redo.length = 0;
       lastGroup =
         action.change.kind === 'habit' ||
         action.change.kind === 'deleteHabit' ||
         action.change.kind === 'order' ||
         action.change.kind === 'entries' ||
-        action.change.kind === 'note'
+        action.change.kind === 'note' ||
+        action.change.kind === 'batch'
           ? null
           : action;
     } else if (event.type === 'undo') {
@@ -435,8 +470,20 @@ function reduceEvent(
     }
     // Preferences only update saved state. They leave habit undo/redo/groups intact.
   }
+  // v24: another device's device-scoped preferences apply here only until
+  // this device makes its own choice (see reduceDevicePreference).
+  const foreign =
+    event.version >= 24 &&
+    localDevice !== undefined &&
+    event.device !== localDevice;
   return {
-    state: reduceChange(previous.state, event.change, mutable, event.version),
+    state: reduceChange(
+      previous.state,
+      event.change,
+      mutable,
+      event.version,
+      foreign,
+    ),
     undo,
     redo,
     lastGroup,
@@ -464,6 +511,7 @@ function reduceEvent(
     hasV21: previous.hasV21 || event.version >= 21,
     hasV22: previous.hasV22 || event.version >= 22,
     hasV23: previous.hasV23 || event.version >= 23,
+    hasV24: previous.hasV24 || event.version >= 24,
   };
 }
 const firstThemeDefaults = {
@@ -474,13 +522,107 @@ const firstThemeDefaults = {
 export function applyChange(state: StoredState, change: Change): StoredState {
   return reduceChange(state, change, false);
 }
+// v24 device-scoped preferences. This device's own events (and every event
+// before v24) check their before-value and replace any inherited value.
+// Another device's choice applies only while this device has none of its
+// own, and is then marked inherited; haptics has a default, so it never
+// inherits. Validation of foreign events is shape-only: their before-value
+// describes the other device's view, not this one's.
+function reduceDevicePreference(
+  state: StoredState,
+  change: Extract<Change, { kind: DevicePreferenceKind }>,
+  mutable: boolean,
+  version: number,
+): StoredState {
+  const kind = change.kind;
+  const inherited = state.inheritedPreferences ?? [];
+  if (
+    kind === 'haptics' ||
+    (state[kind] !== undefined && !inherited.includes(kind))
+  )
+    return state;
+  const next = reduceChange(
+    { ...state, [kind]: undefined, inheritedPreferences: undefined },
+    { ...change, before: initialPreference(state, change) } as Change,
+    mutable,
+    version,
+  );
+  return withInherited(next, [...inherited.filter((k) => k !== kind), kind]);
+}
+// The before-value a first choice on this device would carry.
+function initialPreference(
+  state: StoredState,
+  change: Extract<Change, { kind: DevicePreferenceKind }>,
+): unknown {
+  return preferenceBefore(
+    { ...state, [change.kind]: undefined } as StoredState,
+    change.kind,
+  );
+}
+/**
+ * The before-value a preference change made now must carry: the saved value,
+ * or the absent-field default its precondition expects (see reduceChange).
+ */
+export function preferenceBefore(
+  state: StoredState,
+  kind: PreferenceChange['kind'],
+): unknown {
+  if (kind === 'haptics') return state.hapticsEnabled;
+  if (kind === 'columnSpacing') return state.columnSpacing ?? 'compact';
+  if (kind === 'columnDensity') return effectiveColumnSpacing(state);
+  if (kind === 'rowSpacing') return state.rowSpacing ?? 'standard';
+  if (
+    kind === 'nameColumnWidth' ||
+    kind === 'weekStart' ||
+    kind === 'weekDividers' ||
+    kind === 'tapAnimations' ||
+    kind === 'checkboxStyle' ||
+    kind === 'dateFading' ||
+    kind === 'textScale' ||
+    kind === 'hideCompleted'
+  )
+    return state[kind] ?? displayDefaults[kind];
+  return state[kind] ?? null;
+}
+function withInherited(
+  state: StoredState,
+  inherited: DevicePreferenceKind[],
+): StoredState {
+  const { inheritedPreferences: _previous, ...rest } = state;
+  const record = rest as Record<string, unknown>;
+  for (const key of Object.keys(record))
+    if (record[key] === undefined) delete record[key];
+  return inherited.length ? { ...rest, inheritedPreferences: inherited } : rest;
+}
 function reduceChange(
   state: StoredState,
   change: Change,
   mutable: boolean,
-  version = 23,
+  version = 24,
+  foreign = false,
 ): StoredState {
   validateChange(change, version);
+  if (change.kind === 'batch') {
+    let next = state;
+    for (const item of change.changes)
+      next = reduceChange(next, item, false, version);
+    return next;
+  }
+  if (isDevicePreference(change)) {
+    if (foreign) return reduceDevicePreference(state, change, mutable, version);
+    if (state.inheritedPreferences?.includes(change.kind)) {
+      const next = reduceChange(
+        { ...state, inheritedPreferences: undefined },
+        change,
+        false,
+        version,
+      );
+      return withInherited(
+        next,
+        state.inheritedPreferences.filter((kind) => kind !== change.kind),
+      );
+    }
+  }
   let next: StoredState;
   if (
     change.kind === 'columnSpacing' ||
@@ -826,7 +968,10 @@ function reduceNote(
     withNotes(state.notes, habit.id, stored),
   );
 }
-export function replayEvents(input: unknown): {
+export function replayEvents(
+  input: unknown,
+  options: { localDevice?: string } = {},
+): {
   events: StoredEvent[];
   replay: Replay;
 } {
@@ -842,7 +987,7 @@ export function replayEvents(input: unknown): {
     );
     insist(!ids.has(candidate.id), 'Duplicate change identifier.');
     ids.add(candidate.id);
-    replay = reduceEvent(replay, candidate, true);
+    replay = reduceEvent(replay, candidate, true, options.localDevice);
     events.push(candidate);
   }
   return { events, replay };
@@ -856,6 +1001,10 @@ const cellLookNames = {
   joinedEndsOnly: 'Streak ends only',
 } as const;
 export function describeChange(change: Change, state: StoredState): string {
+  if (change.kind === 'batch')
+    return change.label === 'restore'
+      ? 'Restored from a backup'
+      : 'Combined with another device';
   if (change.kind === 'connectorThickness')
     return `Connector thickness · ${change.after}%`;
   if (

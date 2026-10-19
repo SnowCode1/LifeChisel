@@ -32,10 +32,14 @@ and uncertainty about whether something was saved.
   holder. The repository is public at https://github.com/SnowCode1/OnPurpose.
 - Earn income through a free tier of five active habits (archived habits do
   not count) plus a one-time US$9.99
-  unlock, with no subscription. The paywall appears when creating a sixth habit,
-  never during onboarding. Payment never locks existing records, export,
-  backups, History or the Loop import; reaching the limit only prevents adding
-  more.
+  unlock, with no subscription for the core product. The paywall appears when
+  creating a sixth habit, never during onboarding. Payment never locks
+  existing records, export, backups, History or the Loop import; reaching the
+  limit only prevents adding more.
+- Offer optional cross-device sync as its own subscription, independent of the
+  unlock, end-to-end encrypted, on Cloudflare (18 October 2026; see
+  [SYNC.md](docs/SYNC.md)). With an account, the unlock follows the account.
+  On-device use never needs an account.
 - Use [Loop Habit Tracker for Android](https://github.com/iSoron/uhabits) as a
   product reference. This is inspiration for behaviour, not a decision to copy
   its code, assets, scoring formula, or every feature.
@@ -297,8 +301,9 @@ The following capabilities are desired; their milestone order is proposed.
 
 ## Deferred candidates, not permanent exclusions
 
-Cloud sync and any backend, accounts, social features, leaderboards, coaching,
-AI features, reminders, widgets and Apple Watch. Each
+Social features, leaderboards, coaching, AI features, reminders, widgets and
+Apple Watch. (Optional sync, with its backend and accounts, is planned scope
+since 18 October 2026.) Each
 needs a concrete reason to enter the first release. Statistics, numeric habits,
 comments, and incremental history are desired scope, not excluded candidates.
 
@@ -308,21 +313,21 @@ Permanent erasure of deleted data is also deferred.
 
 ## Decisions to make together
 
-| Question                                                               | Current status                                                                     |
-| ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| How many dates and in which direction? How do we browse history?       | Adaptive columns; deliberate future reveal; future entries allowed; date jump      |
-| All habits daily, selected weekdays, or frequency targets?             | Daily/selected weekdays, fixed periods and anchored cycles confirmed               |
-| Do numeric habits have units, targets, and a “lower is better” option? | Daily totals, comparisons and period success-day quotas implemented                |
-| What exactly counts toward a numeric or scheduled habit's streak?      | Dated daily rules; neutral off periods; finished-period streaks for quotas         |
-| Midnight cutoff, late-night logging, backdating, and travel?           | Local midnight implemented; later cutoff/travel policy pending                     |
-| Comments on a habit, a day, a particular entry, or multiple kinds?     | Comments desired; attachment semantics open                                        |
-| Which app changes enter the history; how do deletion and undo work?    | Active habit actions; preferences excluded; archived Delete undoable; erasure open |
-| Export/import format, backup location, and cross-device sync?          | Versioned JSON change-log backup; all older versions import; sync deferred         |
-| Any reminders or widgets required for version one?                     | Open                                                                               |
-| Free, paid, donations, or another model?                               | Five free habits plus a one-time US$9.99 unlock                                    |
-| Licence and copyright holder?                                          | GPLv3 or later; LICENSE added, copyright Daniel Adams                              |
-| Final name and visual personality?                                     | Name open; System/Dark/Light themes (Dark default) and habit colours confirmed     |
-| iOS version, Expo account, Apple Developer membership?                 | iPhone 16 Pro confirmed; EAS preview profile prepared; account/OS status open      |
+| Question                                                               | Current status                                                                      |
+| ---------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| How many dates and in which direction? How do we browse history?       | Adaptive columns; deliberate future reveal; future entries allowed; date jump       |
+| All habits daily, selected weekdays, or frequency targets?             | Daily/selected weekdays, fixed periods and anchored cycles confirmed                |
+| Do numeric habits have units, targets, and a “lower is better” option? | Daily totals, comparisons and period success-day quotas implemented                 |
+| What exactly counts toward a numeric or scheduled habit's streak?      | Dated daily rules; neutral off periods; finished-period streaks for quotas          |
+| Midnight cutoff, late-night logging, backdating, and travel?           | Local midnight implemented; later cutoff/travel policy pending                      |
+| Comments on a habit, a day, a particular entry, or multiple kinds?     | Comments desired; attachment semantics open                                         |
+| Which app changes enter the history; how do deletion and undo work?    | Active habit actions; preferences excluded; archived Delete undoable; erasure open  |
+| Export/import format, backup location, and cross-device sync?          | Versioned JSON change-log backup; all older versions import; sync planned (SYNC.md) |
+| Any reminders or widgets required for version one?                     | Open                                                                                |
+| Free, paid, donations, or another model?                               | Five free habits plus a one-time US$9.99 unlock                                     |
+| Licence and copyright holder?                                          | GPLv3 or later; LICENSE added, copyright Daniel Adams                               |
+| Final name and visual personality?                                     | Name open; System/Dark/Light themes (Dark default) and habit colours confirmed      |
+| iOS version, Expo account, Apple Developer membership?                 | iPhone 16 Pro confirmed; EAS preview profile prepared; account/OS status open       |
 
 ## Milestones
 

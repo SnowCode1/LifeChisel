@@ -179,7 +179,13 @@ export async function createSampleStore(
   );
   const repository: Repository = {
     async load() {
-      return { ...replayEvents(events), hasRecovery: false };
+      return {
+        ...replayEvents(events),
+        hasRecovery: false,
+        device: 'sample',
+        sync: null,
+        conflicts: [],
+      };
     },
     async append(event, state) {
       const next = applyEvent(replay, event);

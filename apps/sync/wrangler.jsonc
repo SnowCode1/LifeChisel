@@ -1,0 +1,51 @@
+// Cloudflare configuration for the sync Worker (docs/SYNC.md).
+// - Top level: production. Not deployed; it has no D1 database yet, and
+//   payments must exist before it may serve anyone.
+// - env.dev: the development server (`npm run sync:dev` locally, and
+//   `npm run sync:deploy:dev` on workers.dev). Bindings and vars are not
+//   inherited between environments, so each lists its own.
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "onpurpose-sync",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-15",
+  "workers_dev": false,
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["AccountMailbox"] }],
+  "durable_objects": {
+    "bindings": [{ "name": "MAILBOX", "class_name": "AccountMailbox" }],
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "onpurpose-sync",
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations",
+    },
+  ],
+  "vars": { "APP_ORIGINS": "", "PASSKEY_RP_ID": "" },
+  "env": {
+    "dev": {
+      "name": "onpurpose-sync-dev",
+      "workers_dev": true,
+      "durable_objects": {
+        "bindings": [{ "name": "MAILBOX", "class_name": "AccountMailbox" }],
+      },
+      "d1_databases": [
+        {
+          "binding": "DB",
+          "database_name": "onpurpose-sync-dev",
+          // Created 18 October 2026 (region OC). Not a secret: using it
+          // still needs this Cloudflare account's credentials.
+          "database_id": "dd9237e1-89be-4336-b7fa-20fc335767bc",
+          "migrations_dir": "migrations",
+        },
+      ],
+      "vars": {
+        "APP_ORIGINS": "http://localhost:5173",
+        "PASSKEY_RP_ID": "localhost",
+        "DEV_PASSWORD_SIGN_IN": "enabled",
+        "DEV_FREE_SYNC": "enabled",
+      },
+    },
+  },
+}

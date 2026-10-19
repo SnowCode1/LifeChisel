@@ -124,7 +124,10 @@ Expo troubleshooting pages, some of which describe an earlier freeze at SDK 54.
 | `npm run web:dev`               | Browser app (`apps/web`) and landing page development servers               |
 | `npm run web:build`             | Typecheck and build the browser app into `apps/web/dist/`                   |
 | `npm run web:preview`           | Serve the browser app's production build locally                            |
-| `npm run typecheck`             | TypeScript checks for the phone and web apps                                |
+| `npm run sync:dev`              | Sync server (`apps/sync`) locally with a local D1 database; see SYNC.md     |
+| `npm run sync:build`            | Bundle both sync server environments without deploying                      |
+| `npm run sync:deploy:dev`       | Deploy the development sync server (after the setup in SYNC.md)             |
+| `npm run typecheck`             | TypeScript checks for the phone, web, landing and sync code                 |
 | `npm run lint`                  | ESLint checks                                                               |
 | `npm run format`                | Format the repository with Prettier                                         |
 | `npm run format:check`          | Check formatting without changing files                                     |

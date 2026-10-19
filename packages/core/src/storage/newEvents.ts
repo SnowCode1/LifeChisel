@@ -4,28 +4,37 @@ import { presetDescriptions } from '../presetDescriptions.ts';
 import { LEGACY_NOTE_TITLE } from '../notes.ts';
 import type { EventMeta, StoredEvent } from './model.ts';
 
+export const WRITER_VERSION = 24;
+
 // Every app writes new events with the current writer version; keep the phone
-// and web stores on one definition so they cannot drift apart.
+// and web stores on one definition so they cannot drift apart. From v24 each
+// event names its device; the store adds it to ordinary edits.
 export function eventMeta(
   sequence: number,
   id: string,
   now = new Date(),
+  device?: string,
 ): EventMeta {
   return {
-    version: 23,
+    version: WRITER_VERSION,
     id,
     sequence,
     recordedAt: now.toISOString(),
     timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'unknown',
     utcOffsetMinutes: -now.getTimezoneOffset(),
+    ...(device ? { device } : {}),
   };
 }
 
 // The one-time first event of a new store (development presets for now).
 // Each preset's placeholder text is its first note, titled Info.
-export function initialEvent(id: string, now = new Date()): StoredEvent {
+export function initialEvent(
+  id: string,
+  device: string,
+  now = new Date(),
+): StoredEvent {
   return {
-    ...eventMeta(1, id, now),
+    ...eventMeta(1, id, now, device),
     type: 'initialize',
     habits: demoHabits.map((habit) => ({
       ...habit,

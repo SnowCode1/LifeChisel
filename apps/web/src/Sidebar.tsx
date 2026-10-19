@@ -1,6 +1,47 @@
+import { useSyncExternalStore } from 'react';
 import { Icon, type WebIconName } from './ui/Icon.tsx';
 import { LANDING_URL } from './config.ts';
 import type { SamplePresetInfo } from '@onpurpose/core/dev/samplePresets';
+import type { SyncController, SyncSnapshot } from './sync/controller.ts';
+
+const noSync: SyncSnapshot = {
+  view: { stage: 'unavailable' },
+  busy: false,
+  notice: null,
+};
+const subscribeNothing = () => () => {};
+
+// Where the data is kept, in a few words (docs/SYNC.md for sync states).
+function useStorageLine(
+  sync: SyncController | null,
+  conflicts: number,
+): { label: string; title: string; attention: boolean } | null {
+  const snapshot = useSyncExternalStore(
+    sync?.subscribe ?? subscribeNothing,
+    sync?.getSnapshot ?? (() => noSync),
+  );
+  const view = snapshot.view;
+  if (view.stage !== 'ready') return null;
+  const status = view.status;
+  const title =
+    'Your habits are saved in this browser and synced. Open Sync settings.';
+  if (conflicts)
+    return {
+      label: `Synced · ${conflicts} to review`,
+      title,
+      attention: true,
+    };
+  switch (status.state) {
+    case 'idle':
+      return { label: 'Saved and synced', title, attention: false };
+    case 'syncing':
+      return { label: 'Syncing…', title, attention: false };
+    case 'offline':
+      return { label: 'Saved · sync offline', title, attention: false };
+    default:
+      return { label: 'Sync needs attention', title, attention: true };
+  }
+}
 
 /** Development only: which fictional history the sample store holds. */
 export type SamplePresetChoice = {
@@ -23,6 +64,8 @@ export function Sidebar({
   historyOpen,
   canAdd,
   saveError,
+  sync,
+  conflicts,
   sampleData,
   onSampleData,
   samplePreset,
@@ -40,6 +83,8 @@ export function Sidebar({
   historyOpen: boolean;
   canAdd: boolean;
   saveError: boolean;
+  sync: SyncController | null;
+  conflicts: number;
   sampleData: boolean;
   onSampleData?: (value: boolean) => void;
   samplePreset?: SamplePresetChoice;
@@ -51,6 +96,7 @@ export function Sidebar({
   onBackups: () => void;
   onShortcuts: () => void;
 }) {
+  const synced = useStorageLine(sync, conflicts);
   return (
     <aside
       className={collapsed ? 'sidebar collapsed' : 'sidebar'}
@@ -135,22 +181,25 @@ export function Sidebar({
         <button
           type="button"
           className={
-            saveError ? 'sidebar-item storage error' : 'sidebar-item storage'
+            saveError || (synced?.attention && !sampleData)
+              ? 'sidebar-item storage error'
+              : 'sidebar-item storage'
           }
           title={
             sampleData
               ? 'Sample data lives only in this tab'
-              : 'Your habits are saved in this browser. Back them up from Settings.'
+              : (synced?.title ??
+                'Your habits are saved in this browser. Back them up or sync them from Settings.')
           }
           onClick={onBackups}
         >
-          <Icon name="device" size={18} />
+          <Icon name={synced && !sampleData ? 'cloud' : 'device'} size={18} />
           <span className="sidebar-label">
             {sampleData
               ? 'Sample data, not saved'
               : saveError
                 ? 'Not saved yet'
-                : 'Saved in this browser'}
+                : (synced?.label ?? 'Saved in this browser')}
           </span>
         </button>
         <Item

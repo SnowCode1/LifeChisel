@@ -153,7 +153,7 @@ test('text and multiple categories survive SQLite reload, serialized corrections
     opened.getSnapshot().replay.state,
     store.getSnapshot().replay.state,
   );
-  assert.equal(raw.prepare('PRAGMA user_version').get().user_version, 1);
+  assert.equal(raw.prepare('PRAGMA user_version').get().user_version, 2);
   assert.equal(opened.undo(), true);
   assert.equal(
     opened.getSnapshot().replay.state.values['exercise:2026-10-06'],
@@ -170,7 +170,7 @@ test('text and multiple categories survive SQLite reload, serialized corrections
     '2026-10-05T09:00:00.000Z',
     digest,
   );
-  assert.equal(JSON.parse(encoded).version, 23);
+  assert.equal(JSON.parse(encoded).version, 24);
   const decoded = await decodeArchive(encoded, digest);
   assert.deepEqual(
     decoded.replay.state.values,

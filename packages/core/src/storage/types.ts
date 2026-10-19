@@ -43,7 +43,27 @@ export type StoredState = {
   joinedEndsOnly?: boolean;
   /** v23: each habit's saved notes in order (a v7 description reads first). */
   notes?: Record<string, HabitNote[]>;
+  /**
+   * v24: device-scoped preferences whose value came from another device
+   * because this one has not chosen its own yet. Present only when nonempty.
+   */
+  inheritedPreferences?: DevicePreferenceKind[];
 };
+/**
+ * v24: preferences tied to one screen or one device's hardware. Each device
+ * keeps its own choice; until it makes one it follows the latest from any.
+ */
+export type DevicePreferenceKind =
+  | 'haptics'
+  | 'tapAnimations'
+  | 'textScale'
+  | 'rowSpacing'
+  | 'columnSpacing'
+  | 'columnDensity'
+  | 'nameColumnWidth'
+  | 'gridNameWidth'
+  | 'gridColumnWidth'
+  | 'gridRowHeight';
 export type DeletedHabit = {
   habit: Habit;
   entries: Record<string, EntryValue>;
@@ -129,7 +149,8 @@ export type Change =
   | { kind: 'roundCheckboxes'; before: boolean | null; after: boolean }
   | { kind: 'connectorThickness'; before: number | null; after: number }
   // v21: joined runs show only their end boxes.
-  | { kind: 'joinedEndsOnly'; before: boolean | null; after: boolean };
+  | { kind: 'joinedEndsOnly'; before: boolean | null; after: boolean }
+  | BatchChange;
 export type PreferenceChange = Extract<
   Change,
   {
@@ -161,6 +182,18 @@ export type PreferenceChange = Extract<
       | 'joinedEndsOnly';
   }
 >;
+/** A habit action that may sit inside a batch (v24). */
+export type BatchItem = Exclude<Change, PreferenceChange | BatchChange>;
+/**
+ * v24: several habit changes saved, undone and synced as one action, such as
+ * restoring a backup as changes or combining two devices' data. Its inverse
+ * is the inverted items in reverse order.
+ */
+export type BatchChange = {
+  kind: 'batch';
+  label: 'restore' | 'combine';
+  changes: BatchItem[];
+};
 export type HabitChange = Exclude<Change, PreferenceChange>;
 export type EventMeta = {
   version:
@@ -186,12 +219,15 @@ export type EventMeta = {
     | 20
     | 21
     | 22
-    | 23;
+    | 23
+    | 24;
   id: string;
   sequence: number;
   recordedAt: string;
   timeZone: string;
   utcOffsetMinutes: number;
+  /** v24: the device that wrote the event (required from v24). */
+  device?: string;
 };
 export type LegacyChangeEvent = EventMeta & { version: 1 } & (
     | { type: 'change'; change: Change }
@@ -220,7 +256,8 @@ export type CurrentChangeEvent = EventMeta & {
     | 20
     | 21
     | 22
-    | 23;
+    | 23
+    | 24;
 } & (
     | { type: 'change'; groupId: string; change: HabitChange }
     | { type: 'undo' | 'redo'; targetId: string; change: HabitChange }
@@ -273,4 +310,5 @@ export type Replay = {
   hasV21: boolean;
   hasV22: boolean;
   hasV23: boolean;
+  hasV24: boolean;
 };

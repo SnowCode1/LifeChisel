@@ -2147,6 +2147,35 @@ without a card, Edit as a text button, and the reading column lined up with
 the title once the scroll area kept even gutters. Writing in place and the
 narrow pill row still worked.
 
+### Sync mailbox server (local only)
+
+`scripts/sync-mailbox.test.mjs` checks the account mailbox against Node's
+SQLite: numbering in arrival order, refusing a device that is behind or a
+duplicate retry without storing anything, paging by count and payload size,
+reopening a database file, refusing a newer layout, and strict push and pull
+validation. `npm run sync:dev` (Wrangler 4.147.0, Windows) ran the Worker
+under Cloudflare's local runtime with a real Durable Object SQLite database:
+health, sign-in refused without the dev header, push, behind (409),
+duplicate (409), paging, malformed JSON and empty pushes (400), separate
+accounts kept apart, and browser access allowed only from
+`http://localhost:5173`. Nothing was deployed; Cloudflare's hosted runtime,
+point-in-time restore and costs are untested.
+
+### Sync sign-in (local only)
+
+`scripts/sync-api.test.mjs` runs the API with real Better Auth over Node's
+SQLite, using the generated D1 migration: sign-up returns a bearer token that
+pushes and pulls only its own mailbox; two accounts stay apart; missing,
+forged and signed-out tokens get 401; sync gets 403 without free sync; the
+allowlist refuses other emails (403, no user stored); password sign-up off
+gives 400; repeated wrong passwords from one address reach 429; CORS answers
+only the app origin. `npm run sync:dev` then applied the migration to a local
+D1 database and, under Cloudflare's local runtime, sign-up, push, pull,
+sign-in, the 401s and passkey registration options (only with a session)
+behaved the same. `npm run sync:build` bundled both environments (595 KiB
+gzipped). Passkey registration in a browser and the deployed server are
+untested.
+
 ### Colour means done
 
 `scripts/grid-performance.test.mjs` and `scripts/theme.test.mjs` now check the
@@ -2156,6 +2185,23 @@ brightness from a not-done one. Headless desktop Chrome with sample data
 (Dark): done tiles stood out clearly from grey not-done tiles with grey
 circles; on the grid, empty boxes and missed crosses were grey and done days
 tinted. Paper and the phone are unchecked by eye.
+
+### Deployed development sync server
+
+`https://onpurpose-sync-dev.onpurpose-dev.workers.dev`, Wrangler 4.147.0,
+free plan, D1 in Oceania. A new `workers.dev` subdomain refused TLS for a few
+minutes after registration, then served. The first deploy hung most requests
+after the first in each instance (`wrangler tail` showed them "canceled",
+with no exception); after building Better Auth per request, ten repeated
+unauthenticated pulls each answered 401 in under 0.4 s. Then, live: health;
+a non-allowlisted sign-up refused (403); the allowlisted sign-up returned a
+bearer token; push (200, about 1 s for the first touch of the mailbox),
+behind and duplicate (409), pull; missing, forged and signed-out tokens 401;
+sign-in again; passkey registration options for the signed-in account; the
+third wrong password from one address 429. The test account, its sessions
+and the rate-limit rows were deleted afterwards; its two test mailboxes (one
+event each) remain, unreachable without the deleted accounts. Passkeys in a
+real browser and the web app against this server are untested.
 
 ### Streak numbers sat high on the iPhone
 
@@ -2204,3 +2250,41 @@ the iOS export. The founder found it better on the iPhone, and a second
 capture confirmed it: across 22 circles (eight of them 1s), every number's
 weight sat within 0.3 px of the centre horizontally, and outlines within
 0.5 px vertically.
+
+### Storage v24 and device sync
+
+`npm test` (457 tests) adds `scripts/storage-v24.test.mjs`: the v24 fixture
+extends v23 exactly and replays per device (its own text size, another
+device's ignored, a new device keeping the pre-v24 value); v24 events need a
+device and older ones must not carry one; batches validate strictly, apply
+all or nothing and Undo/Redo in one step; another device's preferences follow
+the inherit-until-chosen rule; a schema 1 database upgrades in place to
+schema 2 and keeps its device ID across reopening; log rewrites keep
+confirmed events, absorb queued edits, save sync state and conflicts
+atomically, refuse a changed kept part and leave the store editable after a
+failed plan. `scripts/sync-engine.test.mjs` runs two (and three) SQLite stores
+syncing through a real mailbox with real encryption: first upload and
+adoption, merges of different days, a same-day conflict both ways with the
+switch back, silent merge of the same change, field-by-field definition
+merges, an Undo turned into an edit, per-device preferences, combine on first
+sync (and one Undo of it everywhere), a cloud reset followed quietly or asked
+about, a lost push reply, offline edits, a wrong key that changes nothing,
+recovery-code tolerance and replacement, and restore plans. The mailbox and
+API tests cover the epoch, key compare-and-set, reset, the layout 1 → 2
+upgrade and account deletion erasing the mailbox. `npm run check`, both
+exports and `npm run web:build` passed.
+
+Headless desktop Chrome (two isolated profiles, the deployed development
+server through the Vite proxy, a virtual WebAuthn authenticator): browser A
+ticked a day, created an account, saved the recovery code and synced; added
+a passkey; browser B signed in with that passkey, unlocked with the code typed
+in lower case with spaces, took A's data and showed A's tick; B's later tick
+reached A after Sync now; A's sidebar read "Saved and synced"; deleting the
+account from A kept both ticks on A, and the server then held no users,
+sessions, passkeys or accounts. A second run, with a tick on each browser
+before syncing, asked B what to keep, matched every habit by default,
+combined both ticks onto both browsers and showed "Combined with another
+device" in B's History. Found and fixed during these runs: React's
+development profiler crashed on the controller's Proxy-valued auth client.
+Not checked: conflicts and change-based restore in a browser (covered by the
+Node tests only), Safari and Firefox, and any phone.

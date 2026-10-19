@@ -108,7 +108,10 @@ unlock for unlimited habits (10 and 12 October 2026; see
   completes the tax and banking details it requires. Then create the unlock as a
   one-time (non-consumable) in-app purchase.
 - Handle restoring purchases: offer a visible Restore Purchases action and
-  recognise an existing unlock after reinstalling or on a new device.
+  recognise an existing unlock after reinstalling or on a new device. Once
+  sync accounts exist, the unlock belongs to the account on every platform
+  (see [SYNC.md](SYNC.md)), so choose a purchase library that can carry it,
+  such as RevenueCat.
 - Test purchases with App Store sandbox accounts and through TestFlight before
   release. Update the privacy disclosures if the chosen library collects data.
 

@@ -14,7 +14,9 @@ export function openStore() {
   if (!opening)
     opening = (async () => {
       const store = new ChangeStore(
-        browserRepository(localStorage, () => initialEvent(randomUUID())),
+        browserRepository(localStorage, (device) =>
+          initialEvent(randomUUID(), device),
+        ),
         metadata,
       );
       await store.load();

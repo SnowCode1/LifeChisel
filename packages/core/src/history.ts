@@ -85,6 +85,14 @@ export function historyKind(action: HistoryAction): HistoryKind {
   return kind;
 }
 
+// The habits an action touches: one, none (order) or several (a v24 batch).
+export function changeHabitIds(change: HistoryAction['change']): string[] {
+  if (change.kind === 'order') return [];
+  if (change.kind === 'batch')
+    return [...new Set(change.changes.flatMap(changeHabitIds))];
+  return [change.habitId];
+}
+
 function historyDate(action: HistoryAction): string {
   let date = days.get(action);
   if (date === undefined) {
@@ -101,9 +109,7 @@ export function historyMatches(
   if (filter.kind !== 'all' && historyKind(action) !== filter.kind)
     return false;
   if (filter.habitId === null) return true;
-  return (
-    action.change.kind !== 'order' && action.change.habitId === filter.habitId
-  );
+  return changeHabitIds(action.change).includes(filter.habitId);
 }
 
 // Keep the log's newest-first sequence, including when the device clock changes.
@@ -205,7 +211,7 @@ export function historyCalendar(
     }
     day.count++;
     day.counts[historyKind(action)]++;
-    if (action.change.kind === 'order') {
+    if (action.change.kind === 'order' || action.change.kind === 'batch') {
       day.other++;
       continue;
     }
@@ -341,7 +347,7 @@ export function historyHabits(
 ): StoredState['habits'] {
   const ids = new Set<string>();
   for (const action of actions)
-    if (action.change.kind !== 'order') ids.add(action.change.habitId);
+    for (const id of changeHabitIds(action.change)) ids.add(id);
   return state.habits.filter((habit) => ids.has(habit.id));
 }
 
@@ -387,6 +393,19 @@ export function historyDisplayState(
 
 export function historyPresentation(event: HistoryAction, state: StoredState) {
   const change = event.change;
+  if (change.kind === 'batch') {
+    const habits = changeHabitIds(change).length;
+    return {
+      title:
+        change.label === 'restore'
+          ? 'Restored from a backup'
+          : 'Combined with another device',
+      summary: `${change.changes.length} ${change.changes.length === 1 ? 'change' : 'changes'} · ${habits} ${habits === 1 ? 'habit' : 'habits'}`,
+      icon: 'history' as const,
+      color: '#ACB8C5',
+      effectiveDate: null,
+    };
+  }
   if (change.kind === 'order')
     return {
       title: 'Habit order',

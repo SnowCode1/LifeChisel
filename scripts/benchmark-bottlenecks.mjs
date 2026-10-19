@@ -71,7 +71,9 @@ async function run(days, notes) {
     events = eventsFor(days, notes);
   const raw = new DatabaseSync(join(directory, `fixture-${days}.db`));
   try {
-    const repo = f.sqliteRepository(nodeSqlPort(raw), () => events[0]);
+    const repo = f.sqliteRepository(nodeSqlPort(raw), () => events[0], {
+      newId: () => 'benchmark-device',
+    });
     await repo.load();
     await repo.replace(events, 'fixture_recovery', '2026-10-07T00:00:00.000Z');
     let sequence = events.length;

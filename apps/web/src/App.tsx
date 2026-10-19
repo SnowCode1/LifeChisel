@@ -19,6 +19,7 @@ import { createQuickUndo } from '@onpurpose/core/quickUndo';
 import { dateRangeLabel, localDateKey } from '@onpurpose/core/calendar';
 import type { FillChange } from './grid/fillWave.ts';
 import { openStore } from './storage/openStore.ts';
+import type { SyncController } from './sync/controller.ts';
 import {
   HabitGrid,
   type CellLookStyle,
@@ -67,12 +68,24 @@ import type { SettingsPage } from './settings/Settings.tsx';
 
 export function App() {
   const [store, setStore] = useState<ChangeStore | null>(null);
+  const [sync, setSync] = useState<SyncController | null>(null);
   const [openError, setOpenError] = useState<string | null>(null);
   useEffect(() => {
-    openStore().then(setStore, (error: unknown) =>
-      setOpenError(
-        error instanceof Error ? error.message : 'Saved data could not open.',
-      ),
+    openStore().then(
+      (opened) => {
+        setStore(opened);
+        // Sync copies the saved log in the background (docs/SYNC.md); its
+        // code loads after the grid, never in the way of opening it.
+        void import('./sync/controller.ts').then(({ SyncController }) => {
+          const controller = new SyncController(opened);
+          setSync(controller);
+          void controller.init();
+        });
+      },
+      (error: unknown) =>
+        setOpenError(
+          error instanceof Error ? error.message : 'Saved data could not open.',
+        ),
     );
   }, []);
   const sample = useSampleData();
@@ -84,6 +97,7 @@ export function App() {
     <Tracker
       key={sample.enabled ? 'sample' : 'real'}
       store={sample.enabled ? sample.store! : store}
+      sync={sample.enabled ? null : sync}
       sampleData={sample.enabled}
       onSampleData={sample.available ? sample.setEnabled : undefined}
       samplePreset={
@@ -169,11 +183,13 @@ function useSampleData() {
 
 function Tracker({
   store,
+  sync,
   sampleData,
   onSampleData,
   samplePreset,
 }: {
   store: ChangeStore;
+  sync: SyncController | null;
   sampleData: boolean;
   onSampleData?: (value: boolean) => void;
   samplePreset?: SamplePresetChoice;
@@ -437,6 +453,8 @@ function Tracker({
         historyOpen={panel?.kind === 'history'}
         canAdd={store.canEdit() && state.habits.length < MAX_HABITS}
         saveError={!!snapshot.error}
+        sync={sync}
+        conflicts={snapshot.conflicts.length}
         sampleData={sampleData}
         onSampleData={onSampleData}
         samplePreset={samplePreset}
@@ -445,7 +463,7 @@ function Tracker({
         onHistory={toggleHistory}
         onArchived={() => setSettingsPage('archived')}
         onSettings={() => setSettingsPage('appearance')}
-        onBackups={() => setSettingsPage('backups')}
+        onBackups={() => setSettingsPage(sync ? 'sync' : 'backups')}
         onShortcuts={() => setShortcutsOpen(true)}
       />
       <main className="main">
@@ -547,6 +565,7 @@ function Tracker({
           {panel?.kind === 'history' && (
             <HistoryPanel
               snapshot={snapshot}
+              store={store}
               today={today}
               weekStart={state.weekStart ?? displayDefaults.weekStart}
               theme={theme}
@@ -724,6 +743,11 @@ function Tracker({
           initialPage={settingsPage}
           sampleData={sampleData}
           store={store}
+          sync={sync}
+          onReviewConflicts={() => {
+            setSettingsPage(null);
+            setPanel({ kind: 'history' });
+          }}
           snapshot={snapshot}
           theme={theme}
           look={look}

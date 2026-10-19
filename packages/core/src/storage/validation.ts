@@ -34,6 +34,8 @@ import type { Change, HabitNote, StoredEvent } from './types.ts';
 // historical version gates and rejection messages unchanged during refactoring.
 // The most dates one v22 fill may change (about ten years).
 export const MAX_FILL_DATES = 3660;
+/** v24: changes in one batch (a restore or combine of a large history). */
+export const MAX_BATCH_CHANGES = 20000;
 export function insist(condition: unknown, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
@@ -257,9 +259,31 @@ export function entryFits(
 }
 export function validateChange(
   value: unknown,
-  version = 23,
+  version = 24,
 ): asserts value is Change {
   object(value);
+  if (value.kind === 'batch') {
+    insist(version >= 24, 'Batches require version 24.');
+    keys(value, ['kind', 'label', 'changes']);
+    insist(
+      value.label === 'restore' || value.label === 'combine',
+      'Invalid batch label.',
+    );
+    insist(
+      Array.isArray(value.changes) &&
+        value.changes.length > 0 &&
+        value.changes.length <= MAX_BATCH_CHANGES,
+      `A batch holds 1 to ${MAX_BATCH_CHANGES} changes.`,
+    );
+    for (const item of value.changes) {
+      validateChange(item, version);
+      insist(
+        item.kind !== 'batch' && !isPreference(item),
+        'A batch holds habit changes only.',
+      );
+    }
+    return;
+  }
   if (value.kind === 'entry') {
     keys(value, ['kind', 'habitId', 'date', 'before', 'after']);
     id(value.habitId);
@@ -570,9 +594,15 @@ export function validateEvent(value: unknown): asserts value is StoredEvent {
       value.version === 20 ||
       value.version === 21 ||
       value.version === 22 ||
-      value.version === 23,
+      value.version === 23 ||
+      value.version === 24,
     'Unsupported event version.',
   );
+  // From v24 every event names the device that wrote it.
+  const device = value.version >= 24;
+  if (device) id(value.device);
+  else
+    insist(!Object.hasOwn(value, 'device'), 'Device IDs require version 24.');
   id(value.id);
   insist(
     Number.isSafeInteger(value.sequence) && Number(value.sequence) > 0,
@@ -597,7 +627,12 @@ export function validateEvent(value: unknown): asserts value is StoredEvent {
   );
   if (value.type === 'initialize') {
     const notes = value.version >= 23 && Object.hasOwn(value, 'notes');
-    keys(value, [...common, 'habits', ...(notes ? ['notes'] : [])]);
+    keys(value, [
+      ...common,
+      'habits',
+      ...(notes ? ['notes'] : []),
+      ...(device ? ['device'] : []),
+    ]);
     insist(
       Array.isArray(value.habits) &&
         (value.habits.length > 0 || value.version >= 3) &&
@@ -634,6 +669,7 @@ export function validateEvent(value: unknown): asserts value is StoredEvent {
       'change',
       ...(value.type === 'undo' || value.type === 'redo' ? ['targetId'] : []),
       ...(grouped ? ['groupId'] : []),
+      ...(device ? ['device'] : []),
     ]);
     validateChange(value.change, value.version);
     insist(

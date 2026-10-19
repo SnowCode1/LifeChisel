@@ -7,7 +7,7 @@ Read `PROJECT_GOALS.md`, `docs/DEVELOPMENT.md`, and `docs/DECISIONS.md`;
 (project owner and maintainer) is new to the stack: explain technical choices in
 plain language and connect them to the product goal.
 
-Current storage writers and backup exports are v23 with SQL schema 1;
+Current storage writers and backup exports are v24 with SQL schema 2;
 `docs/STORAGE.md` is the authority. Version numbers in the sections below record
 when a feature's fields arrived, and each older version must keep replaying
 unchanged.
@@ -349,8 +349,8 @@ Statistics buttons (opening the sheet on that page via `initialTab`/
 screens. Read docs/WEB.md. It reuses `@onpurpose/core` for every rule and
 format; never copy core logic into the web app, move it into core instead.
 Storage is the shared `sqliteRepository` over SQLite WebAssembly in a worker on
-OPFS (`opfs-sahpool`, no special headers), so the log, schema 1 and backups match
-the phone. One tab holds a Web Lock on the database; never fall back to a
+OPFS (`opfs-sahpool`, no special headers), so the log, SQL schema and backups
+match the phone. One tab holds a Web Lock on the database; never fall back to a
 temporary or `localStorage` database, because unsaved data must look unsaved.
 The grid is a DOM table, not Skia: browsers scroll, zoom and announce tables
 natively. Keep layout A: a centred grid about three weeks wide so Today stays
@@ -381,6 +381,28 @@ framework, small scripts for its pictures and examples); read docs/LANDING.md.
 Its copy describes the product at launch (founder decision, 16 October 2026),
 including the store apps and optional sync, in plain wording, and never copies
 `private/` planning. `src/config.ts` holds the web app and store addresses.
+
+## Sync (v24)
+
+Optional cross-device sync is confirmed scope (founder decision, 18
+October 2026), built for the web app against the development server; read
+docs/SYNC.md first. It is the one requirement for a backend and accounts;
+on-device use never needs an account. `apps/sync` is a Cloudflare Worker with
+one Durable Object mailbox per account that stores and orders end-to-end
+encrypted events it cannot read; keep the mailbox logic over its small SQL
+interface so Node tests cover it. Merging, conflicts and encryption stay on
+the device in core `sync/` (`engine.ts`, `rebase.ts`, `conflicts.ts`,
+`plan.ts`, `crypto.ts`, `client.ts`, `protocol.ts`). Rebases go through
+`ChangeStore.rewriteLog` in the ordered write queue and never alter confirmed
+events; keep a recovery copy whenever pending edits change. The web side is
+`apps/web/src/sync/` (its controller loads after the grid; keep the Better
+Auth client in private fields, React's development profiler walks visible
+props). Choose the mailbox only from the signed-in session; keep sync refused
+unless `DEV_FREE_SYNC` (development servers only) or, later, the server's
+entitlement check allows it; keep secrets out of the repository. Regenerate
+`migrations/0001_auth.sql` with `scripts/generate-auth-schema.mjs` only before
+it has been applied, then add numbered migrations. The phone writes v24 and
+schema 2 but has no sync screens yet.
 
 ## UI and accessibility
 
@@ -653,5 +675,5 @@ date/daily/habit validation and precondition assertions; `storage/changeUtils.ts
 owns preference classification, structural equality and inversion. Validation
 must not import replay/model at runtime. Preserve all public model exports,
 legacy rejection semantics, mutable replay versus immutable live updates, the
-current writer version and schema 1 when changing these modules. Do not bypass validation to
+current writer version and SQL schema when changing these modules. Do not bypass validation to
 make the split appear faster.

@@ -17,7 +17,9 @@ export function openStore(): Promise<ChangeStore> {
     opening = (async () => {
       const db = await openDatabaseAsync('onpurpose.db');
       const store = new ChangeStore(
-        sqliteRepository(db, () => initialEvent(randomUUID())),
+        sqliteRepository(db, (device) => initialEvent(randomUUID(), device), {
+          newId: randomUUID,
+        }),
         metadata,
       );
       await store.load();

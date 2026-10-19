@@ -1,10 +1,13 @@
 import { applyEvent, replayEvents, type StoredEvent } from './model.ts';
 import type { Repository } from './repository.ts';
 
+// The preview's fixed device ID; it has no sync.
+const PREVIEW_DEVICE = 'expo-web-preview';
+
 // Browser preview only. Native iOS uses SQLite, not this localStorage adapter.
 export function browserRepository(
   storage: Pick<Storage, 'getItem' | 'setItem'>,
-  initialize: () => StoredEvent,
+  initialize: (device: string) => StoredEvent,
 ): Repository {
   const key = 'onpurpose.preview.v1';
   type Document = {
@@ -17,7 +20,7 @@ export function browserRepository(
     if (text === null) {
       const document: Document = {
         version: 1,
-        events: [initialize()],
+        events: [initialize(PREVIEW_DEVICE)],
         recovery: [],
       };
       replayEvents(document.events);
@@ -34,8 +37,11 @@ export function browserRepository(
     async load() {
       const doc = read();
       return {
-        ...replayEvents(doc.events),
+        ...replayEvents(doc.events, { localDevice: PREVIEW_DEVICE }),
         hasRecovery: doc.recovery.length > 0,
+        device: PREVIEW_DEVICE,
+        sync: null,
+        conflicts: [],
       };
     },
     async append(event, state) {
@@ -48,7 +54,10 @@ export function browserRepository(
       }
       if (event.sequence !== doc.events.length + 1)
         throw new Error('Another browser tab changed the preview data.');
-      const projected = applyEvent(replayEvents(doc.events).replay, event);
+      const projected = applyEvent(
+        replayEvents(doc.events, { localDevice: PREVIEW_DEVICE }).replay,
+        event,
+      );
       if (JSON.stringify(projected.state) !== JSON.stringify(state))
         throw new Error('Projection mismatch.');
       storage.setItem(

@@ -387,7 +387,7 @@ test('v17 width/density preferences persist in SQLite/backup without changing le
     digest,
   );
   const decoded = await decodeArchive(backup, digest);
-  assert.equal(JSON.parse(backup).version, 23);
+  assert.equal(JSON.parse(backup).version, 24);
   assert.deepEqual(decoded.events, events);
   await store.exclusive(() => store.replace(decoded.events));
   assert.equal(store.redo(), true);
@@ -400,7 +400,7 @@ test('v17 width/density preferences persist in SQLite/backup without changing le
         type: 'preference',
         change: { kind: 'haptics', before: true, after: false },
       }),
-    /version-23/,
+    /version-24/,
   );
   const previous = JSON.parse(
     readFileSync(

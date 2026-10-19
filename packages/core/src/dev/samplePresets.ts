@@ -83,6 +83,9 @@ function presetNotes(habit: SampleHabit): HabitNote[] {
   ];
 }
 
+// Sample logs are written by one fictional device (v24 events name theirs).
+const SAMPLE_DEVICE = 'sample';
+
 /** A deterministic event log for one preset, ending on `today`. */
 export function createPresetEvents(id: string, today: string): StoredEvent[] {
   const preset = samplePresets.find((item) => item.id === id);
@@ -93,7 +96,7 @@ export function createPresetEvents(id: string, today: string): StoredEvent[] {
   first.setHours(5, 0, 0, 0);
   const events: StoredEvent[] = [
     {
-      ...eventMeta(1, `sample_${id}_1`, first),
+      ...eventMeta(1, `sample_${id}_1`, first, SAMPLE_DEVICE),
       type: 'initialize',
       habits: preset.habits.map((habit) => definition(habit, start, today)),
       notes: Object.fromEntries(
@@ -142,6 +145,7 @@ export function createPresetEvents(id: string, today: string): StoredEvent[] {
         events.length + 1,
         `sample_${id}_${events.length + 1}`,
         date,
+        SAMPLE_DEVICE,
       );
       events.push({
         ...metadata,

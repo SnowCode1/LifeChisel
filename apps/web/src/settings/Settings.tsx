@@ -33,7 +33,11 @@ import {
   archivedRecordRange,
 } from '@onpurpose/core/archivedHabitDetails';
 import type { EntryValues } from '@onpurpose/core/entries';
-import type { StoredState } from '@onpurpose/core/storage/model';
+import {
+  replayEvents,
+  type StoredEvent,
+  type StoredState,
+} from '@onpurpose/core/storage/model';
 import type { ChangeStore, StoreSnapshot } from '@onpurpose/core/storage/store';
 import { createGridPalette } from '@onpurpose/core/gridAppearance';
 import { ordinal } from '@onpurpose/core/goalTiming';
@@ -44,13 +48,18 @@ import { gridDays } from '../grid/HabitGrid.tsx';
 import type { CellLookStyle, GridHandlers } from '../grid/types.ts';
 import type { HabitActions, WebPreference } from '../actions.ts';
 import { exportBackup, readBackup } from '../storage/backups.ts';
+import { restorePlan, type RestoreMode } from '@onpurpose/core/sync/plan';
+import { MAX_BATCH_CHANGES } from '@onpurpose/core/storage/validation';
+import { SyncSettings } from '../sync/SyncSettings.tsx';
+import type { SyncController } from '../sync/controller.ts';
 
 export type SettingsPage =
-  'appearance' | 'tracking' | 'backups' | 'archived' | 'about';
+  'appearance' | 'tracking' | 'sync' | 'backups' | 'archived' | 'about';
 type Page = SettingsPage;
-const PAGES: { id: Page; label: string }[] = [
+const ALL_PAGES: { id: Page; label: string }[] = [
   { id: 'appearance', label: 'Appearance' },
   { id: 'tracking', label: 'Daily tracking' },
+  { id: 'sync', label: 'Sync' },
   { id: 'backups', label: 'Backups' },
   { id: 'archived', label: 'Archived habits' },
   { id: 'about', label: 'About' },
@@ -63,6 +72,8 @@ export function Settings({
   initialPage = 'appearance',
   sampleData = false,
   store,
+  sync,
+  onReviewConflicts,
   snapshot,
   theme,
   look,
@@ -75,6 +86,9 @@ export function Settings({
   initialPage?: Page;
   sampleData?: boolean;
   store: ChangeStore;
+  /** Absent with sample data, which never syncs. */
+  sync: SyncController | null;
+  onReviewConflicts: () => void;
   snapshot: StoreSnapshot;
   theme: Theme;
   look: CellLookStyle;
@@ -85,7 +99,10 @@ export function Settings({
   onClose: () => void;
 }) {
   const titleId = useId();
-  const [page, setPage] = useState<Page>(initialPage);
+  const PAGES = ALL_PAGES.filter((item) => item.id !== 'sync' || sync);
+  const [page, setPage] = useState<Page>(
+    initialPage === 'sync' && !sync ? 'backups' : initialPage,
+  );
   const state = snapshot.replay.state;
   const set = <K extends WebPreference>(kind: K, value: StoredState[K]) =>
     actions.setPreference(kind, value);
@@ -179,6 +196,13 @@ export function Settings({
                   Track only stay visible.
                 </p>
               </>
+            )}
+            {page === 'sync' && sync && (
+              <SyncSettings
+                sync={sync}
+                snapshot={snapshot}
+                onReviewConflicts={onReviewConflicts}
+              />
             )}
             {page === 'backups' && (
               <Backups
@@ -716,18 +740,64 @@ function Backups({
       setBusy(false);
     }
   };
-  const restore = (file: File) =>
+  const [chosen, setChosen] = useState<{
+    name: string;
+    events: StoredEvent[];
+  } | null>(null);
+  const synced = !!snapshot.sync;
+  const choose = (file: File) =>
     run(async () => {
       const archive = await readBackup(file);
-      const confirmed = window.confirm(
-        `Restore this backup?\n\nIt has ${archive.replay.state.habits.length} habits and ${archive.events.length - 1} changes. It will replace your current entries, colours and settings in this browser. A copy of the current data will be kept here.`,
-      );
-      if (!confirmed) return null;
-      await store.exclusive(() => store.replace(archive.events));
+      setChosen({ name: file.name, events: archive.events });
+      return null;
+    });
+  // A restore is ordinary undoable changes towards the backup, so it syncs
+  // like any edit and keeps History (docs/SYNC.md).
+  const restoreAsChanges = (events: StoredEvent[], mode: RestoreMode) =>
+    run(async () => {
+      const target = replayEvents(events).replay.state;
+      const plan = restorePlan(snapshot.replay.state, target, mode);
+      setChosen(null);
+      if (!plan.changes.length)
+        return mode === 'missing'
+          ? 'Nothing is missing here; nothing was changed.'
+          : 'Everything already matches; nothing was changed.';
+      for (
+        let start = 0;
+        start < plan.changes.length;
+        start += MAX_BATCH_CHANGES
+      )
+        store.applyBatch(
+          'restore',
+          plan.changes.slice(start, start + MAX_BATCH_CHANGES),
+        );
+      await store.settled();
+      const count = plan.changes.length;
+      const skipped = plan.skipped ? ` (${plan.skipped} could not apply)` : '';
+      return `Restored with ${count.toLocaleString()} ${count === 1 ? 'change' : 'changes'}${skipped}. Undo it in History.`;
+    });
+  const replaceAll = (events: StoredEvent[]) =>
+    run(async () => {
+      if (
+        !window.confirm(
+          'Replace everything with this backup?\n\nThis replaces your habits, settings and History in this browser with the backup’s. A copy of the current data will be kept here.',
+        )
+      )
+        return null;
+      setChosen(null);
+      await store.exclusive(() => store.replace(events));
       return 'Backup restored. The data it replaced is kept as a copy.';
     });
   const recover = () =>
     run(async () => {
+      // Synced: return to the copy as changes, like any other restore.
+      if (synced) {
+        setChosen({
+          name: 'The copy kept here',
+          events: await store.recoveryEvents(),
+        });
+        return null;
+      }
       if (
         !window.confirm(
           'Return to the pre-restore copy?\n\nThis replaces the current data. A copy of the current data will also be kept.',
@@ -768,7 +838,8 @@ function Backups({
           <span>
             Restore backup
             <span className="hint">
-              Replaces this browser’s data after you confirm
+              Brings back what is missing, or makes everything match, as changes
+              you can undo
             </span>
           </span>
           <button
@@ -787,10 +858,29 @@ function Backups({
             onChange={(event) => {
               const file = event.target.files?.[0];
               event.target.value = '';
-              if (file) void restore(file);
+              if (file) void choose(file);
             }}
           />
         </div>
+        {chosen && (
+          <RestoreChoice
+            name={chosen.name}
+            events={chosen.events}
+            synced={synced}
+            busy={busy}
+            onMissing={() => void restoreAsChanges(chosen.events, 'missing')}
+            onMatch={() => {
+              if (
+                window.confirm(
+                  'Make everything match this backup?\n\nDays, notes, habit details and order are set to the backup’s, and habits it does not have are archived. This is one action you can undo in History.',
+                )
+              )
+                void restoreAsChanges(chosen.events, 'match');
+            }}
+            onReplace={() => void replaceAll(chosen.events)}
+            onCancel={() => setChosen(null)}
+          />
+        )}
         {snapshot.hasRecovery && (
           <div className="setting-row">
             <span>
@@ -827,6 +917,81 @@ function Backups({
         now and then.
       </p>
     </>
+  );
+}
+
+function RestoreChoice({
+  name,
+  events,
+  synced,
+  busy,
+  onMissing,
+  onMatch,
+  onReplace,
+  onCancel,
+}: {
+  name: string;
+  events: StoredEvent[];
+  synced: boolean;
+  busy: boolean;
+  onMissing: () => void;
+  onMatch: () => void;
+  onReplace: () => void;
+  onCancel: () => void;
+}) {
+  const habits = replayEvents(events).replay.state.habits.length;
+  const last = events.at(-1)?.recordedAt;
+  return (
+    <div className="restore-choice" role="group" aria-label="Restore options">
+      <p>
+        <strong>{name}</strong>
+        <span className="hint">
+          {habits} {habits === 1 ? 'habit' : 'habits'} ·{' '}
+          {(events.length - 1).toLocaleString()} changes
+          {last
+            ? ` · last change ${new Date(last).toLocaleDateString(undefined, { dateStyle: 'medium' })}`
+            : ''}
+        </span>
+      </p>
+      <div className="sync-options">
+        <button
+          type="button"
+          className="done-button"
+          disabled={busy}
+          onClick={onMissing}
+        >
+          Bring back what’s missing
+        </button>
+        <button
+          type="button"
+          className="secondary-button"
+          disabled={busy}
+          onClick={onMatch}
+        >
+          Make everything match…
+        </button>
+        {!synced && (
+          <button
+            type="button"
+            className="secondary-button"
+            disabled={busy}
+            onClick={onReplace}
+          >
+            Replace everything…
+          </button>
+        )}
+        <button type="button" className="text-button" onClick={onCancel}>
+          Cancel
+        </button>
+      </div>
+      <p className="hint">
+        Bringing back what is missing adds the habits, days and notes this
+        browser lacks and changes nothing else.
+        {synced
+          ? ' Either way it reaches your other devices as one change.'
+          : ' Replacing everything also replaces History and settings.'}
+      </p>
+    </div>
   );
 }
 

@@ -9,7 +9,14 @@ const gear = Array.from({ length: 40 }, (_, index) => {
 
 // Web-only icons (the sidebar and its controls) beside the shared ones.
 export type WebIconName =
-  IconName | 'grid' | 'keyboard' | 'sidebar' | 'device' | 'flask' | 'expand';
+  | IconName
+  | 'grid'
+  | 'keyboard'
+  | 'sidebar'
+  | 'device'
+  | 'flask'
+  | 'expand'
+  | 'cloud';
 
 export function Icon({
   name,
@@ -148,6 +155,9 @@ export function Icon({
           <ellipse cx={12} cy={6} rx={7.5} ry={2.5} />
           <path d="M4.5 6v12c0 1.4 3.4 2.5 7.5 2.5s7.5-1.1 7.5-2.5V6M4.5 12c0 1.4 3.4 2.5 7.5 2.5s7.5-1.1 7.5-2.5" />
         </>
+      )}
+      {name === 'cloud' && (
+        <path d="M7 18.5h10.5a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.5 9.6 4.5 4.5 0 0 0 7 18.5Z" />
       )}
       {name === 'expand' && (
         <path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7" />

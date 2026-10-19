@@ -37,8 +37,10 @@ export function openStore(): Promise<ChangeStore> {
         type: 'module',
       });
       const store = new ChangeStore(
-        sqliteRepository(workerSql(worker as unknown as SqlChannel), () =>
-          initialEvent(crypto.randomUUID()),
+        sqliteRepository(
+          workerSql(worker as unknown as SqlChannel),
+          (device) => initialEvent(crypto.randomUUID(), device),
+          { newId: () => crypto.randomUUID() },
         ),
         (sequence) => eventMeta(sequence, crypto.randomUUID()),
       );

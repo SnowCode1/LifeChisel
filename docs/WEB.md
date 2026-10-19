@@ -10,7 +10,8 @@ Ctrl+Shift+Z or Ctrl+Y) and the four-second quick undo. Habits can be added,
 edited, reordered and archived, and each has a Notes/Statistics dialog.
 History has its own panel, and Settings covers appearance, grid sizes, daily
 tracking, backups and archived habits. Goals and notes can be edited. A quiet
-sidebar holds everything around the grid. Sync is not built yet.
+sidebar holds everything around the grid. Optional sync (Settings → Sync,
+see [Sync](#sync)) works against the development server.
 
 ## Home grid (layout A)
 
@@ -264,7 +265,9 @@ Choosing a day opens it in the day list. What the dots mean is behind a
 "What the dots mean" row below the calendar, under a separator
 (`ui/InfoNote.tsx`, the phone's InfoNote pattern). The Undo bar always names the newest
 action, even when filtered out; Undo and Redo live there (and on Ctrl+Z /
-Ctrl+Shift+Z) rather than in the top bar.
+Ctrl+Shift+Z) rather than in the top bar. While syncing, sync conflicts show
+above the filters (`sync/Conflicts.tsx`): what was kept, a button for the
+other value (an ordinary undoable edit) and OK to clear the notice.
 
 ## Goals
 
@@ -321,11 +324,14 @@ and Undo, with the phone's before-value rules (newer kinds start from null).
 - **Daily tracking:** Hide completed today (rows meeting today's goal leave
   after 700 ms, return at once when undone, and a footer link shows them) and
   the week start.
+- **Sync:** see [Sync](#sync).
 - **Backups:** export downloads the phone's backup format (core
-  `encodeArchive`, SHA-256 via Web Crypto); restore validates the whole file
-  first, asks for confirmation naming its habits and changes, runs
-  exclusively and keeps a pre-restore copy, which "Restore previous data"
-  returns to.
+  `encodeArchive`, SHA-256 via Web Crypto). Restore validates the whole file
+  first, then offers Bring back what's missing (the default) or Make
+  everything match, each one undoable "Restored from a backup" action built by
+  core `restorePlan`; without sync, Replace everything (the whole log,
+  exclusively, keeping a pre-restore copy that "Restore previous data"
+  returns to) is offered too.
 - **Archived habits:** record counts and ranges, Restore, and Delete with a
   named confirmation (core `deleteArchivedHabit`, undoable in History).
 
@@ -385,6 +391,32 @@ this size well, so the web keeps the browser's native strengths. The grid's
 rules (colours from `gridAppearance`, completion from `habitCompletion`,
 checkbox defaults from `habitGoals`) are shared; only the drawing differs.
 
+## Sync
+
+Settings → Sync (`sync/SyncSettings.tsx`) and the sidebar's storage line
+("Saved and synced", "Syncing…", "Sync needs attention") are the browser side
+of [SYNC.md](SYNC.md). `sync/controller.ts` holds sign-in (Better Auth's
+client with bearer tokens and passkeys), the account key and the core sync
+engine, and gives the screens one snapshot; it loads after the grid opens,
+so opening the app never waits for it. Sample data never syncs.
+
+1. Sign in with a passkey, or on the development server with an allowed email
+   and password.
+2. The first browser for an account creates the recovery code; the person
+   copies or downloads it and confirms before sync starts. Other browsers
+   type it to unlock.
+3. Sync then runs in the background: after edits, every minute and with Sync
+   now. When this browser and the account both have habits, the page asks
+   whether to combine them (with habit matching), use the account's or use
+   this browser's.
+4. The Account group adds a passkey, makes a new recovery code, signs out
+   (the habits stay) or deletes the account and its cloud copy.
+
+The session token and the account key live in IndexedDB (`sync/secrets.ts`),
+apart from the habit database. In development, requests go to `/sync`, which
+Vite proxies to the deployed development server or to `VITE_SYNC_TARGET`;
+production builds show sync only when `VITE_SYNC_URL` is set.
+
 ## Storage
 
 `src/storage/openStore.ts` opens the same `ChangeStore` and `sqliteRepository`
@@ -409,8 +441,10 @@ temporary or `localStorage` database, because data that will not survive a
 reload must not look saved. OPFS needs a secure context (`https://` or
 `localhost`).
 
-Because the format matches, backups exported from the phone will import on the
-web once backup screens exist there; nothing about the file format changes.
+Because the format matches, backups exported from the phone import on the
+web, and the other way round. The database also holds this browser's device
+ID, sync state and open conflicts (SQL schema 2, see
+[STORAGE.md](STORAGE.md)).
 
 ## Commands
 
@@ -434,7 +468,10 @@ WebAssembly in memory (Node has no OPFS).
 - Every loaded row and day is in the DOM. Twelve to fourteen habits over
   several hundred days are fine in Chrome; hundreds of habits may need only
   the visible rows rendered.
-- The main script is about 300 KB gzipped, mostly the habit icon catalogues
-  that validation imports; SQLite adds about 400 KB gzipped. Splitting the
-  catalogues out is a later optimisation.
-- Data in one browser is separate from the phone until sync exists.
+- The main script is about 810 KB gzipped (measured 18 October 2026), mostly
+  the habit icon catalogues that validation imports; SQLite adds about 400 KB
+  gzipped and the sync code, loaded after the grid, about 23 KB. Splitting
+  the catalogues out is a later optimisation.
+- Without sync, data in one browser is separate from the phone. Sync has
+  been checked only in headless desktop Chrome, against the development
+  server.

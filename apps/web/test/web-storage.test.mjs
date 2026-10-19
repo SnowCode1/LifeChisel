@@ -22,12 +22,14 @@ function channel(db) {
 }
 function open(db) {
   return new ChangeStore(
-    sqliteRepository(workerSql(channel(db)), () => initialEvent(randomUUID())),
+    sqliteRepository(workerSql(channel(db)), (device) =>
+      initialEvent(randomUUID(), device),
+    ),
     (sequence) => eventMeta(sequence, randomUUID()),
   );
 }
 
-test('the shared repository creates schema 1 and keeps saved entries across reopening', async () => {
+test('the shared repository creates schema 2 and keeps saved entries and the device across reopening', async () => {
   const db = new sqlite3.oo1.DB(':memory:');
   const first = open(db);
   await first.load();
@@ -43,13 +45,17 @@ test('the shared repository creates schema 1 and keeps saved entries across reop
     }),
   );
   await first.flush();
-  assert.equal(db.selectValue('PRAGMA user_version'), 1);
+  assert.equal(db.selectValue('PRAGMA user_version'), 2);
+  const device = first.getSnapshot().device;
+  assert.equal(first.getSnapshot().events[1].device, device);
   const second = open(db);
   await second.load();
   const snapshot = second.getSnapshot();
   assert.equal(snapshot.status, 'ready');
   assert.equal(snapshot.events.length, 2);
-  assert.equal(snapshot.events[0].version, 23);
+  assert.equal(snapshot.events[0].version, 24);
+  assert.equal(snapshot.device, device);
+  assert.equal(snapshot.events[0].device, device);
   assert.equal(snapshot.replay.state.values[`${habit.id}:2026-10-13`], 1);
   db.close();
 });

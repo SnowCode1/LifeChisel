@@ -96,7 +96,7 @@ async function fixture(habits = [walk, read], extra = []) {
 }
 
 test('a v7 description reads as an Info note first, and the writer is v23', async () => {
-  assert.equal(eventMeta(1, 'x').version, 23);
+  assert.equal(eventMeta(1, 'x').version, 24);
   const { state, notes } = await fixture();
   assert.deepEqual(notes(), [
     { id: LEGACY_NOTE_ID, title: 'Info', text: 'Old **walk** note' },
@@ -304,7 +304,8 @@ test('replay rejects stale notes, orphans and a description returning beside its
   const event = (change, type = 'change') => {
     const meta = {
       ...metadata(store.getSnapshot().events.length + 1),
-      version: 23,
+      version: 24,
+      device: 'test-device',
     };
     return type === 'change'
       ? { ...meta, type, groupId: meta.id, change }
@@ -443,11 +444,15 @@ test('the v23 fixture extends v22 exactly and replays notes, moves, renames and 
     await encodeArchive(next.events, file.exportedAt, digest),
   );
   assert.equal(again.sha256, file.sha256);
-  assert.equal(again.version, 23);
+  assert.equal(again.version, 24);
 });
 
 test('new stores, marketing presets and the sample store start with notes, not descriptions', async () => {
-  const first = initialEvent('first', new Date('2026-10-17T02:00:00Z'));
+  const first = initialEvent(
+    'first',
+    'test-device',
+    new Date('2026-10-17T02:00:00Z'),
+  );
   assert.ok(first.habits.every((habit) => habit.description === undefined));
   assert.equal(first.notes.walk[0].title, 'Info');
   const { replay } = replayEvents([first]);

@@ -17,11 +17,12 @@ import {
 } from '@onpurpose/core/history';
 import { noteVersion } from '@onpurpose/core/notes';
 import type { HistoryAction, StoredState } from '@onpurpose/core/storage/model';
-import type { StoreSnapshot } from '@onpurpose/core/storage/store';
+import type { ChangeStore, StoreSnapshot } from '@onpurpose/core/storage/store';
 import type { Theme } from '@onpurpose/core/theme';
 import type { WeekStart } from '@onpurpose/core/displayPreferences';
 import { Icon } from '../ui/Icon.tsx';
 import { HistoryCalendar, type CalendarScale } from './HistoryCalendar.tsx';
+import { Conflicts } from '../sync/Conflicts.tsx';
 
 const DAY_PAGE = 40;
 const KINDS: { value: HistoryKind | 'all'; label: string }[] = [
@@ -48,6 +49,7 @@ const shortDate = (date: string, reference: string) =>
 // even when it is filtered out.
 export function HistoryPanel({
   snapshot,
+  store,
   today,
   weekStart,
   theme,
@@ -58,6 +60,7 @@ export function HistoryPanel({
   onOpenNote,
 }: {
   snapshot: StoreSnapshot;
+  store: ChangeStore;
   today: string;
   weekStart: WeekStart;
   theme: Theme;
@@ -196,6 +199,7 @@ export function HistoryPanel({
           </button>
         </div>
       </header>
+      <Conflicts store={store} snapshot={snapshot} editable={editable} />
       <div className="history-filters">
         <div className="chips" role="tablist" aria-label="Kind of change">
           {KINDS.map((option) => (

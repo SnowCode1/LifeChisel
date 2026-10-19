@@ -182,11 +182,16 @@ function fixture(t, fault) {
     timeZone: 'UTC',
     utcOffsetMinutes: 0,
   });
-  const repository = f.sqliteRepository(nodeSqlPort(raw, fault), () => ({
-    ...meta(1),
-    type: 'initialize',
-    habits: [{ id: 'habit', name: 'Fictional habit', color: '#82E6BC' }],
-  }));
+  const repository = f.sqliteRepository(
+    nodeSqlPort(raw, fault),
+    () => ({
+      ...meta(1),
+      type: 'initialize',
+      habits: [{ id: 'habit', name: 'Fictional habit', color: '#82E6BC' }],
+    }),
+    // The sandbox has no crypto; a fixed device ID keeps the run deterministic.
+    { newId: () => 'perf-device' },
+  );
   return { ...f, repository, store: new f.ChangeStore(repository, meta), raw };
 }
 test('reading mounted entry selections is SQL-free; one durable edit records SQL and validation separately', async (t) => {

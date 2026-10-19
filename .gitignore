@@ -47,3 +47,7 @@ credentials.json
 
 # maintainer-only planning (launch, legal, business); never committed
 /private/
+
+# Cloudflare local state and secrets
+.wrangler/
+.dev.vars*

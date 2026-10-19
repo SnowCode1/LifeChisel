@@ -234,7 +234,7 @@ test('deleting every record type is one atomic action, with exact reload/Undo/Re
     ),
     prefix,
   );
-  assert.equal(f.raw.prepare('PRAGMA user_version').get().user_version, 1);
+  assert.equal(f.raw.prepare('PRAGMA user_version').get().user_version, 2);
   assert.deepEqual(store.getSnapshot().replay.state.habits, [
     original.habits.at(-1),
   ]);
@@ -253,7 +253,7 @@ test('backup round trip retains deletion and exact undo data; restore keeps a re
     meta(1).recordedAt,
     digest,
   );
-  assert.equal(JSON.parse(encoded).version, 23);
+  assert.equal(JSON.parse(encoded).version, 24);
   const decoded = await decodeArchive(encoded, digest);
   assert.deepEqual(decoded.replay.state, f.store.getSnapshot().replay.state);
   f.store.undo();
@@ -327,7 +327,8 @@ test('deletion validates full records, exact position/definition, archived state
     () =>
       applyEvent(f.store.getSnapshot().replay, {
         ...meta(event.sequence + 1),
-        version: 23,
+        version: 24,
+        device: 'test-device',
         type: 'undo',
         targetId: event.id,
         change: { ...inverse(change), index: 1 },
@@ -345,7 +346,7 @@ test('deletion validates full records, exact position/definition, archived state
           change: { kind: 'haptics', before: true, after: false },
         },
       ]),
-    /version-23/,
+    /version-24/,
   );
   await f.store.flush();
 });

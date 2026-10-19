@@ -2420,6 +2420,54 @@ and 390 px wide with sample data.
   description must first leave the definition). The phone is unchanged; its
   notes keep their sheet with Move earlier/later.
 
+## 18 October 2026 — Cross-device sync: service and direction
+
+Status: direction agreed; the account mailbox server runs locally, nothing
+else is built. [SYNC.md](SYNC.md) holds the design.
+
+- Founder decisions:
+  - Sync is an optional subscription, separate from and independent of the
+    one-time unlock, because many people will stay on one device. Once an
+    account exists, the unlock belongs to the account on every platform.
+  - Cloudflare: one Durable Object (a small server with its own SQLite) per
+    account, chosen over Supabase for its fit with one ordered log per
+    account, lower cost, 30-day point-in-time restore of every account and
+    lighter local development. A separate sign-in service is acceptable if it
+    is convenient for users.
+  - End-to-end encryption from day one.
+  - Conflicts get a best guess applied straight away; only the bad cases are
+    shown, and the person can change the choice.
+  - Preferences about how habits look and are counted sync; those tied to the
+    screen or hardware (text size, grid sizes, haptics, tap animations) stay
+    per device. This supersedes the 13 October assistant proposal that grid
+    sizes travel with sync.
+  - First sync copies silently when one side is empty and asks (keep this
+    device, keep the cloud or combine) when both have data; a restore becomes
+    one undoable set of changes towards the backup.
+  - No sync in the F-Droid build at launch. The design keeps a web-purchased
+    subscription possible there later, since the server checks payment.
+- Research (18 October 2026, official pricing pages): Supabase (about $25 a
+  month, sign-in included; point-in-time restore $100+ a month extra) was the
+  other strong fit. PowerSync and Turso would replace the local SQLite layer
+  and merge by table state or last write wins; Firebase is proprietary and
+  suits an ordered per-account log poorly; CloudKit has no Android support;
+  Convex, InstantDB, Zero and Jazz would replace the data model. LiveStore
+  uses the same server-orders, device-rebases model but is in beta and would
+  replace the storage, so its approach is borrowed, not the library. No
+  vendor understands before-value checks, so merging stays in core.
+- Assistant proposals awaiting review: Better Auth in the Worker for sign-in;
+  RevenueCat for both entitlements; the rebase rules, device IDs on v24
+  events and a schema 2 migration for sync state; a recovery code plus
+  device approval for the encryption key; a 90-day cloud copy after a lapse;
+  using `recordedAt` for the guess with the server's arrival time as a
+  guard against wrong clocks.
+- Assistant implementation: `apps/sync` (Worker and account mailbox) and the
+  shared protocol in `packages/core/src/sync/`, tested against Node's SQLite
+  and run locally under Cloudflare's runtime; no sign-in, payment or device
+  sync yet, and nothing is deployed.
+- Superseded: PROJECT_GOALS' "no subscription" now applies to the core
+  product only, and sync moves from a deferred candidate to planned scope.
+
 ## 18 October 2026 — A quieter web Notes view
 
 Status: implemented in the web app; checked in headless desktop Chrome at 1400
@@ -2435,6 +2483,47 @@ and 390 px wide with sample data.
   button like Versions; only Save while writing is filled. Excerpts are one
   line, the drag grip sits at the card's right, scrollbars are thin and
   neutral, and the reading column lines up with the note's header.
+
+## 18 October 2026 — Sync: web first, security model, development sign-in
+
+Status: sign-in runs locally, in tests and on the deployed development server
+(`onpurpose-sync-dev`, see [SYNC.md](SYNC.md#deploying-the-development-server));
+production is not deployed.
+
+- Founder decisions: sync reaches the web app first, because the founder
+  has a Cloudflare account but not yet the Apple Developer membership or a
+  Google Cloud project; the phone follows. The security model in
+  [SYNC.md](SYNC.md#security) is agreed: nothing depends on the open-source
+  app behaving, every check that matters runs on the server with secrets
+  outside the repository, and the device-enforced unlock is an accepted
+  limit with no obfuscation.
+- Assistant implementation: Better Auth 1.7.7 in the Worker with accounts in
+  D1, bearer-token sessions (the same for browser and phone), the passkey
+  plugin, email and password only where `DEV_PASSWORD_SIGN_IN` is set, an
+  optional `SIGNUP_ALLOWLIST`, rate limits stored in D1 and Better Auth's
+  telemetry off. The mailbox is chosen from the session; sync is refused
+  unless `DEV_FREE_SYNC` allows it, so production fails closed until the
+  entitlement check exists. The local header naming an account was removed.
+  The D1 tables are generated from the same settings by
+  `scripts/generate-auth-schema.mjs`. A `dev` Wrangler environment
+  (`onpurpose-sync-dev` on workers.dev) is configured but needs the
+  founder's login, D1 database and secrets before deploying.
+- Assistant proposals: hash-chained encrypted events so devices notice
+  dropped or reordered events; setting aside events that do not replay;
+  keeping the web app and server on one site (a Vite proxy in development,
+  sibling subdomains in production) because the passkey challenge uses a
+  cookie.
+- Founder approval, then assistant deployment (18 October 2026): the
+  development server runs on the founder's Cloudflare account (free plan).
+  The account's `workers.dev` subdomain was registered as the neutral
+  `onpurpose-dev` so the public address names no person, at the founder's
+  request that their email stay private; the email is only a Worker secret
+  (the sign-up allowlist) and the D1 user table.
+- Assistant fix: the first deploy reused one Better Auth instance across
+  requests, and on Cloudflare later requests hung until the client gave up
+  (logged as "canceled"), because a Worker cannot await work begun by another
+  request. Local development and the Node tests did not show it. Each request
+  now builds its own instance.
 
 ## 18 October 2026 — Colour means done
 
@@ -2478,3 +2567,54 @@ exports pass; not yet seen on the iPhone.
   cell centres its own number, so they lined nothing up, and they left a 1
   looking off to the right in its wide advance (founder report). Streak
   numbers now centre their ink horizontally as well as vertically.
+
+## 18 October 2026 — Sync built for the web app (storage v24, SQL schema 2)
+
+Status: built and tested in Node and headless desktop Chrome against the
+deployed development server; the phone has no sync screens, and payments and
+a production server do not exist. [SYNC.md](SYNC.md) and
+[STORAGE.md](STORAGE.md) hold the details.
+
+- Founder approval: the proposed storage changes (device IDs on v24 events, a
+  schema 2 migration for sync state, renumbering and rewriting unsent events
+  during a rebase), and to build the rest of what sync needs, stopping only
+  where strictly necessary.
+- Assistant implementation, storage: v24 events carry `device`; device-scoped
+  preferences follow another device only until this one chooses (choices
+  before v24 count as every device's own; haptics never follows); a `batch`
+  change saves, undoes and syncs several habit changes as one action. Schema 2
+  adds `device`, `sync_state` and `sync_conflicts` in one transactional
+  migration. `ChangeStore.rewriteLog` replaces the unconfirmed part of the log
+  inside the ordered write queue, keeping a recovery copy when pending edits
+  change. Fixing that queue exposed and fixed an older race: a write queued
+  while the drain loop was finishing could wait until the next write.
+- Assistant implementation, sync: core `sync/` pulls, decrypts and checks the
+  account's events, rebases pending edits value by value (definitions field by
+  field, orders by relative position, Undo converted when its target is no
+  longer newest), records conflicts with the later edit kept, and pushes in
+  batches. First sync uploads, adopts or asks (combine, account's, this
+  device's); an erased cloud copy starts a new epoch that other devices
+  follow or ask about. Restore became changes towards the backup (missing or
+  match), with full replacement kept only without sync.
+- Assistant implementation, encryption: AES-256-GCM per event, bound to its
+  position, ID and device; a 160-bit recovery code wraps the account key on
+  the server. The key is extractable so a signed-in device can make a new
+  code, superseding the proposal of a non-extractable key: a page script could
+  use either to decrypt, and being unable to replace a lost code was the
+  larger risk. The proposed hash chain is superseded by the position binding;
+  withholding the newest events remains undetected.
+- Assistant implementation, server: mailbox layout 2 (epoch, wrapped key, an
+  in-place upgrade from layout 1), key compare-and-set, reset, and account
+  deletion through Better Auth that erases the mailbox first. Redeployed to
+  the development server.
+- Assistant implementation, web: Settings → Sync (passkey and development
+  password sign-in, recovery code, status, the first-sync choice with habit
+  matching, account actions), conflicts at the top of History, the sidebar's
+  sync status, and change-based restore. The sync code loads after the grid.
+  Better Auth's client is a Proxy, and React's development profiler crashed
+  walking it through the controller's props; it now sits in private fields.
+- Not built, waiting on accounts the founder does not have yet: Sign in with
+  Apple and the phone's sync screens (Apple Developer membership), Google
+  sign-in (a Google Cloud OAuth client), RevenueCat payments. Also not built:
+  the account deletion web page, Turnstile, rate limits and quotas on the sync
+  API, and a production server.

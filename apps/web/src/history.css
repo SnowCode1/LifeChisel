@@ -411,3 +411,47 @@
     display: none;
   }
 }
+
+/* Sync conflicts above the filters (docs/SYNC.md). */
+.conflicts {
+  margin: 0 16px 8px;
+  border: 1px solid var(--surface-edge);
+  border-radius: 12px;
+  background-color: var(--surface);
+}
+.conflicts header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 8px;
+}
+.conflicts header .text-button:first-child {
+  font-weight: 600;
+  color: var(--ink);
+}
+.conflicts ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.conflicts li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 10px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--rule);
+}
+.conflicts li > span:first-child {
+  display: flex;
+  flex: 1 1 200px;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.conflict-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}

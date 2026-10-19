@@ -36,7 +36,7 @@ physical iPhone.
 
 ### Example event
 
-This entry event comes from [the v23 fixture](examples/storage-v23.json). It was
+This entry event comes from [the v24 fixture](examples/storage-v24.json). It was
 written at version 6 and still replays unchanged.
 
 ```json
@@ -80,9 +80,9 @@ introduced each feature.
 
 | Number                     | Where it lives     | Current | Meaning                                                                                                                                            |
 | -------------------------- | ------------------ | ------: | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| SQL `PRAGMA user_version`  | SQLite database    |       1 | Table layout. Changes only through an explicit migration.                                                                                          |
-| Event `version`            | Each event         |      23 | Format the event was written in. Old events keep their version and that version's rules. Replay accepts 1–23; a log never returns to an older one. |
-| Export container `version` | Backup JSON header |      23 | Format of the export file. The importer accepts 1–23, and a container cannot hold events newer than its own version.                               |
+| SQL `PRAGMA user_version`  | SQLite database    |       2 | Table layout. Changes only through an explicit migration.                                                                                          |
+| Event `version`            | Each event         |      24 | Format the event was written in. Old events keep their version and that version's rules. Replay accepts 1–24; a log never returns to an older one. |
+| Export container `version` | Backup JSON header |      24 | Format of the export file. The importer accepts 1–24, and a container cannot hold events newer than its own version.                               |
 
 ### Glossary
 
@@ -195,18 +195,23 @@ notification filtering derived from the store snapshot, not another persisted
 cache. Store timing can be enabled in development without changing events,
 replay, serialized writes or the schema.
 
-## Database (SQL schema 1)
+## Database (SQL schema 2)
 
 Native data (iOS and Android) lives in `onpurpose.db` in Expo SQLite's
 application database directory. It is local to the app; Expo Go and a future
 standalone build have separate containers. Uninstalling or clearing the container
-can remove the data. There is no server, account or automatic cross-device
-transfer.
+can remove the data. Optional sync copies the log to an account (see
+[SYNC.md](SYNC.md)); without it nothing leaves the device.
 
 - `changes`: ordered immutable event JSON, integer sequence primary key, unique ID.
 - `current_state`: one derived JSON projection with its last committed sequence.
 - `recovery_archives`: complete pre-restore event logs retained locally.
-- `PRAGMA user_version = 1`: database schema version, distinct from event/export versions.
+- `device` (schema 2): this device's ID, created once and written into every
+  v24 event.
+- `sync_state` (schema 2): the account, server, epoch and confirmed count
+  while this device syncs; empty otherwise.
+- `sync_conflicts` (schema 2): conflicts found while rebasing, until reviewed.
+- `PRAGMA user_version = 2`: database schema version, distinct from event/export versions.
 
 SQLite uses WAL and requests FULL synchronous durability. Each normal append
 inserts the event and advances the projection in one exclusive transaction.
@@ -224,8 +229,16 @@ histories still needs measurement.
 Future database migrations must be explicit transactional steps that reject
 newer versions. Future event reducers must continue to interpret all earlier
 event versions. Do not rewrite old events to match a newer domain model. Keep
-tests for old exports and migration fixtures. Schema 1 is the first schema, so
-there is no migration from an earlier persisted OnPurpose version.
+tests for old exports and migration fixtures. Schema 1 was the first schema;
+schema 2 (v24, 18 October 2026) is its one migration so far: in one
+transaction it adds the three tables above and the device ID, and leaves the
+log and projection untouched. A new database is created at schema 2 directly.
+
+Sync adds one more write besides appends: a **rewrite**, which replaces the
+log after its confirmed events in one transaction with the sync state and
+conflicts. It runs in the same ordered write queue as appends, checks that
+the kept events are unchanged, and keeps a recovery copy first whenever
+unsent edits were changed or dropped. Confirmed events are never rewritten.
 
 ## Event structure and semantics
 
@@ -369,7 +382,7 @@ pending saves and captures a stable log. The export is a readable JSON container
 of **changes**, not a replacement snapshot of habit/day values. Every event
 version has a synthetic example in [docs/examples](examples/), from
 [the unchanged version-1 fixture](examples/storage-v1.json) to
-[the newest fixture](examples/storage-v23.json); see
+[the newest fixture](examples/storage-v24.json); see
 [Version history](#version-history).
 
 The container has `format: "onpurpose.changes"`, `version`, `exportedAt`,
@@ -469,16 +482,15 @@ the phone. Follow [TESTING.md](TESTING.md) for that pass, and see
 backup acceptance.
 
 Still deferred: comments, permanent erasure, skipped/excused days, manual
-success overrides, rolling windows (see [GOALS.md](GOALS.md)), launch snapshots,
-encryption and sync. An incremental log alone is not a sync protocol. Each edit
-currently revalidates and rewrites the whole projection; see
+success overrides, rolling windows (see [GOALS.md](GOALS.md)), launch snapshots, and sync on
+the phone (see [SYNC.md](SYNC.md)). Each edit currently revalidates and rewrites the whole projection; see
 [PERFORMANCE.md](PERFORMANCE.md) before changing that.
 
 ## Version history
 
 Each version adds fields or change kinds; earlier events keep their meaning.
-Every new version leaves the SQL schema at 1, rewrites and reseeds nothing, and
-makes older event versions reject the new fields or kinds. Once a log contains a
+Versions up to 23 left the SQL schema at 1; v24 moved it to 2. None rewrites
+or reseeds anything, and each makes older event versions reject the new fields or kinds. Once a log contains a
 version, older events cannot follow it.
 
 | Version | Added                                                                                    |
@@ -506,6 +518,7 @@ version, older events cannot follow it.
 |      21 | `joinedEndsOnly` cell look preference                                                    |
 |      22 | `entries` change: one fill across several days of a habit                                |
 |      23 | `note` change and named notes kept apart from habit definitions                          |
+|      24 | Event `device`, device-scoped preferences, `batch` changes; SQL schema 2 for sync        |
 
 ### Version 1: the original log
 
@@ -846,6 +859,36 @@ at schema 1. The [v23 fixture](examples/storage-v23.json) extends the v22
 example: it edits the walk's v7 description into an Info note, adds Why and
 Rules, moves Why up (with its undo and redo), renames Rules, adds a note to the
 text habit, then archives and deletes that habit and undoes the deletion.
+
+### Version 24: devices and batches (SQL schema 2)
+
+Adds what sync needs ([SYNC.md](SYNC.md)); local-only use behaves as before.
+
+- **Device:** every v24 event carries `device`, this device's ID from the
+  `device` table. Earlier events must not carry it.
+- **Device-scoped preferences:** `haptics`, `tapAnimations`, `textScale` and
+  the grid sizes (`gridNameWidth`, `gridColumnWidth`, `gridRowHeight` and the
+  older `rowSpacing`, `columnSpacing`, `columnDensity`, `nameColumnWidth`)
+  belong to the device that chose them. Replay takes the replaying device's
+  ID: its own events, and every event before v24 (which names no device),
+  apply as always, with before-value checks. Another device's choice applies
+  only while this device has no value of its own for that setting; the state
+  then lists it in `inheritedPreferences` and the before-value is not checked
+  (it describes the other device). Haptics has a default, so it never
+  inherits. All other preferences are shared. Without a device ID, replay
+  treats every event as its own, so v1–v23 logs replay exactly as before.
+- **Batches:** a `batch` change (`label` `restore` or `combine`, `changes` of
+  1–20,000 habit changes, never preferences or batches) applies its items in
+  order as one action, all or none. Its inverse is the inverted items in
+  reverse order, so Undo and Redo take it back and forth in one step; it never
+  joins a correction group. History shows "Restored from a backup" or
+  "Combined with another device".
+
+Older event versions reject `device` and `batch`, older events cannot follow
+a v24 event, backups accept container version 24, and SQL moves to schema 2.
+The [v24 fixture](examples/storage-v24.json) extends the v23 example: a text
+size chosen on one device and then another, a tick from the second device, a
+restore batch, its Undo and its Redo.
 
 ## References
 

@@ -1,4 +1,9 @@
-import type { Change, PreferenceChange } from './types.ts';
+import type {
+  BatchItem,
+  Change,
+  DevicePreferenceKind,
+  PreferenceChange,
+} from './types.ts';
 
 // Classification, structural equality and inversion are shared by validation,
 // replay and optimistic writes. They do not depend on the replay implementation.
@@ -45,5 +50,36 @@ export function sameValue(left: unknown, right: unknown): boolean {
   );
 }
 export function inverse(change: Change): Change {
+  if (change.kind === 'batch')
+    return {
+      ...change,
+      changes: change.changes
+        .map((item) => inverse(item) as BatchItem)
+        .reverse(),
+    };
   return { ...change, before: change.after, after: change.before } as Change;
+}
+/** True when applying the change would leave every value as it was. */
+export function isNoChange(change: Change): boolean {
+  return change.kind === 'batch'
+    ? change.changes.length === 0
+    : sameValue(change.before, change.after);
+}
+const devicePreferences = new Set<string>([
+  'haptics',
+  'tapAnimations',
+  'textScale',
+  'rowSpacing',
+  'columnSpacing',
+  'columnDensity',
+  'nameColumnWidth',
+  'gridNameWidth',
+  'gridColumnWidth',
+  'gridRowHeight',
+] satisfies DevicePreferenceKind[]);
+/** v24: preferences each device keeps for itself (see DevicePreferenceKind). */
+export function isDevicePreference(
+  change: Change,
+): change is Extract<PreferenceChange, { kind: DevicePreferenceKind }> {
+  return devicePreferences.has(change.kind);
 }

@@ -1,0 +1,27 @@
+{
+  "name": "@onpurpose/sync",
+  "version": "0.1.0",
+  "private": true,
+  "license": "GPL-3.0-or-later",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler d1 migrations apply DB --local --env dev && wrangler dev --env dev --var BETTER_AUTH_SECRET:local-development-only-secret-never-deploy-0000",
+    "deploy:dev": "wrangler d1 migrations apply DB --remote --env dev && wrangler deploy --env dev",
+    "build:check": "wrangler deploy --dry-run --env dev --outdir dist/dev && wrangler deploy --dry-run --outdir dist/production",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@better-auth/core": "1.7.7",
+    "@better-auth/passkey": "1.7.7",
+    "@better-auth/utils": "0.4.2",
+    "@better-fetch/fetch": "1.3.2",
+    "@onpurpose/core": "0.1.0",
+    "better-auth": "1.7.7",
+    "better-call": "1.4.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20261003.1",
+    "typescript": "~6.0.3",
+    "wrangler": "4.147.0"
+  }
+}
