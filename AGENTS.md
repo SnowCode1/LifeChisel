@@ -476,8 +476,10 @@ State the current storage version only in `docs/STORAGE.md`. Keep chat/session
 state (running terminals, received captures, local flags) out of the docs.
 Keep credentials, signing files, tokens, local logs, and real user habit data out
 of Git. `EXPO_PUBLIC_*` variables are public in the app, not secret storage.
-Keep deployment and signing manual until release automation is deliberately set
-up. Do not claim App Store readiness from a successful JavaScript bundle export.
+The landing page and web app deploy to Vercel on every push (founder decision,
+19 October 2026; docs/WEB.md, Hosting). Keep phone builds, signing and other
+deployment manual until their automation is deliberately set up. Do not claim
+App Store readiness from a successful JavaScript bundle export.
 Preserve the Expo template notice in `docs/licenses/EXPO_TEMPLATE_LICENSE.txt`.
 The project is GPLv3-or-later (LICENSE; copyright notice in README). Pricing is a
 free tier of five active habits (archived habits do not count) plus a one-time

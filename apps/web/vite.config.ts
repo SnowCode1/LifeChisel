@@ -1,7 +1,7 @@
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 
-export default defineConfig(({ mode }) => {
+export default defineConfig(({ command, mode }) => {
   // The sync server behind /sync in development (docs/SYNC.md): the deployed
   // development Worker, or VITE_SYNC_TARGET=http://localhost:8787 (from the
   // shell or .env.local) for `npm run sync:dev`. Same-site requests keep the
@@ -10,6 +10,8 @@ export default defineConfig(({ mode }) => {
     loadEnv(mode, '.', '').VITE_SYNC_TARGET ||
     'https://onpurpose-sync-dev.onpurpose-dev.workers.dev';
   return {
+    // Builds are served at /app/ under the landing page (docs/WEB.md, Hosting).
+    base: command === 'build' ? '/app/' : '/',
     plugins: [react()],
     // SQLite ships its own WebAssembly loader; pre-bundling would break its path.
     optimizeDeps: { exclude: ['@sqlite.org/sqlite-wasm'] },

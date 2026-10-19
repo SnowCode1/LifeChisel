@@ -1,6 +1,7 @@
 node_modules/
 .expo/
 dist/
+site-dist/
 package-lock.json
 docs/licenses/
 .dev/

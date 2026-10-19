@@ -7,6 +7,8 @@ node_modules/
 .expo/
 dist/
 web-build/
+site-dist/
+.vercel/
 expo-env.d.ts
 
 # Native

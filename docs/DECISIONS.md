@@ -2678,3 +2678,23 @@ Status: built for both apps; phone review pending
   `valueLevel` in `statsSeries.ts`. Best day became Highest day for every
   number habit. The `statsLayout` preference compares per habit when sync
   rebases. Per-section settings beyond the combine choice are not built.
+
+## 19 October 2026 — Hosting on Vercel at lifechisel.app
+
+Status: configured in the repository; the Vercel project is set up by the
+founder in the dashboard.
+
+- Founder decisions: register `lifechisel.app` and host the landing page and
+  web app on Vercel Pro. Keep the site private until launch with Vercel
+  Authentication on All Deployments (free on Pro), sharing it through
+  Shareable Links, rather than Password Protection (US$20 a month per project).
+  Deploy automatically on every push, which replaces the earlier rule to keep
+  all deployment manual for the two websites only; phone builds and signing
+  stay manual.
+- Assistant implementation: one static site, the landing page at `/` and the
+  web app at `/app/` (Vite `base`), as both apps' links already assumed.
+  `vercel.json` runs `npm ci` and `npm run site:build`; `scripts/build-site.mjs`
+  assembles `site-dist/`. Hosted builds leave sync off because `VITE_SYNC_URL`
+  is unset. See [WEB.md](WEB.md#hosting).
+- The production branch is `main`, which now contains the web app (merged
+  from `web-app` the same day).

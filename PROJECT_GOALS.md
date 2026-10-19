@@ -29,7 +29,7 @@ and uncertainty about whether something was saved.
   phone is used for testing alongside the iPhone. Development happens on Linux and Windows without a Mac,
   and the physical iPhone (an iPhone 16 Pro) is the primary test device.
 - Release the source under GPLv3 or later, with the founder as sole copyright
-  holder. The repository is public at https://github.com/SnowCode1/OnPurpose.
+  holder. The repository is public at https://github.com/SnowCode1/LifeChisel.
 - Earn income through a free tier of five active habits (archived habits do
   not count) plus a one-time US$9.99
   unlock, with no subscription for the core product. The paywall appears when
