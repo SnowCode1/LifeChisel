@@ -1,4 +1,5 @@
 import '@fontsource-variable/instrument-sans';
+import '@fontsource-variable/gabarito';
 import { setUpCarousel } from './carousel.ts';
 import { APP_URL, STORE_URLS } from './config.ts';
 import { renderGrids } from './grid.ts';

@@ -2698,3 +2698,36 @@ founder in the dashboard.
   is unset. See [WEB.md](WEB.md#hosting).
 - The production branch is `main`, which now contains the web app (merged
   from `web-app` the same day).
+
+## 20 October 2026 — Landing page rewritten around what it does for you
+
+Status: implemented in `apps/landing` on the `web-app` branch; checked in a
+desktop browser at 1440 and 504 px wide.
+
+- Founder feedback: the landing page sounded robotic, like a feature list,
+  rather than explaining what the app does for the person reading it. The
+  founder pointed to Obsidian's page for its order of benefits, its large
+  app icon with download buttons and fonts with more character.
+- Assistant proposal: three mockups (A, modelled on Obsidian; B, one day
+  with the app; C, a straight-talking page modelled on iA Writer) and a table
+  of old and new wording. Founder decision: build A.
+- What changed: the headline is "The habit tracker you'll still be using in
+  March."; three short reasons follow the hero; a large app icon with store
+  buttons sits under them; every section heading names an outcome, with the
+  feature as a small label; a Notes section was added; headings use
+  Instrument Serif over Instrument Sans text; large store buttons replace the
+  small ones. The carousel, the interactive statistics, the `<details>`
+  sections and the pricing questions were kept from the earlier page. The
+  separate sync and open source cards were folded into "Yours to keep" and
+  the questions. This supersedes the 16 October headline and the
+  Instrument-Sans-only choice; see [LANDING.md](LANDING.md).
+- The page says LifeChisel, the repository and domain name. The final brand is
+  still open, and the web app and screenshots still say OnPurpose.
+- Founder feedback (same day): Instrument Serif's curvy style clashed with
+  the page, and A's headline was the weakest line. Founder decisions: a bold
+  geometric display face like Obsidian's and MacroFactor's headings, used
+  only for the hero headline, the wordmark and the closing line, with section
+  headings back in Instrument Sans; Gabarito was chosen from seven assistant
+  candidates. The headline returns to "The habit grid built for muscle
+  memory." while alternatives are explored. The three reasons now sit beside
+  the large icon, wordmark and free tier, as on Obsidian's page.

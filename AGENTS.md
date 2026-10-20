@@ -106,7 +106,8 @@ preserve earlier icon choices/removals and raw history.
   `drawText` in the same font that measured them: vertically their ink box
   is centred, across their ink's weight (optical centring, so a 1's stem
   sits in the middle); never a paragraph's line box or advance. The apps use the system
-  font; Instrument Sans is the brand voice (landing page) only.
+  font; Instrument Sans, with Gabarito for a few display headings, is the
+  brand voice (landing page) only.
   Keep all per-frame work on the UI thread; React receives only settles, reveals
   and arrivals. `useGridModel.ts` prepares cell records on JS in 30-day chunks
   and re-checks only prepared days whose saved values changed (acknowledgements

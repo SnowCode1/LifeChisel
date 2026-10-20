@@ -1,7 +1,8 @@
 /**
- * The decorative habit grids in the hero, drawn from fictional habits and
- * dated so the rightmost column is always the visitor's Today. Hidden from
- * screen readers: the text around them says what they show.
+ * The decorative habit grid beside "See your whole week at a glance", drawn
+ * from fictional habits and dated so the rightmost column is always the
+ * visitor's Today. Hidden from screen readers: the text beside it says what it
+ * shows.
  */
 type Value = number | string | null;
 type Habit = {

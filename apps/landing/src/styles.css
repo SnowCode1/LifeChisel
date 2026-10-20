@@ -1,12 +1,17 @@
 /*
  * The page is always dark on pure black, the apps' default look (founder
- * decision). The font is set once in --font-ui; colours are the tokens below.
+ * decision). --font-display (Gabarito) is kept for the few big moments: the
+ * hero headline, the wordmark and the closing line. Everything else, section
+ * headings included, is --font-ui (Instrument Sans). Colours are the tokens
+ * below.
  * Habit colours in pictures are the presets', set per row as --c.
  */
 :root {
   --font-ui:
     'Instrument Sans Variable', system-ui, -apple-system, 'Segoe UI', Roboto,
     sans-serif;
+  --font-display:
+    'Gabarito Variable', 'Instrument Sans Variable', system-ui, sans-serif;
   --background: #000000;
   --surface: #0b0b0b;
   --raised: #121212;
@@ -69,6 +74,11 @@ h2 {
   font-size: clamp(30px, 3.6vw, 42px);
   line-height: 1.1;
   letter-spacing: -0.03em;
+}
+.sprite {
+  position: absolute;
+  width: 0;
+  height: 0;
 }
 h3 {
   font-size: 18px;
@@ -268,8 +278,9 @@ details.more > ul {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 18px;
-  font-weight: 650;
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
   letter-spacing: -0.01em;
   text-decoration: none;
   color: var(--ink-strong);
@@ -296,14 +307,16 @@ details.more > ul {
   gap: 24px;
   max-width: var(--page);
   margin: 0 auto;
-  padding: 88px var(--gutter) 0;
+  padding: 80px var(--gutter) 0;
   text-align: center;
 }
 .hero h1 {
-  max-width: 900px;
-  font-size: clamp(42px, 6.6vw, 84px);
+  max-width: 13em;
+  font-family: var(--font-display);
+  font-size: clamp(44px, 7vw, 84px);
+  font-weight: 700;
   line-height: 1;
-  letter-spacing: -0.04em;
+  letter-spacing: -0.03em;
 }
 .lede {
   max-width: 620px;
@@ -311,84 +324,159 @@ details.more > ul {
   line-height: 1.55;
   color: var(--ink-soft);
 }
-.actions {
+.hero-shot {
+  width: calc(100% - 2 * var(--gutter));
+  max-width: calc(var(--page) - 2 * var(--gutter));
+  margin: 56px auto 0;
+  box-shadow: 0 40px 100px -40px rgb(73 222 120 / 0.18);
+}
+@media (min-width: 761px) {
+  /* Crop the web app's sidebar so the picture is only the grid. */
+  .hero-shot img {
+    aspect-ratio: 1910 / 984;
+    object-fit: cover;
+    object-position: right center;
+  }
+}
+
+/* Download buttons: large, with the platform's picture. */
+.stores {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 10px;
+  gap: 12px;
   padding-top: 8px;
+}
+.store {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 196px;
+  padding: 10px 22px 10px 16px;
+  border: 1px solid var(--ink);
+  border-radius: 14px;
+  background: var(--ink);
+  color: #000000;
+  text-decoration: none;
+  transition:
+    background-color 0.15s,
+    border-color 0.15s;
+}
+.store:hover {
+  background: var(--ink-strong);
+}
+.store.dark {
+  border-color: var(--edge-strong);
+  background: var(--raised);
+  color: var(--ink);
+}
+.store.dark:hover {
+  border-color: #4a4a4a;
+  background: #1a1a1a;
+}
+.store svg {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.store span {
+  display: grid;
+  font-size: 19px;
+  font-weight: 650;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  text-align: left;
+}
+.store small {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+  opacity: 0.75;
+}
+.big-icon {
+  width: 96px;
+  height: 96px;
+  filter: drop-shadow(0 18px 40px rgb(73 222 120 / 0.18));
+}
+
+/* Three reasons beside the large icon, wordmark and the free tier, as on
+   Obsidian's page. */
+.intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: 64px;
+  align-items: center;
+  padding-top: 120px;
+}
+.reasons > div {
+  padding: 26px 0;
+  border-top: 1px solid var(--edge);
+}
+.reasons > div:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+.reasons h2 {
+  margin-bottom: 6px;
+  font-size: 22px;
+  line-height: 1.3;
+  letter-spacing: -0.01em;
+}
+.reasons p {
+  font-size: 18px;
+  color: var(--ink-soft);
+}
+.reasons a {
+  color: var(--ink);
+}
+.get-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  text-align: center;
+}
+.get-card .big-icon {
+  width: 160px;
+  height: 160px;
+  margin-bottom: 8px;
+}
+.wordmark {
+  font-family: var(--font-display);
+  font-size: 46px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--ink-strong);
+}
+.free-line {
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--ink);
 }
 
 /* The pictures of the grid: always the apps' dark look. */
-.showcase {
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  gap: 24px;
-  max-width: var(--page);
-  margin: 0 auto;
-  padding: 72px var(--gutter) 0;
-}
-.window {
-  flex: 1 1 auto;
-  min-width: 0;
-  max-width: 860px;
-  overflow: hidden;
-  border: 1px solid var(--edge);
-  border-radius: 16px;
-  background: #000000;
-  box-shadow: 0 40px 100px -40px rgb(73 222 120 / 0.18);
-}
-.window-bar {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  padding: 12px 18px;
-  border-bottom: 1px solid #181818;
-  font-size: 13px;
-  color: var(--ink-quiet);
-}
-.window-bar b {
-  color: var(--ink);
-  font-weight: 600;
-}
-.window-bar span:last-child {
-  text-align: right;
-}
-.phone {
-  flex: none;
-  width: 330px;
-  padding: 9px;
-  border: 1px solid var(--edge-strong);
-  border-radius: 44px;
-  background: #0d0d0d;
-}
-.phone-screen {
-  overflow: hidden;
-  padding: 18px 0 14px;
-  border-radius: 35px;
-  background: #000000;
-}
-.phone-today {
-  display: block;
-  padding-bottom: 8px;
-  text-align: center;
-  font-size: 13px;
-  font-weight: 600;
-}
 [data-grid] {
-  --name: 180px;
+  --name: 150px;
   font-size: 13px;
   font-variant-numeric: tabular-nums;
 }
-[data-grid='4'] {
-  --name: 116px;
-}
-[data-grid='4'] .name {
-  padding: 0 8px 0 14px;
+.week-grid {
+  overflow: hidden;
+  padding: 6px 0 0;
+  background: #000000;
 }
 .row {
   display: grid;
-  grid-template-columns: var(--name) repeat(var(--days), minmax(0, 1fr));
+  grid-template-columns: var(--name) repeat(
+      var(--shown, var(--days)),
+      minmax(0, 1fr)
+    );
 }
 .row.heads > * {
   border-top: 0;
@@ -529,6 +617,37 @@ details.more > ul {
 .section-text + .section-text {
   margin-top: 14px;
 }
+.eyebrow {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-quiet);
+}
+/* A heading and text beside a picture; .flip puts the picture first. */
+.feature {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+  gap: 64px;
+  align-items: center;
+}
+.feature.flip {
+  grid-template-columns: minmax(0, 6fr) minmax(0, 5fr);
+}
+.feature.flip > .feature-text {
+  order: 2;
+}
+.feature-text {
+  display: grid;
+  gap: 16px;
+  align-content: start;
+}
+.feature-text .section-text + .section-text {
+  margin-top: 0;
+}
+.feature-text details.more {
+  margin-top: 12px;
+}
 .section-head.split {
   display: flex;
   flex-wrap: wrap;
@@ -621,58 +740,34 @@ details.more > ul {
 /* Habit kinds and goals. */
 .kinds {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
 }
 .kind {
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-.kind-body {
-  display: flex;
-  flex: 1 1 auto;
-  flex-direction: column;
-}
-.kind-body details.more {
-  margin-top: auto;
-}
-.strip {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  background: #000000;
-  border-bottom: 1px solid var(--edge);
+  gap: 6px;
+  align-content: start;
+  padding: 18px 20px 20px;
 }
-.strip .cell {
-  height: 64px;
-  border-top: 0;
+.kind .sample {
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--c);
 }
-.strip .val {
-  font-size: 15px;
+.kind .box {
+  width: 28px;
+  height: 28px;
 }
-.kind-body {
-  padding: 20px 22px 4px;
+.kind h3 {
+  font-size: 17px;
 }
-.kind-body > p {
-  margin: 6px 0 16px;
+.kind p {
   font-size: 15px;
   color: var(--ink-soft);
-}
-.kind details.more:last-child {
-  border-bottom: 0;
-}
-.goals {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 64px;
-  align-items: start;
-  padding-top: 120px;
-}
-.goals h2 {
-  margin-bottom: 18px;
-}
-.goals details.more {
-  margin-top: 28px;
 }
 .goals-visual {
   display: grid;
@@ -697,6 +792,10 @@ details.more > ul {
   border-color: var(--accent);
   background: var(--accent);
   color: var(--on-accent);
+}
+.chips.small li {
+  padding: 4px 12px;
+  font-size: 14px;
 }
 .timeline {
   display: grid;
@@ -1103,19 +1202,7 @@ button.slot:hover {
   border-bottom: 0;
 }
 
-/* History. */
-.history {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 64px;
-  align-items: start;
-}
-.history h2 {
-  margin-bottom: 18px;
-}
-.history details.more {
-  margin-top: 28px;
-}
+/* History and notes. */
 .history-list {
   display: grid;
   padding: 22px 24px 24px;
@@ -1157,53 +1244,28 @@ button.slot:hover {
   font-size: 15px;
 }
 
-/* Sync and open source. */
-.pair {
+.note {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 16px;
-}
-.feature {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
   gap: 14px;
-  padding: 36px;
+  padding: 24px 26px 26px;
 }
-.feature svg {
-  width: 30px;
-  height: 30px;
-  fill: none;
-  stroke: var(--ink);
-  stroke-width: 1.7;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-.feature h2 {
-  font-size: clamp(24px, 2.6vw, 30px);
-}
-.feature p {
+.note p {
   color: var(--ink-soft);
 }
-.feature .button {
-  margin-top: 6px;
+.note .note-quote {
+  font-size: 21px;
+  line-height: 1.4;
+  color: var(--ink);
 }
 
 /* Pricing. */
-.pricing {
+.plans {
   display: grid;
-  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr);
-  overflow: hidden;
-}
-.pricing > * {
-  padding: 40px;
-}
-.pricing-intro p {
-  margin-top: 10px;
-  color: var(--ink-soft);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
 }
 .plan {
-  border-left: 1px solid var(--edge);
+  padding: 28px 30px;
 }
 .plan h3 {
   font-size: 16px;
@@ -1211,6 +1273,7 @@ button.slot:hover {
   color: var(--ink-soft);
 }
 .plan.featured {
+  border-color: #1d4a2c;
   background: #07140c;
 }
 .plan.featured h3 {
@@ -1227,9 +1290,12 @@ button.slot:hover {
   font-size: 16px;
   color: var(--ink-soft);
 }
+.plans-note {
+  margin-top: 20px;
+}
 .faq {
   max-width: 760px;
-  margin: 48px auto 0;
+  margin: 40px 0 0;
 }
 
 /* Closing. */
@@ -1241,11 +1307,10 @@ button.slot:hover {
   text-align: center;
 }
 .closing h2 {
-  font-size: clamp(32px, 4.4vw, 54px);
-  letter-spacing: -0.04em;
-}
-.closing p {
-  color: var(--ink-soft);
+  font-family: var(--font-display);
+  font-size: clamp(40px, 5.4vw, 64px);
+  font-weight: 700;
+  letter-spacing: -0.03em;
 }
 
 /* Footer. */
@@ -1274,13 +1339,17 @@ button.slot:hover {
   .site-header .button {
     margin-left: auto;
   }
-  .kinds {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-  .goals,
-  .history {
+  .feature,
+  .feature.flip {
     grid-template-columns: minmax(0, 1fr);
     gap: 40px;
+  }
+  .feature.flip > .feature-text {
+    order: 0;
+  }
+  .intro {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 56px;
   }
   .stats-summary {
     grid-template-columns: minmax(0, 1fr);
@@ -1302,16 +1371,6 @@ button.slot:hover {
   .chart-list p {
     margin: 4px 0 0;
   }
-  .pricing {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  }
-  .pricing-intro {
-    grid-column: 1 / -1;
-    padding-bottom: 0;
-  }
-  .plan:first-of-type {
-    border-left: 0;
-  }
 }
 @media (max-width: 760px) {
   :root {
@@ -1326,43 +1385,47 @@ button.slot:hover {
   .lede {
     font-size: 18px;
   }
-  .showcase {
-    padding-top: 48px;
+  .hero-shot {
+    max-width: 390px;
+    margin-top: 48px;
   }
-  .window {
+  .intro {
+    padding-top: 80px;
+  }
+  /* Four days fit beside the names on a phone, as in the app. */
+  [data-grid='7'] {
+    --shown: 4;
+    --name: 116px;
+  }
+  [data-grid='7'] .row > :nth-child(-n + 4):not(:first-child) {
     display: none;
+  }
+  [data-grid='7'] .name {
+    padding: 0 8px 0 14px;
   }
   .section {
     padding-top: 110px;
   }
-  .slide figcaption,
-  .pair,
   .tiles {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
   .slide figcaption,
-  .pair {
+  .plans {
     grid-template-columns: minmax(0, 1fr);
   }
   .stats {
     padding: 20px 16px;
   }
-  .feature,
-  .pricing > * {
-    padding: 28px 24px;
+  .plan {
+    padding: 24px;
   }
 }
 @media (max-width: 520px) {
-  .kinds,
-  .pricing {
+  .kinds {
     grid-template-columns: minmax(0, 1fr);
   }
-  .plan {
-    border-left: 0;
-    border-top: 1px solid var(--edge);
-  }
-  .actions .button {
+  .store {
     flex: 1 1 100%;
-    justify-content: center;
+    min-width: 0;
   }
 }
