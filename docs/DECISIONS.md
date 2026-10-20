@@ -2731,3 +2731,19 @@ desktop browser at 1440 and 504 px wide.
   candidates. The headline returns to "The habit grid built for muscle
   memory." while alternatives are explored. The three reasons now sit beside
   the large icon, wordmark and free tier, as on Obsidian's page.
+- Assistant refinements (same day, from a second assistant with founder
+  review): concrete examples in the section copy (a Mon/Wed/Fri routine's
+  off days stay blank, goal changes dated for spring or travel, statistics
+  sections can be reordered or hidden, end-to-end encrypted sync, Undo for
+  deleted habits, an open-source question), Statistics in the header, a habit
+  name on the Notes card, and the decorative Stretch row in `src/grid.ts`
+  drawn from the visitor's real weekdays so its ticks, missed cross and blank
+  off days match the column headings.
+- Corrections in review (same day): example captions went back to short
+  sentences (the habits are already listed as tags below each one) and lost
+  claims that did not match the presets (a three-weeks-on cycle, goal-free
+  feelings, screen time under two hours); number suggestions save typing but
+  are not a single tap on the grid (only the Today view's Usual button is);
+  the examples are described as made up; asides set off with long dashes were
+  removed as sounding generated. The headline stays "The habit grid built for
+  muscle memory." (founder decision).

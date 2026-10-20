@@ -1249,6 +1249,10 @@ button.slot:hover {
   gap: 14px;
   padding: 24px 26px 26px;
 }
+.note-habit {
+  font-size: 14px;
+  font-weight: 600;
+}
 .note p {
   color: var(--ink-soft);
 }

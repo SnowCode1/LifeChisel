@@ -15,8 +15,7 @@
   <body>
     <!-- LifeChisel is the working name. The copy describes the product at
          launch (founder decision, 16 October 2026) in the "why it's worth it"
-         direction (mockup A, 20 October 2026); see docs/LANDING.md. The
-         headline is being reworked. -->
+         direction (mockup A, 20 October 2026); see docs/LANDING.md. -->
     <a class="skip" href="#main">Skip to content</a>
     <svg class="sprite" aria-hidden="true">
       <symbol id="i-iphone" viewBox="0 0 24 24">
@@ -43,6 +42,7 @@
       <nav aria-label="Sections">
         <a href="#grid">How it works</a>
         <a href="#examples">Examples</a>
+        <a href="#statistics">Statistics</a>
         <a href="#pricing">Pricing</a>
         <a href="https://github.com/SnowCode1/LifeChisel">GitHub</a>
       </nav>
@@ -102,18 +102,19 @@
           <div>
             <h2>Fits the way you live.</h2>
             <p>
-              Run three times a week, take a tablet every morning, rest one week
-              a month. Each habit gets the goal that suits it, or no goal at
-              all.
+              Run three times a week, take a tablet every morning, or train
+              three weeks on and one week off. Each habit gets the goal that
+              suits it, or no goal at all.
             </p>
           </div>
           <div>
             <h2>Yours to keep.</h2>
             <p>
-              Everything is saved on your device first. Export it whenever you
-              like, sync it between devices if you want, and
+              Everything is saved on your device first. Export a backup file
+              whenever you like, sync between your devices with end-to-end
+              encryption, and
               <a href="https://github.com/SnowCode1/LifeChisel"
-                >read the code yourself</a
+                >read the source code yourself</a
               >.
             </p>
           </div>
@@ -147,10 +148,11 @@
           <h2 id="grid-title">See your whole week at a glance.</h2>
           <p class="section-text">
             Today is on the right and the days before it run to the left. Boxes
-            joined by a bar are a streak. A cross is a day you missed.
+            joined by a bar are a streak, and a cross is a day you missed.
           </p>
           <p class="section-text">
-            You can tell how the week went before you've read a word.
+            Days a habit wasn't due stay blank, so a Monday, Wednesday and
+            Friday routine never looks broken on Tuesday.
           </p>
         </div>
         <div class="card week-grid" aria-hidden="true">
@@ -163,12 +165,13 @@
           <span class="eyebrow">Four kinds of habit</span>
           <h2 id="kinds-title">Record what actually happened.</h2>
           <p class="section-text">
-            Not everything is a yes or a no. Log how many pages you read, which
-            workout it was, or a line about your day, all in the same grid.
+            Not everything fits a yes or a no. Check off a morning walk, log how
+            many pages you read, pick which workout you did, or write a line
+            about your day, all in the same grid.
           </p>
           <p class="section-text">
-            For numbers, your usual amounts are already offered, so you rarely
-            type.
+            Number habits offer your recent amounts, like 20, 30 or 45 minutes,
+            so you rarely have to type.
           </p>
         </div>
         <div class="kinds">
@@ -177,24 +180,24 @@
               ><span class="box on"></span
             ></span>
             <h3>Did it</h3>
-            <p>One tap to tick. Walked, flossed, took the tablet.</p>
+            <p>One tap to tick. Walked, flossed, took your morning tablet.</p>
           </article>
           <article class="card kind" style="--c: #bda5ff">
             <span class="sample" aria-hidden="true">35</span>
             <h3>How much</h3>
-            <p>
-              Minutes, glasses, kilometres. Shaded when you reach your goal.
-            </p>
+            <p>8 glasses, 35 minutes, 5 km. Shaded when you reach your goal.</p>
           </article>
           <article class="card kind" style="--c: #2bdbbe">
             <span class="sample" aria-hidden="true">Run · Swim</span>
             <h3>Which one</h3>
-            <p>Pick from a short list you made, one or several.</p>
+            <p>
+              Pick one or several from your own list, like Run, Swim or Gym.
+            </p>
           </article>
           <article class="card kind" style="--c: #fdbe45">
             <span class="sample" aria-hidden="true">Calm</span>
             <h3>In a few words</h3>
-            <p>A word or a short note, kept like a diary.</p>
+            <p>What you cooked, a symptom, or one good thing from the day.</p>
           </article>
         </div>
       </section>
@@ -205,22 +208,24 @@
           <h2 id="goals-title">Set a goal that suits each habit.</h2>
           <p class="section-text">
             Three times a week. Weekdays only. Five days on, two off. No more
-            than two coffees. Or no goal, if you only want a record.
+            than two coffees. Or no goal at all, if you just want a record.
           </p>
           <p class="section-text">
-            When you change a goal, you choose the day it starts. The weeks
-            before keep the results they had.
+            When you change a goal, you pick the day it starts, so you can raise
+            a target for spring or drop to twice a week while travelling. The
+            weeks before keep the results they had.
           </p>
           <details class="more">
-            <summary>All the ways a goal can repeat</summary>
+            <summary>All the ways a goal can work</summary>
             <ul>
+              <li>
+                Targets: at least, at most, or between two numbers, or only when
+                specific categories are logged
+              </li>
               <li>Every day, or only on the weekdays you pick</li>
               <li>
-                A number of days per week: at least, at most, or between two
-                numbers
-              </li>
-              <li>
-                The same over a period of your own length, from 1 to 366 days
+                A number of days per week, or over a custom period from 1 to 366
+                days
               </li>
               <li>
                 On and off cycles: 5 days on and 2 off, 3 weeks on and 1 off,
@@ -261,8 +266,8 @@
               Set it up for whatever you're working on.
             </h2>
             <p>
-              Five fictional people, each with six months of sample data, shown
-              in the web app.
+              Five made-up examples, from five everyday habits to marathon
+              training and managing a long-term condition.
             </p>
           </div>
           <div class="carousel-arrows">
@@ -335,9 +340,8 @@
               <div>
                 <h3>Everyday</h3>
                 <p>
-                  Five habits, the most the free version holds: a morning walk,
-                  water, reading, what was for dinner, and one good thing about
-                  the day.
+                  Five habits for an ordinary day, the most the free version
+                  holds.
                 </p>
               </div>
               <ul class="tags">
@@ -508,8 +512,9 @@
           <h2 id="statistics-title">Look back and notice things.</h2>
           <p>
             Tap a habit's name to see its streaks, how each week went, and which
-            days of the week tend to slip. This one is a reading habit with a
-            year of sample data. Try the ranges and charts.
+            days of the week tend to slip. You can reorder or hide sections so
+            the charts you care about stay at the top. Try the ranges and charts
+            below on a year of reading data.
           </p>
         </div>
         <div class="card stats" data-stats>
@@ -526,14 +531,16 @@
           <span class="eyebrow">Notes</span>
           <h2 id="notes-title">Write down why you started.</h2>
           <p class="section-text">
-            Each habit can keep a few notes: why it matters to you, the rules
-            you set yourself, what tends to get in the way.
+            Each habit can keep a few notes, named however you like: why it
+            matters to you, the rules you set yourself, what still counts on a
+            rough day.
           </p>
           <p class="section-text">
-            They're one tap away, for the days you need reminding.
+            They're one tap from the grid, for the days you need reminding.
           </p>
         </div>
         <div class="card note" aria-hidden="true">
+          <b class="note-habit" style="color: #49de78">Go for a walk</b>
           <ul class="chips small">
             <li class="on">Why</li>
             <li>Rules</li>
@@ -554,12 +561,13 @@
           <span class="eyebrow">History</span>
           <h2 id="history-title">Mistakes take one tap to fix.</h2>
           <p class="section-text">
-            Ticked the wrong day, or archived a habit by accident? Undo puts it
-            back. History lists every change you've made, day by day.
+            Ticked the wrong day, changed a goal by mistake, or deleted an
+            archived habit? Undo puts it straight back, and History keeps a
+            day-by-day log of every change you've made.
           </p>
           <p class="section-text">
-            Everything can go into one backup file, which opens again on any
-            device.
+            You can export everything to a single backup file at any time, and
+            open it again on iPhone, Android or the web.
           </p>
           <details class="more">
             <summary>What History keeps</summary>
@@ -608,7 +616,7 @@
           <div class="card plan">
             <h3>Free</h3>
             <p class="price">US$0</p>
-            <p>Up to five habits, with everything else included.</p>
+            <p>Up to five active habits, with every feature included.</p>
           </div>
           <div class="card plan featured">
             <h3>Unlimited</h3>
@@ -624,28 +632,38 @@
           <details class="more">
             <summary>What counts toward the five habits?</summary>
             <p>
-              Only habits you're using. Archive one you've finished with and it
-              stops counting, with all its records kept.
+              Only habits you're actively tracking. Archive one you've finished
+              with and it stops counting, with all its records and statistics
+              kept.
             </p>
           </details>
           <details class="more">
             <summary>What happens if I stay on the free version?</summary>
             <p>
-              Everything keeps working. The limit only stops you adding a sixth
-              habit.
+              Everything keeps working. Reaching five habits only stops you
+              adding a sixth.
             </p>
           </details>
           <details class="more">
             <summary>Where are my habits stored?</summary>
             <p>
-              On your device. If you sign in and turn on sync, they're also kept
-              up to date on your other devices. You can export a backup file at
-              any time.
+              On your device first. You can use the app on one device without an
+              account, or sign in to sync between your devices with end-to-end
+              encryption. You can also export a backup file at any time.
             </p>
           </details>
           <details class="more">
             <summary>Which devices does it work on?</summary>
             <p>iPhone and Android, plus any computer through the browser.</p>
+          </details>
+          <details class="more">
+            <summary>Is LifeChisel open source?</summary>
+            <p>
+              Yes. The full source code for the iPhone, Android and web apps is
+              on
+              <a href="https://github.com/SnowCode1/LifeChisel">GitHub</a> under
+              the GNU GPL, version 3 or later.
+            </p>
           </details>
         </div>
       </section>

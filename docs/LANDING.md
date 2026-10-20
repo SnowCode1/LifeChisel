@@ -29,7 +29,7 @@ rewritten from mockup "A" (20 October 2026). See DECISIONS.md.
   example setups in a carousel; the interactive statistics example; notes;
   History and Undo; pricing with short questions; a closing call to action
   under the large icon; footer.
-- **Detail only on request.** The full list of goal repeats, chart
+- **Detail only on request.** The full list of goal targets and repeats, chart
   explanations, what History keeps and the pricing questions sit in
   `<details>` elements that open on a click.
 
@@ -67,10 +67,10 @@ them when changing the page, and record new feedback here.
 
 **Content to keep**
 
-- The headline "The habit grid built for muscle memory." is still the
-  founder's favourite, but alternatives are being explored (20 October 2026).
-  "The habit tracker you'll still be using in March." was tried with mockup A
-  and rejected.
+- The headline "The habit grid built for muscle memory." (founder decision,
+  20 October 2026, after reviewing alternatives from two assistants; "The
+  habit tracker you'll still be using in March." was tried with mockup A and
+  rejected).
 - The four habit kinds (checkbox, number, category, text), each shown with
   real-looking cells.
 - Goals, and that each habit's goal is customisable.
@@ -92,6 +92,9 @@ them when changing the page, and record new feedback here.
   Use real examples (three times a week, five days on and two off) rather
   than general claims, and write the way a person talks: "you", contractions,
   short sentences.
+- No asides set off with long dashes; they read as generated. Every claim
+  must match the app and the sample presets (check `dev/presets/` before
+  describing an example).
 - Still plain and specific. Avoid wording that sounds generated or like
   marketing ("versatile", "seamless", "powerful"): the founder rejected "Every
   change remembered. Any of them undone." for that reason. No big promises

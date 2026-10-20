@@ -412,7 +412,7 @@ export function setUpStats(today = new Date()): void {
             `<button type="button" data-chart="${c.id}" aria-pressed="${c.id === state.chart}">${c.name}</button>`,
         ).join(
           '',
-        )}<p>Category and text habits also get a breakdown by category and a list of every entry.</p></div>
+        )}<p>Number habits can show totals, averages, highs or lows. Category and text habits add category counts and a full entry log.</p></div>
         <div class="chart">
           <h3>${info.name}</h3>
           ${chart}

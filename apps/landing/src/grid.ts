@@ -11,8 +11,13 @@ type Habit = {
   colour: string;
   kind: 'check' | 'number' | 'text';
   goal?: number;
-  /** Oldest first; the last value is Today. For checkboxes 1 is ticked, 0 open and 'x' missed. */
-  values: Value[];
+  /**
+   * Oldest first; the last value is Today. For checkboxes 1 is ticked, 0 open,
+   * 'x' missed and null an unscheduled day, which stays blank as in the apps.
+   */
+  values?: Value[];
+  /** A checkbox due only on these weekdays (0 is Sunday): its values follow the visitor's calendar instead. */
+  weekdays?: number[];
 };
 
 const HABITS: Habit[] = [
@@ -36,7 +41,7 @@ const HABITS: Habit[] = [
     sub: 'Mon, Wed, Fri',
     colour: '#fdbe45',
     kind: 'check',
-    values: [1, 0, 0, 1, 0, 'x', 0, 1],
+    weekdays: [1, 3, 5],
   },
   {
     name: 'Workout',
@@ -63,6 +68,23 @@ const HABITS: Habit[] = [
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
+/**
+ * A weekday habit on the dates shown: due days ticked except one missed (the
+ * second-latest before Today), other past days blank, and Today ticked when due
+ * or left open when not.
+ */
+function scheduledValues(dates: Date[], weekdays: number[]): Value[] {
+  const due = dates.map((date) => weekdays.includes(date.getDay()));
+  const earlierDue = due
+    .slice(0, -1)
+    .flatMap((isDue, index) => (isDue ? [index] : []));
+  const missed = earlierDue.length > 1 ? earlierDue.at(-2) : undefined;
+  return dates.map((_, index) => {
+    if (!due[index]) return index === dates.length - 1 ? 0 : null;
+    return index === missed ? 'x' : 1;
+  });
+}
+
 function cellHtml(habit: Habit, values: Value[], index: number): string {
   const value = values[index];
   const classes = ['cell'];
@@ -74,7 +96,7 @@ function cellHtml(habit: Habit, values: Value[], index: number): string {
       if (values[index - 1] === 1) classes.push('jl');
       if (values[index + 1] === 1) classes.push('jr');
     } else if (value === 'x') inner = '<span class="cross"></span>';
-    else inner = '<span class="box"></span>';
+    else if (value === 0) inner = '<span class="box"></span>';
   } else {
     const blank = value === null || value === '';
     if (blank) classes.push('blank');
@@ -88,6 +110,7 @@ function cellHtml(habit: Habit, values: Value[], index: number): string {
 export function renderGrids(today = new Date()): void {
   for (const element of document.querySelectorAll<HTMLElement>('[data-grid]')) {
     const count = Number(element.dataset.grid);
+    const dates: Date[] = [];
     const heads = [];
     for (let back = count - 1; back >= 0; back--) {
       const date = new Date(
@@ -95,12 +118,15 @@ export function renderGrids(today = new Date()): void {
         today.getMonth(),
         today.getDate() - back,
       );
+      dates.push(date);
       heads.push(
         `<span class="head${back === 0 ? ' today' : ''}"><small>${back === 0 ? 'Today' : WEEKDAYS[date.getDay()]}</small>${date.getDate()}</span>`,
       );
     }
     const rows = HABITS.map((habit) => {
-      const values = habit.values.slice(-count);
+      const values = habit.weekdays
+        ? scheduledValues(dates, habit.weekdays)
+        : (habit.values ?? []).slice(-count);
       const cells = values
         .map((_, index) => cellHtml(habit, values, index))
         .join('');
